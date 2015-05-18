@@ -1,0 +1,5 @@
+thrift
+gevent
+eventlet
+psycopg2
+sqlachemy

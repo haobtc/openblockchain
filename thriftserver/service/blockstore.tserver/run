@@ -1,0 +1,4 @@
+#!/bin/bash
+
+exec /usr/local/bin/run-service haobtc 'bin/blockstored -h 127.0.0.1'
+

@@ -1,0 +1,22 @@
+#!/bin/bash
+
+USER=$1
+CMDLINE=$2
+
+SERVICE=`basename $PWD`
+
+if [ -L $PWD ]; then
+    PRJDIR=`readlink $PWD`
+else 
+    PRJDIR=$PWD
+fi
+
+PRJDIR=`python -c 'import sys, os; print os.path.abspath(sys.argv[1])' $PRJDIR/../..`
+cd $PRJDIR
+
+who=$(id -u)
+if [[ $who -eq 0 ]]; then
+   exec setuidgid $USER $CMDLINE 2>>$PRJDIR/service/logs/$SERVICE.err >$PRJDIR/service/logs/$SERVICE.log
+else
+   exec $CMDLINE 2>>$PRJDIR/service/logs/$SERVICE.err >$PRJDIR/service/logs/$SERVICE.log
+fi
