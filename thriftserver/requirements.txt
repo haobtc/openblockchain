@@ -1,5 +1,7 @@
-thrift
-gevent
-eventlet
-psycopg2
-sqlachemy
+SQLAlchemy==1.0.4
+gevent==1.0.1
+greenlet==0.4.6
+psycopg2==2.6
+pycrypto==2.6.1
+pytz==2015.4
+thrift==0.9.2
