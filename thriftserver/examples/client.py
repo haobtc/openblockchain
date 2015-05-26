@@ -20,12 +20,11 @@ c = BlockStoreService.Client(protocol)
 transport.open()
 
 if True:
-    #txid = '64a9a0935f50a809b6889f30957c50d4ed5385d4a99e2493118ac5c6fab31b46'.decode('hex')
-    #txid1 = '64a9a0935f50a809b6889f30957c50d4ed5385d4a99e2493118ac5c6fab31b47'.decode('hex')
-    #tx = c.getTx(ttypes.Network.BITCOIN, txid)
-    #print repr(tx.txid)
-    #for input in tx.inputs:
-    #    print repr(input.txid)
+    txid = '4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b'.decode('hex')
+    tx = c.getTx(ttypes.Network.BITCOIN, txid)
+    print repr(tx.hash)
+    for input in tx.inputs:
+        print repr(input.hash)
 
     #r = c.verifyTx(ttypes.Network.BITCOIN, tx)
     #print 'verified', r
