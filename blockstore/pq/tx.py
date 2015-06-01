@@ -15,13 +15,14 @@ txOutColumns = ('s', 'v', 'type')
 def db2t_tx(conn, dtx, db_block=None):
     t = ttypes.Tx(nettype=get_nettype(conn))
     t.hash = hexlify(dtx['hash'])
+    t.version = dtx['version']
 
     blkid = conn.engine.execute(text(
         'select blk_id from blk_tx where tx_id=:val limit 1'),
                                 val=dtx['id']).first()
     blkid = blkid[0]
     blk = conn.engine.execute(text(
-        'select id,hash,depth,version,prev_hash,mrkl_root,time,bits,nonce,blk_size,work from blk where id=:val limit 1'),
+        'select id,hash,height,version,prev_hash,mrkl_root,time,bits,nonce,blk_size,work from blk where id=:val limit 1'),
                               val=blkid).first()
     if blk:
         block = (dict(zip(blkColumns, blk[1:])))

@@ -18,13 +18,16 @@ def db2t_block(conn, block):
     b.merkleRoot = hexlify(block['mrkl_root'])
     b.timestamp = block['time']
     b.isMain = True
+    b.bits = block['bits'] 
 
-    if block.get('next_hash'):
-        b.nextHash = block['next_hash']
     if block.get('_id'):
         b.objId = block['_id'].binary
-    if block.get('bits'):
-        b.bits = block['bits']
+    if block.get('next_hash'):
+        blk = conn.engine.execute(text('select hash from blk where prev_hash=:val and height=:height limit 1'),val=("\\x" + b.hash), height=(b.height+1)).first()
+        import pdb
+        pdb.set_trace()
+        if blk:
+            b.nextHash = blk[1]
     return b
 
 
@@ -32,7 +35,7 @@ def get_block(conn, blockHash):
     if blockHash is None:
         return None
     blk = conn.engine.execute(text(
-        'select id,hash,depth,version,prev_hash,mrkl_root,time,bits,nonce,blk_size,work from blk where hash=:val limit 1'),
+        'select id,hash,height,version,prev_hash,mrkl_root,time,bits,nonce,blk_size,work from blk where hash=:val limit 1'),
                               val=("\\x" + blockHash.encode('hex'))).first()
     if blk:
         block = (dict(zip(blkColumns, blk[1:])))
