@@ -4,89 +4,153 @@ from helper import get_nettype
 from sqlalchemy.sql import text
 from binascii import hexlify
 from deserialize import extract_public_key
-
-blkColumns = ('hash', 'height', 'version', 'prev_hash', 'mrkl_root', 'time',
-              'bits', 'nonce', 'blk_size', 'work')
-txColumns = ('id', 'hash', 'version', 'lock_time', 'coinbase', 'size')
-txInColumns = ('q', 's', 'prev_out', 'n')
-txOutColumns = ('s', 'v', 'type')
-
+from database import Tx, Block, BlockTx, TxIn, TxOut, engine 
+from base58 import bc_address_to_hash_160
 
 def db2t_tx(conn, dtx, db_block=None):
     t = ttypes.Tx(nettype=get_nettype(conn))
-    t.hash = hexlify(dtx['hash'])
-    t.version = dtx['version']
+    t.hash = hexlify(dtx.hash)
+    t.version = dtx.version
 
-    blkid = conn.engine.execute(text(
-        'select blk_id from blk_tx where tx_id=:val limit 1'),
-                                val=dtx['id']).first()
-    blkid = blkid[0]
-    blk = conn.engine.execute(text(
-        'select id,hash,height,version,prev_hash,mrkl_root,time,bits,nonce,blk_size,work from blk where id=:val limit 1'),
-                              val=blkid).first()
+    blkid = BlockTx.query.filter(BlockTx.tx_id==dtx.id).limit(1).first().blk_id
+    blk = Block.query.filter(Block.id==blkid).limit(1).first()
     if blk:
-        block = (dict(zip(blkColumns, blk[1:])))
-        txcount = conn.engine.execute(text(
-            'select count(*) from blk_tx where blk_id=:val limit 1'),
-                                      val=blk[0]).first()[0]
-        block['cntTxes'] = txcount
-        t.block = db2t_block(conn, block)
-        #t.blockIndex = index
+        t.block = db2t_block(conn, blk)
+        t.blockIndex = BlockTx.query.filter(BlockTx.blk_id==blkid, BlockTx.tx_id==dtx.id).first().idx
 
-    txinlist = conn.engine.execute(text(
-        'select sequence, script_sig, prev_out, prev_out_index from txin where tx_id=:val order by tx_idx'),
-                                   val=dtx['id'])
+    txinlist = TxIn.query.filter(TxIn.tx_id==dtx.id).all()
     for vin in txinlist:
         txin = {}
         inp = ttypes.TxInput()
-        if dtx['coinbase']:
-            txin['coinbase'] = vin[1]
+        if dtx.coinbase:
+            inp.script = vin.script_sig 
         else:
-            txin = dict(zip(txInColumns, vin))
-            if 'hash' in txin:
-                inp.hash = hexlify(txin['prev_out'])
-            if 'n' in txin:
-                inp.vout = txin['n']
-            inp.script = txin['s']
-            if 'q' in txin:
-                inp.q = txin['q']
+            inp.hash = hexlify(vin.prev_out)
+            inp.vout = vin.prev_out_index
+            inp.script = vin.script_sig 
+            inp.q = vin.sequence
 
-            prev_tx = conn.engine.execute(
-                text('select id from tx where hash=:val limit 1'),
-                val="\\x" + hexlify(txin['prev_out'][::-1])).first()
-            tx_id = prev_tx[0]
-            vout = conn.engine.execute(text(
-                'select pk_script, value, type from txout where tx_id=%d and tx_idx=%d'
-                % (tx_id, txin['n']))).first()
-            prev_txout = dict(zip(txOutColumns, vout))
-            txin['s'] = hexlify(txin['s'])
-            txin['value'] = str(prev_txout['value'])
-            txin['addr'] = extract_public_key(prev_txout['scriptPubKey'])
-            inp.address = ','.join(txin['addr'])
-            inp.amountSatoshi = txin['v']
+            prev_tx = Tx.query.filter(Tx.hash==vin.prev_out).first()
+            prev_txout = TxOut.query.filter(TxOut.txid==prev_tx.id, TxOut.idx==vin.prev_out.index).first()
+            inp.address = ''.join(extract_public_key(prev_txout.pk_script))
+            inp.amountSatoshi = prev_out.value
         t.inputs.append(inp)
 
-    txoutlist = conn.engine.execute(
-        text('select pk_script, value, type from txout where tx_id=%d' %
-             dtx['id'])).fetchall()
+    txoutlist = TxOut.query.filter(TxOut.tx_id==dtx.id).all()
     for vout in txoutlist:
-        txOut = dict(zip(txOutColumns, vout))
         outp = ttypes.TxOutput()
-        txOut['addr'] = extract_public_key(txOut['s'])
-        outp.address = ','.join(txOut['addr'])
-        outp.amountSatoshi = str(txOut['v'])
-        outp.script = hexlify(txOut['s'])
+        outp.address = ''.join(extract_public_key(vout.pk_script))
+        outp.amountSatoshi = str(vout.value)
+        outp.script = hexlify(vout.pk_script)
         t.outputs.append(outp)
 
     return t
 
 
 def get_tx(conn, txid):
-    tx = conn.engine.execute(text(
-        'select id, hash, version, lock_time, coinbase, tx_size from tx where hash=:val limit 1'),
-                             val=("\\x" + txid.encode('hex'))).first()
-    if tx:
-        dtx = dict(zip(txColumns, tx))
+    dtx = Tx.query.filter(Tx.hash==txid).limit(1).first()
+    if dtx:
         return db2t_tx(conn, dtx)
     else:
       return None
+
+def get_db_tx_list(conn, txids, keep_order=False):
+    txids = [Binary(txid) for txid in txids]
+    return get_dbobj_list(conn, conn.tx, txids, keep_order=keep_order)
+
+def get_tx_list(conn, txids, keep_order=False):
+    arr = get_db_tx_list(conn, txids, keep_order=keep_order)
+    return arr
+
+def db2t_tx_list(conn, txes): 
+    return [db2t_tx(conn, tx) for tx in txes]
+        
+def get_tail_tx_list(conn, n):
+    n = min(n, 20)
+    arr = list(Tx.query.order_by("id desc").limit(n).all())
+    arr.reverse()
+    return db2t_tx_list(conn, arr)
+
+def get_tx_list_since(conn, since, n=20):
+    arr = list(Tx.query.where("id >%d and id < %d" % (since, n)).order_by("id desc").limit(n).all())
+    return db2t_tx_list(conn, arr)
+
+def get_missing_txid_list(conn, tx_hashs):
+    if not tx_hashs:
+        return []
+    found_set = []
+    for tx_hash in tx_hashs:
+        if  Tx.query.filter(Tx.hash==tx_hash).limit(1).first():
+            found_set.append(tx_hash)
+    return list(set(tx_hashs) - set(found_set))
+
+def send_tx(conn, stx):
+    if Tx.query.filter(Tx.hash==stx.hash).limit(1).first():
+        raise ttypes.AppException(code="tx_exist", message="tx already exists in the blockchain")
+
+    if UTx.query.filter(Tx.hash==stx.hash).limit(1).first():
+        raise ttypes.AppException(code="sending existing")
+
+# UTXO related
+def get_utxo(conn, dtx, output, i):
+    utxo = ttypes.UTXO(nettype=get_nettype(conn))
+    utxo.address = output['addrs'][0]
+    utxo.amountSatoshi = output['v']
+    utxo.txid = dtx['hash']
+    utxo.vout = i
+    utxo.scriptPubKey = output['s']
+
+    b, index = get_tx_db_block(conn, dtx)
+    if b:
+        tip = get_tip_block(conn)
+        utxo.confirmations = tip.height - b['height'] + 1
+        utxo.timestamp = b['timestamp']
+    else:
+        utxo.confirmations = 0
+        utxo.timestamp = int(time.mktime(dtx['_id'].generation_time.replace(tzinfo=pytz.utc).utctimetuple()))
+        #utxo.timestamp = int(time.time())
+    return utxo
+
+def get_unspent(conn, addresses):
+    addr_set = set(addresses)
+    output_txes = conn.tx.find({'oa': {'$in': addresses}}, projection=['hash', 'vout'])
+    input_txes =  conn.tx.find({'ia': {'$in': addresses}}, projection=['hash', 'vin'])
+
+    utxos = []
+    spent_set = set([])
+    for dtx in input_txes:
+        for input in dtx['vin']:
+            if not input.get('addrs'):
+                continue
+            # FIXME: consider multiple addrs
+            addr = input['addrs'][0]
+            if addr in addr_set:
+                spent_set.add((input['hash'], input['n']))
+    
+    for dtx in output_txes:
+        for i, output in enumerate(dtx['vout']):
+            if not output.get('addrs'):
+                continue
+            #FIXME: consider multiple addrs
+            addr = output['addrs'][0]
+            if addr in addr_set:
+                if (dtx['hash'], i) not in spent_set:
+                    utxos.append(get_utxo(conn, dtx, output, i))
+
+    return utxos
+
+def get_related_txid_list(conn, addresses):
+    hash160 = ''
+    for  address in addresses:
+        hash160 = hash160.join("'" +bc_address_to_hash_160(address).encode('hex')+"',")
+    hash160 = hash160[:-1]
+    txes = engine.execute(text("select hash from tx a join txout b on (b.tx_id=a.id) join addr_txout c on (c.txout_id=b.id) join addr d on (d.id=c.addr_id) where d.hash160 in (%s) limit 10" % hash160)).fetchall()  
+    return [tx[0] for tx in txes]
+
+def get_related_tx_list(conn, addresses):
+    hash160 = ''
+    for  address in addresses:
+        hash160 = hash160.join("'" +bc_address_to_hash_160(address).encode('hex')+"',")
+    hash160 = hash160[:-1]
+    txes = engine.execute(text("select hash from tx a join txout b on (b.tx_id=a.id) join addr_txout c on (c.txout_id=b.id) join addr d on (d.id=c.addr_id) where d.hash160 in (%s) limit 10" % hash160)).fetchall() 
+    return [db2t_tx(conn, Tx.query.filter(Tx.hash==tx[0]).limit(1).first()) for tx in txes]

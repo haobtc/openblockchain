@@ -1,7 +1,9 @@
 from blockstore import ttypes
 
+from helper import get_nettype
 from binascii import hexlify
 from sqlalchemy.sql import text
+from database import Block, BlockTx
 
 blkColumns = ('hash', 'height', 'version', 'prev_hash', 'mrkl_root', 'time',
               'bits', 'nonce', 'blk_size', 'work')
@@ -9,40 +11,54 @@ blkColumns = ('hash', 'height', 'version', 'prev_hash', 'mrkl_root', 'time',
 
 def db2t_block(conn, block):
     b = {}
-    b = ttypes.Block(nettype=1)
-    b.hash = hexlify(block['hash'])
-    b.version = block['version']
-    b.prevHash = hexlify(block['prev_hash'])
-    b.cntTxes = block['cntTxes']
-    b.height = block['height']
-    b.merkleRoot = hexlify(block['mrkl_root'])
-    b.timestamp = block['time']
-    b.isMain = True
-    b.bits = block['bits'] 
+    b = ttypes.Block(nettype=get_nettype(conn))
+    b.cntTxes = BlockTx.query.filter(BlockTx.blk_id==block.id).count()
+    b.hash = hexlify(block.hash)
+    b.version = block.version
+    b.prevHash = hexlify(block.prev_hash)
+    b.height = block.height
+    b.merkleRoot = hexlify(block.mrkl_root)
+    b.timestamp = block.time
+    b.isMain = block.chain
+    b.bits = block.bits
 
-    if block.get('_id'):
-        b.objId = block['_id'].binary
-    if block.get('next_hash'):
-        blk = conn.engine.execute(text('select hash from blk where prev_hash=:val and height=:height limit 1'),val=("\\x" + b.hash), height=(b.height+1)).first()
-        import pdb
-        pdb.set_trace()
-        if blk:
-            b.nextHash = blk[1]
+    b.objId = hex(block.id)
+    block_next = Block.query.filter(Block.prev_hash==block.hash).limit(1).first()
+    if block_next:
+       b.nextHash = hexlify(block_next.hash)
     return b
 
 
 def get_block(conn, blockHash):
     if blockHash is None:
         return None
-    blk = conn.engine.execute(text(
-        'select id,hash,height,version,prev_hash,mrkl_root,time,bits,nonce,blk_size,work from blk where hash=:val limit 1'),
-                              val=("\\x" + blockHash.encode('hex'))).first()
-    if blk:
-        block = (dict(zip(blkColumns, blk[1:])))
-        txCount = conn.engine.execute(text(
-            'select count(*) from blk_tx where blk_id=:val limit 1'),
-                                      val=blk[0]).first()[0]
-        block['cntTxes'] = txCount
+    block = Block.query.filter(Block.hash==blockHash).limit(1).first()
+    if block:
         return db2t_block(conn, block)
     else:
       return None
+
+def get_tip_block(conn):
+    block = Block.query.order_by("height desc").limit(1).first()
+    if block:
+       return db2t_block(conn, block)
+    else:
+      return None
+
+def get_missing_block_hash_list(conn, bhashes):
+    if not bhashes:
+        return []
+    binary_bhash_list = [Binary(bhash) for bhash in bhashes]
+    hash_set = set(binary_bhash_list)
+    found_set = []
+    for block_hash in hash_set:
+        if  Block.query.filter(Block.hash==block_hash).limit(1).first():
+            found_set.append(block_hash)
+    return list(hash_set - found_set)
+
+def get_tail_block_list(conn, n):
+    n = min(n, 10)
+    arr = Block.query.order_by(Block.height.desc).limit(10).all()
+    arr = list(arr)
+    arr.reverse()
+    return [db2t_block(conn, b) for b in arr]
