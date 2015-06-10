@@ -1,6 +1,6 @@
 from blockstore import ttypes
 from helper import resolve_network
-from block import get_block, get_tip_block, get_missing_block_hash_list, get_tail_block_list
+from block import get_block, get_tip_block, get_tail_block_list
 
 from tx import get_tx, get_tx_list, get_missing_txid_list
 from tx import get_tail_tx_list, get_tx_list_since
@@ -28,7 +28,7 @@ class BlockStoreHandler:
         conn = network_conn(nettype)
         block = get_tip_block(conn)
         if not block:
-            raise ttypes.NotFound();
+            raise ttypes.NotFound()
         return block
 
     def getTx(self, nettype, txid):

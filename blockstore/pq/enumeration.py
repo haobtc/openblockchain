@@ -4,17 +4,19 @@
 #
 import types, string, exceptions
 
+
 class EnumException(exceptions.Exception):
     pass
+
 
 class Enumeration:
     def __init__(self, name, enumList):
         self.__doc__ = name
-        lookup = { }
-        reverseLookup = { }
+        lookup = {}
+        reverseLookup = {}
         i = 0
-        uniqueNames = [ ]
-        uniqueValues = [ ]
+        uniqueNames = []
+        uniqueValues = []
         for x in enumList:
             if type(x) == types.TupleType:
                 x, i = x
@@ -33,9 +35,11 @@ class Enumeration:
             i = i + 1
         self.lookup = lookup
         self.reverseLookup = reverseLookup
+
     def __getattr__(self, attr):
         if not self.lookup.has_key(attr):
             raise AttributeError
         return self.lookup[attr]
+
     def whatis(self, value):
         return self.reverseLookup[value]
