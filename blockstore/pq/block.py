@@ -58,7 +58,7 @@ def get_missing_block_hash_list(conn, bhashes):
 
 def get_tail_block_list(conn, n):
     n = min(n, 10)
-    arr = Block.query.order_by(Block.height.desc).limit(10).all()
+    arr = Block.query.order_by("height desc").limit(10).all()
     arr = list(arr)
     arr.reverse()
     return [db2t_block(conn, b) for b in arr]

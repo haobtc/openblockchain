@@ -31,9 +31,11 @@ def db2t_tx(conn, dtx, db_block=None):
             inp.q = vin.sequence
 
             prev_tx = Tx.query.filter(Tx.hash==vin.prev_out).first()
-            prev_txout = TxOut.query.filter(TxOut.txid==prev_tx.id, TxOut.idx==vin.prev_out.index).first()
-            inp.address = ''.join(extract_public_key(prev_txout.pk_script))
-            inp.amountSatoshi = prev_out.value
+            if prev_tx:
+                prev_txout = TxOut.query.filter(TxOut.tx_id==prev_tx.id, TxOut.tx_idx==vin.prev_out_index).first()
+                if prev_txout:
+                    inp.address = ''.join(extract_public_key(prev_txout.pk_script))
+                    inp.amountSatoshi = str(prev_txout.value)
         t.inputs.append(inp)
 
     txoutlist = TxOut.query.filter(TxOut.tx_id==dtx.id).all()
@@ -55,8 +57,7 @@ def get_tx(conn, txid):
       return None
 
 def get_db_tx_list(conn, txids, keep_order=False):
-    txids = [Binary(txid) for txid in txids]
-    return get_dbobj_list(conn, conn.tx, txids, keep_order=keep_order)
+    return  [get_tx(conn, txid) for txid in txids]
 
 def get_tx_list(conn, txids, keep_order=False):
     arr = get_db_tx_list(conn, txids, keep_order=keep_order)
@@ -72,7 +73,7 @@ def get_tail_tx_list(conn, n):
     return db2t_tx_list(conn, arr)
 
 def get_tx_list_since(conn, since, n=20):
-    arr = list(Tx.query.where("id >%d and id < %d" % (since, n)).order_by("id desc").limit(n).all())
+    arr = list(Tx.query.filter("id >%d and id < %d" % (int(since,0), n)).order_by("id desc").limit(n).all())
     return db2t_tx_list(conn, arr)
 
 def get_missing_txid_list(conn, tx_hashs):
@@ -142,15 +143,15 @@ def get_unspent(conn, addresses):
 def get_related_txid_list(conn, addresses):
     hash160 = ''
     for  address in addresses:
-        hash160 = hash160.join("'" +bc_address_to_hash_160(address).encode('hex')+"',")
+        hash160 = hash160 + "'" + bc_address_to_hash_160(address).encode('hex')+"',"
     hash160 = hash160[:-1]
     txes = engine.execute(text("select hash from tx a join txout b on (b.tx_id=a.id) join addr_txout c on (c.txout_id=b.id) join addr d on (d.id=c.addr_id) where d.hash160 in (%s) limit 10" % hash160)).fetchall()  
-    return [tx[0] for tx in txes]
+    return [hexlify(tx[0]) for tx in txes]
 
 def get_related_tx_list(conn, addresses):
     hash160 = ''
     for  address in addresses:
-        hash160 = hash160.join("'" +bc_address_to_hash_160(address).encode('hex')+"',")
+        hash160 = hash160 + "'" + bc_address_to_hash_160(address).encode('hex')+"',"
     hash160 = hash160[:-1]
     txes = engine.execute(text("select hash from tx a join txout b on (b.tx_id=a.id) join addr_txout c on (c.txout_id=b.id) join addr d on (d.id=c.addr_id) where d.hash160 in (%s) limit 10" % hash160)).fetchall() 
     return [db2t_tx(conn, Tx.query.filter(Tx.hash==tx[0]).limit(1).first()) for tx in txes]
