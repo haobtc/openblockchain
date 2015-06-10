@@ -31,6 +31,17 @@ if True:
     #r = c.verifyTx(ttypes.Network.BITCOIN, tx)
     #print 'verified', r
 
+    nettype = ttypes.Network.BITCOIN
+    addresses = ['1CjPR7Z5ZSyWk6WtXvSFgkptmpoi4UM9BC','1CjPR7Z5ZSyWk6WtXvSFgkptmpoi4UM9BC']
+    print c.getTailBlockList  (nettype, 10)
+    print c.getTxList         (nettype, [txid, ])
+    print c.getTxListSince    (nettype, hex(1), 5)
+    print c.getTailTxList     (nettype, 5)
+    print c.getRelatedTxIdList(nettype, addresses)
+    print c.getRelatedTxList  (nettype, addresses)
+    print c.getMissingTxIdList(nettype, [txid, txid1])
+    #getUnspent        (nettype, addresses):
+
     #blockid = '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f'.decode('hex')
     blockid = '000000000000000082ccf8f1557c5d40b21edabb18d2d691cfbf87118bac7254'.decode('hex')
     b = c.getBlock(ttypes.Network.BITCOIN, blockid)
