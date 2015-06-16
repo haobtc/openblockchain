@@ -59,7 +59,11 @@ def get_tx(conn, txid):
     if dtx:
         return db2t_tx(conn, dtx)
     else:
-        return None
+        dtx = UTx.query.filter(UTx.hash == txid).limit(1).first()
+        if dtx:
+            return db2t_tx(conn, dtx)
+        else:
+            return None
 
 
 def get_db_tx_list(conn, txids, keep_order=False):
@@ -77,7 +81,7 @@ def db2t_tx_list(conn, txes):
 
 def get_tail_tx_list(conn, n):
     n = min(n, 20)
-    arr = list(Tx.query.order_by("id desc").limit(n).all())
+    arr = list(UTx.query.order_by("id desc").limit(n).all())
     arr.reverse()
     return db2t_tx_list(conn, arr)
 
