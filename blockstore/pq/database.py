@@ -91,39 +91,3 @@ class TxOut(SQLBase):
     pk_script = Column(BYTEA)
     value = Column(BIGINT)
     type = Column(INTEGER)
-
-
-class UTx(SQLBase):
-    __tablename__ = 'utx'
-    id = Column(INTEGER, primary_key=True)
-    hash = Column(BYTEA)
-    version = Column(BIGINT)
-    lock_time = Column(BIGINT)
-    coinbase = Column(BOOLEAN)
-    tx_size = Column(BIGINT)
-    nhash = Column(BYTEA)
-
-    def __repr__(self):
-        return "<('%s')>" % (self.hash.encode('hex'))
-
-
-class UTxIn(SQLBase):
-    __tablename__ = 'utxin'
-    id = Column(INTEGER, primary_key=True)
-    tx_id = Column(INTEGER, ForeignKey("utx.id"))
-    tx_idx = Column(INTEGER)
-    prev_out_index = Column(BIGINT)
-    sequence = Column(BIGINT)
-    script_sig = Column(BYTEA)
-    prev_out = Column(BYTEA)
-    p2sh_type = Column(INTEGER)
-
-
-class UTxOut(SQLBase):
-    __tablename__ = 'utxout'
-    id = Column(INTEGER, primary_key=True)
-    tx_id = Column(INTEGER, ForeignKey("utx.id"))
-    tx_idx = Column(INTEGER)
-    pk_script = Column(BYTEA)
-    value = Column(BIGINT)
-    type = Column(INTEGER)

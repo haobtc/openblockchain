@@ -4,7 +4,7 @@ from helper import get_nettype
 from sqlalchemy.sql import text
 from binascii import hexlify
 from deserialize import extract_public_key
-from database import Tx, Block, BlockTx, TxIn, TxOut, UTx, UTxIn, UTxOut, engine
+from database import Tx, Block, BlockTx, TxIn, TxOut, engine
 from base58 import bc_address_to_hash_160
 
 
@@ -59,11 +59,7 @@ def get_tx(conn, txid):
     if dtx:
         return db2t_tx(conn, dtx)
     else:
-        dtx = UTx.query.filter(UTx.hash == txid).limit(1).first()
-        if dtx:
-            return db2t_tx(conn, dtx)
-        else:
-            return None
+       return None
 
 
 def get_db_tx_list(conn, txids, keep_order=False):
@@ -81,7 +77,7 @@ def db2t_tx_list(conn, txes):
 
 def get_tail_tx_list(conn, n):
     n = min(n, 20)
-    arr = list(UTx.query.order_by("id desc").limit(n).all())
+    arr = list(Tx.query.order_by("id desc").limit(n).all())
     arr.reverse()
     return db2t_tx_list(conn, arr)
 
@@ -108,10 +104,6 @@ def send_tx(conn, stx):
         raise ttypes.AppException(
             code="tx_exist",
             message="tx already exists in the blockchain")
-
-    if UTx.query.filter(Tx.hash == stx.hash).limit(1).first():
-        raise ttypes.AppException(code="sending existing")
-
 
 # UTXO related
 def get_utxo(conn, dtx, output, i):
