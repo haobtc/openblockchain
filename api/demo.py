@@ -8,6 +8,7 @@ import binascii
 from bitcoinrpc.authproxy import AuthServiceProxy
 from deserialize import extract_public_key
 from base58 import bc_address_to_hash_160
+from database import *
 
 RPC_URL = "http://bitcoinrpc:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX@127.0.0.1:8333"
 access = AuthServiceProxy(RPC_URL)
@@ -15,7 +16,6 @@ access = AuthServiceProxy(RPC_URL)
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://postgres@127.0.0.1/bitcoin'
 db = SQLAlchemy(app)
-
 
 txColumns=('hash','version','lock_time','coinbase','size')
 txinColumns=('sequence', 'script_sig', 'prev_out', 'prev_out_index' )
@@ -33,111 +33,81 @@ def buffer_to_json(python_object):
 def tx(txhash):                                                                                                                                                                  
     """
     """
-    txs = db.engine.execute('select id, hash, version, lock_time, coinbase, tx_size from tx where hash=%(x)s limit 1', x="\\x" + (txhash)).fetchall()
-    tx_id = txs[0][0]
-    tx = dict(zip(txColumns, txs[0][1:]))
+    #txhash = "\\x".join(txhash)
+    txhash = txhash.decode('hex')
+    res = Tx.query.filter(Tx.hash == txhash).first()
+    tx= res.todict()
+    tx_id = tx['id']
 
     txins = []
-    txinlist = db.engine.execute('select sequence, script_sig, prev_out, prev_out_index from txin where tx_id=%d order by tx_idx' % tx_id).fetchall()
-    for vin in txinlist:
-        txin = {}
-        if tx['coinbase']:
-            txin['coinbase'] = vin[1]
-        else:
-            txin =dict(zip(txinColumns, vin))
-            prev_tx = db.engine.execute('select id from tx where hash=%(x)s limit 1', x="\\x" + binascii.hexlify(txin['prev_out'][::-1])).first()
-            tx_id = prev_tx[0]
-            vout = db.engine.execute('select pk_script, value, type from txout where tx_id=%d and tx_idx=%d' % (tx_id,txin['prev_out_index'])).first()
-            prev_txout =dict(zip(txoutColumns, vout))
-            txin['value'] = prev_txout['value'] 
-            txin['addr'] =extract_public_key(prev_txout['scriptPubKey'])
-        txins.append(txin)
-    tx['in'] = txins
-
-    txoutlist = db.engine.execute('select pk_script, value, type from txout where tx_id=%d' % tx_id)
-    txouts = []
-    for vout in txoutlist:
-        txout = dict(zip(txoutColumns, vout))
-        txout['addrs']=extract_public_key(txout['scriptPubKey'])
-        txouts.append(txout)
- 
-    tx['vin_sz'] = len(txins)
-    tx['vout_sz'] = len(txouts)
-    tx['out'] = txouts
-    return  json.dumps(tx, default=buffer_to_json, indent=4)
+    txins = TxIn.query.filter(TxIn.tx_id==tx_id).all()
+    tx['in'] = [txin.todict() for txin in txins ]
+    txouts = TxOut.query.filter(TxOut.tx_id==tx_id).all()
+    tx['out'] = [txout.todict() for txout in txouts]
+    return json.dumps(tx, default=buffer_to_json, indent=4)
 
 @app.route('/height/<height>')
 def blkheight(height=0):
 
-    blks = db.engine.execute('select id,hash,height,version,prev_hash,mrkl_root,time,bits,nonce,blk_size,work from blk where height=%(x)s limit 1', x=height).first()
-    blkid =blks[0]
-    txids = db.engine.execute('select tx.hash from blk,tx,blk_tx where blk.id=blk_tx.blk_id and blk_tx.tx_id=tx.id and blk.id=%(x)s', x=blkid).fetchall()
+    res = Block.query.filter(Block.height == height).first()
+    blk = res.todict()
+    res = BlockTx.query.with_entities(BlockTx.tx_id).filter(BlockTx.blk_id == blk['id']).limit(10);
     txs=[]
-    for txid in txids:
-       txs.append(txid[0])
-    blk = (dict(zip(blkColumns, blks[1:])))
-    blk['tx'] = txs
+    for txid in res:
+       res = Tx.query.filter(Tx.id==txid).first()
+       tx= res.todict()
+       txins = []
+       txins = TxIn.query.filter(TxIn.tx_id==tx['id']).all()
+       tx['in'] = [txin.todict() for txin in txins ]
+       txouts = TxOut.query.filter(TxOut.tx_id==tx['id']).all()
+       tx['out'] = [txout.todict() for txout in txouts]
+       txs.append(tx)
+    blk['tx']=txs
     return  json.dumps(blk, default=buffer_to_json, indent=4)
 
 @app.route('/blk/<blkhash>')
 def blk(blkhash):
     """
     """
-    blks = db.engine.execute('select id,hash,height,version,prev_hash,mrkl_root,time,bits,nonce,blk_size,work from blk where hash=%(x)s limit 1', x="\\x" + (blkhash)).first()
-    txids = db.engine.execute('select tx.hash from blk,tx,blk_tx where blk.id=blk_tx.blk_id and blk_tx.tx_id=tx.id and blk.id=%(x)s', x=blkid).fetchall()
+
+    res = Block.query.filter(Block.hash == blkhash.decode('hex')).first()
+    blk = res.todict()
+    res = BlockTx.query.with_entities(BlockTx.tx_id).filter(BlockTx.blk_id ==  blk['id']).limit(10);
     txs=[]
-    for txid in txids:
-       txs.append(txid[0])
-    blk = (dict(zip(blkColumns, blks[1:])))
-    blk['tx'] = txs
+    for txid in res:
+       res = Tx.query.filter(Tx.id==txid).first()
+       tx= res.todict()
+       txins = []
+       txins = TxIn.query.filter(TxIn.tx_id==tx['id']).all()
+       tx['in'] = [txin.todict() for txin in txins ]
+       txouts = TxOut.query.filter(TxOut.tx_id==tx['id']).all()
+       tx['out'] = [txout.todict() for txout in txouts]
+       txs.append(tx)
+    blk['tx']=txs
     return  json.dumps(blk, default=buffer_to_json, indent=4)
 
 @app.route('/addr/<address>')
 def address(address, num=10):
     hash160 = bc_address_to_hash_160( address).encode('hex')
-    import pdb
-    pdb.set_trace()
-    #hash160 = (address)
-    #get addr
+    res = Addr.query.filter(Addr.hash160 == hash160).first()
+    addr=res.todict()
+    txidlist = UTXO.query.with_entities(UTXO.txout_tx_id).filter(UTXO.hash160 == hash160 and UTXO.txin_id == None).limit(10).all()
+    if txidlist ==None:
+        txidlist = UTXO.query.with_entities(UTXO.txout_tx_id).filter(UTXO.hash160 == hash160).limit(10).all()
 
-    addr={}
-    addr['tx']=[]
-    txidlist = db.engine.execute("select c.tx_id from addr a  join addr_txout b on (a.id=b.addr_id) join txout c on (c.id=b.txout_id)  where a.hash160='%s' order by c.id desc limit 10" %   hash160).fetchall()
-
-    for res in txidlist:
-        tx_id = res[0]
-        txs = db.engine.execute('select hash, version, lock_time, coinbase, tx_size from tx where id=%d limit 1' % tx_id).first()
-        tx = dict(zip(txColumns, txs))
-        txinlist = db.engine.execute('select sequence, script_sig, prev_out, prev_out_index from txin where tx_id=%d order by tx_idx' % tx_id).fetchall()
+    txs=[]
+    for txid in txidlist:
+        res = Tx.query.filter(Tx.id==txid).first()
+        tx= res.todict()
         txins = []
-        for vin in txinlist:
-            txin = {}
-            if tx['coinbase']:
-                txin['coinbase'] = vin[1]
-            else:
-                txin =dict(zip(txinColumns, vin))
-                prev_tx = db.engine.execute('select id from tx where hash=%(x)s limit 1', x="\\x" + binascii.hexlify(txin['prev_out'][::-1])).first()
-                tx_id = prev_tx[0]
-                vout = db.engine.execute('select pk_script, value, type from txout where tx_id=%d and tx_idx=%d' % (tx_id,txin['prev_out_index'])).first()
-                prev_txout =dict(zip(txoutColumns, vout))
-                txin['value'] = prev_txout['value'] 
-                txin['addr'] =extract_public_key(prev_txout['scriptPubKey'])
-            txins.append(txin)
-        tx['in'] = txins
-
-        txoutlist = db.engine.execute('select pk_script, value, type from txout where tx_id=%d' % tx_id)
-        txouts = []
-        for vout in txoutlist:
-            txout = dict(zip(txoutColumns, vout))
-            txout['addrs']=extract_public_key(txout['scriptPubKey'])
-            txouts.append(txout)
+        txins = TxIn.query.filter(TxIn.tx_id==tx['id']).all()
+        tx['in'] = [txin.todict() for txin in txins ]
+        txouts = TxOut.query.filter(TxOut.tx_id==tx['id']).all()
+        tx['out'] = [txout.todict() for txout in txouts]
+        txs.append(tx)
  
-        tx['vin_sz'] = len(txins)
-        tx['vout_sz'] = len(txouts)
-        tx['out'] = txouts
-        addr['tx'].append(tx)
-    addr['addr']=address
-    addr['hash160']=hash160
+    addr['tx']=txs
+    addr['address']=address
 
     return  json.dumps(addr, default=buffer_to_json, indent=4)
 
