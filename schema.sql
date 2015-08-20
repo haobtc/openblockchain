@@ -26,56 +26,165 @@ COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
 SET search_path = public, pg_catalog;
 
 --
+-- Name: add_blk_statics(integer); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION add_blk_statics(blkid integer) RETURNS void
+    LANGUAGE plpgsql
+    AS $_$                                                                                                                     
+BEGIN                                                                                                                         
+    update blk set total_in_count=t.a, total_out_count=t.b, total_in_value=t.c, total_out_value=t.d, fees=t.e from (select sum(in_count) as a,sum(out_count) as b, sum(in_value) as c, sum(out_value) as d, sum(fee) as e from tx where id in (select tx_id from blk_tx where blk_id=$1)) as t where blk.id=$1;                                                                      
+                                                                                                                              
+    delete from utx where id in (select tx_id from blk_tx where blk_id=$1);                                                   
+END;                                                                                                                          
+$_$;
+
+
+ALTER FUNCTION public.add_blk_statics(blkid integer) OWNER TO postgres;
+
+--
+-- Name: add_tx_statics(integer, integer, integer, bigint, bigint); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION add_tx_statics(txid integer, inc integer, outc integer, inv bigint, outv bigint) RETURNS void
+    LANGUAGE plpgsql
+    AS $_$
+BEGIN
+    IF (inv = 0) THEN
+        update tx set in_count=$2, out_count=$3, in_value=$4, out_value=$5, fee=0 where id=$1;
+    else
+        update tx set in_count=$2, out_count=$3, in_value=$4, out_value=$5, fee=($4-$5) where id=$1;
+    END IF;
+    perform update_addr_balance($1);
+END
+$_$;
+
+
+ALTER FUNCTION public.add_tx_statics(txid integer, inc integer, outc integer, inv bigint, outv bigint) OWNER TO postgres;
+
+--
+-- Name: delete_blk(bytea); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION delete_blk(blkhash bytea) RETURNS void
+    LANGUAGE plpgsql
+    AS $$                        
+    declare blkid integer;
+    BEGIN
+    blkid=(select id from blk where hash=blkhash);
+    insert into utx select tx_id from blk_tx where blk_id=blkid;
+    delete from blk_tx where blk_id=blkid;
+    delete from blk where id=blkid;
+    END
+$$;
+
+
+ALTER FUNCTION public.delete_blk(blkhash bytea) OWNER TO postgres;
+
+--
 -- Name: delete_tx(integer); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
 CREATE FUNCTION delete_tx(txid integer) RETURNS void
-    LANGUAGE sql
-    AS $$
-     delete from addr_txout where txout_id in (select id from txout where tx_id=txid);
-
-     delete from txin where tx_id=txid;
-
-     delete from txout where tx_id=txid; 
-
-     delete from tx where id=txid; 
-
-$$;
+    LANGUAGE plpgsql
+    AS $_$
+    DECLARE ntx RECORD;
+BEGIN
+     FOR ntx IN select txin_tx_id from vout where txout_tx_id=$1 and txout_tx_id!=txin_tx_id LOOP
+         perform delete_tx(ntx.txin_tx_id);
+     END LOOP;
+     perform  rollback_addr_balance($1);
+     delete from addr_txout where txout_id in (select id from txout where tx_id=$1);
+     delete from txin where tx_id=$1;                                                                                              delete from txout where tx_id=$1;
+     delete from tx where id=$1;                                                                                                   delete from utx where id=$1;
+END;
+$_$;
 
 
 ALTER FUNCTION public.delete_tx(txid integer) OWNER TO postgres;
 
 --
--- Name: update_blk(integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: insert_addr(text, text, integer); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION update_blk(h integer) RETURNS void
-    LANGUAGE sql
+CREATE FUNCTION insert_addr(a text, h text, t integer) RETURNS integer
+    LANGUAGE plpgsql
     AS $$
-  update blk set tx_num=blk_in.tx_num, txin_num=blk_in.txin_num, txin_value=blk_in.txin_value from blk_in where blk_in.height=h;
-
-  update blk set txin_num=blk_out.txout_num, txout_value=blk_out.txout_value from blk_out where blk_out.height=h;
-
+    declare addrid integer;
+BEGIN
+    addrid = (select id from addr where address = a);
+    IF addrid is NULL THEN
+        insert into addr (address, hash160, type) values(a, h,t) RETURNING id into addrid;
+    END IF;
+    return addrid;
+END
 $$;
 
 
-ALTER FUNCTION public.update_blk(h integer) OWNER TO postgres;
+ALTER FUNCTION public.insert_addr(a text, h text, t integer) OWNER TO postgres;
 
 --
--- Name: update_tx(integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: rollback_addr_balance(integer); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION update_tx(txid integer) RETURNS void
-    LANGUAGE sql
-    AS $$
-  update tx set txin_num=tx_inv.txin_num, txin_value=tx_inv.txin_value from tx_inv where tx_inv.id=txid;
-
-  update tx set txout_num=tx_outv.txout_num, txout_value=tx_outv.txout_value from tx_outv where tx_outv.id=txid;
-
+CREATE FUNCTION rollback_addr_balance(txid integer) RETURNS void
+    LANGUAGE plpgsql
+    AS $$                                                                                                                     
+    DECLARE o RECORD;                                                                                                         
+BEGIN                                                                                                                         
+    FOR o IN select address, value from vout where txin_tx_id=txid LOOP                                                       
+       update addr set balance=(balance + o.value) where address=o.address;                                                   
+    END LOOP;                                                                                                                 
+                                                                                                                              
+    FOR o IN select address, value from vout where txout_tx_id=txid LOOP                                                      
+       update addr set balance=(balance - o.value) where address=o.address;                                                   
+    END LOOP;                                                                                                                 
+END;                                                                                                                          
 $$;
 
 
-ALTER FUNCTION public.update_tx(txid integer) OWNER TO postgres;
+ALTER FUNCTION public.rollback_addr_balance(txid integer) OWNER TO postgres;
+
+--
+-- Name: tru_utx(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION tru_utx() RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+    declare did integer;
+BEGIN
+    FOR did IN select id from utx LOOP
+      perform delete_tx(did);
+    END LOOP;
+    truncate table utx;
+END;
+$$;
+
+
+ALTER FUNCTION public.tru_utx() OWNER TO postgres;
+
+--
+-- Name: update_addr_balance(integer); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION update_addr_balance(txid integer) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE o RECORD;
+BEGIN
+    FOR o IN select address, value from vout where txin_tx_id=txid LOOP
+       update addr set balance=(balance - o.value) where address=o.address;
+    END LOOP;
+
+    FOR o IN select address, value from vout where txout_tx_id=txid LOOP
+       update addr set balance=(balance + o.value) where address=o.address;
+    END LOOP;
+END;
+$$;
+
+
+ALTER FUNCTION public.update_addr_balance(txid integer) OWNER TO postgres;
 
 SET default_tablespace = '';
 
@@ -87,12 +196,14 @@ SET default_with_oids = false;
 
 CREATE TABLE addr (
     id integer NOT NULL,
+    address text NOT NULL,
     hash160 text NOT NULL,
-    type integer DEFAULT 0 NOT NULL
+    type integer,
+    balance bigint DEFAULT 0
 );
 
 
-ALTER TABLE public.addr OWNER TO postgres;
+ALTER TABLE addr OWNER TO postgres;
 
 --
 -- Name: addr_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -106,7 +217,7 @@ CREATE SEQUENCE addr_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.addr_id_seq OWNER TO postgres;
+ALTER TABLE addr_id_seq OWNER TO postgres;
 
 --
 -- Name: addr_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -125,7 +236,7 @@ CREATE TABLE addr_txout (
 );
 
 
-ALTER TABLE public.addr_txout OWNER TO postgres;
+ALTER TABLE addr_txout OWNER TO postgres;
 
 --
 -- Name: tx; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
@@ -139,14 +250,17 @@ CREATE TABLE tx (
     coinbase boolean NOT NULL,
     tx_size integer NOT NULL,
     nhash bytea,
-    txin_num integer,
-    txin_value bigint,
-    txout_num integer,
-    txout_value bigint
+    in_count integer,
+    in_value bigint,
+    out_count integer,
+    out_value bigint,
+    fee bigint,
+    recv_time bigint,
+    ip text
 );
 
 
-ALTER TABLE public.tx OWNER TO postgres;
+ALTER TABLE tx OWNER TO postgres;
 
 --
 -- Name: txin; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
@@ -164,7 +278,7 @@ CREATE TABLE txin (
 );
 
 
-ALTER TABLE public.txin OWNER TO postgres;
+ALTER TABLE txin OWNER TO postgres;
 
 --
 -- Name: txout; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
@@ -180,76 +294,43 @@ CREATE TABLE txout (
 );
 
 
-ALTER TABLE public.txout OWNER TO postgres;
+ALTER TABLE txout OWNER TO postgres;
 
 --
 -- Name: vout; Type: VIEW; Schema: public; Owner: postgres
 --
 
 CREATE VIEW vout AS
- SELECT addr.hash160,
-    addr_txout.addr_id,
-    b.id AS txout_id,
-    txin.id AS txin_id,
-    tx.id AS tx_id,
-    b.value
-   FROM ((((txin
-     JOIN tx ON ((tx.hash = txin.prev_out)))
-     RIGHT JOIN txout b ON (((b.tx_id = tx.id) AND (b.tx_idx = txin.prev_out_index))))
-     JOIN addr_txout ON ((addr_txout.txout_id = b.id)))
-     JOIN addr ON ((addr.id = addr_txout.addr_id)));
+ SELECT g.address,
+    g.id AS addr_id,
+    a.id AS txout_id,
+    c.id AS txin_id,
+    e.id AS txin_tx_id,
+    b.id AS txout_tx_id,
+    a.value
+   FROM (((((txout a
+     LEFT JOIN tx b ON ((b.id = a.tx_id)))
+     LEFT JOIN txin c ON (((c.prev_out = b.hash) AND (c.prev_out_index = a.tx_idx))))
+     LEFT JOIN tx e ON ((e.id = c.tx_id)))
+     LEFT JOIN addr_txout f ON ((f.txout_id = a.id)))
+     LEFT JOIN addr g ON ((g.id = f.addr_id)));
 
 
-ALTER TABLE public.vout OWNER TO postgres;
-
---
--- Name: b; Type: VIEW; Schema: public; Owner: postgres
---
-
-CREATE VIEW b AS
- SELECT vout.hash160,
-    sum(vout.value) AS balance
-   FROM vout
-  WHERE (vout.txin_id IS NULL)
-  GROUP BY vout.hash160;
-
-
-ALTER TABLE public.b OWNER TO postgres;
-
---
--- Name: vvout; Type: MATERIALIZED VIEW; Schema: public; Owner: postgres; Tablespace: 
---
-
-CREATE MATERIALIZED VIEW vvout AS
- SELECT addr.hash160,
-    addr_txout.addr_id,
-    b.id AS txout_id,
-    txin.id AS txin_id,
-    tx.id AS tx_id,
-    b.value
-   FROM ((((txin
-     JOIN tx ON ((tx.hash = txin.prev_out)))
-     RIGHT JOIN txout b ON (((b.tx_id = tx.id) AND (b.tx_idx = txin.prev_out_index))))
-     JOIN addr_txout ON ((addr_txout.txout_id = b.id)))
-     JOIN addr ON ((addr.id = addr_txout.addr_id)))
-  WITH NO DATA;
-
-
-ALTER TABLE public.vvout OWNER TO postgres;
+ALTER TABLE vout OWNER TO postgres;
 
 --
 -- Name: balance; Type: VIEW; Schema: public; Owner: postgres
 --
 
 CREATE VIEW balance AS
- SELECT vvout.hash160,
-    sum(vvout.value) AS balance
-   FROM vvout
-  WHERE (vvout.txin_id IS NULL)
-  GROUP BY vvout.hash160;
+ SELECT vout.addr_id,
+    sum(vout.value) AS value
+   FROM vout
+  WHERE (vout.txin_id IS NULL)
+  GROUP BY vout.addr_id;
 
 
-ALTER TABLE public.balance OWNER TO postgres;
+ALTER TABLE balance OWNER TO postgres;
 
 --
 -- Name: blk; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
@@ -268,16 +349,16 @@ CREATE TABLE blk (
     blk_size integer NOT NULL,
     chain integer NOT NULL,
     work bytea,
-    txin_num integer,
-    txin_value bigint,
-    txout_num integer,
-    txout_value bigint,
-    tx_num integer,
-    blk_fee bigint
+    total_in_count integer,
+    total_in_value bigint,
+    fees bigint,
+    total_out_count integer,
+    total_out_value bigint,
+    tx_count integer
 );
 
 
-ALTER TABLE public.blk OWNER TO postgres;
+ALTER TABLE blk OWNER TO postgres;
 
 --
 -- Name: blk_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -291,7 +372,7 @@ CREATE SEQUENCE blk_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.blk_id_seq OWNER TO postgres;
+ALTER TABLE blk_id_seq OWNER TO postgres;
 
 --
 -- Name: blk_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -299,34 +380,6 @@ ALTER TABLE public.blk_id_seq OWNER TO postgres;
 
 ALTER SEQUENCE blk_id_seq OWNED BY blk.id;
 
-
---
--- Name: blk_in; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
---
-
-CREATE TABLE blk_in (
-    height integer,
-    tx_num bigint,
-    txin_num bigint,
-    txin_value numeric
-);
-
-
-ALTER TABLE public.blk_in OWNER TO postgres;
-
---
--- Name: blk_out; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
---
-
-CREATE TABLE blk_out (
-    height integer,
-    tx_num bigint,
-    txout_num bigint,
-    txout_value numeric
-);
-
-
-ALTER TABLE public.blk_out OWNER TO postgres;
 
 --
 -- Name: blk_tx; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
@@ -339,79 +392,7 @@ CREATE TABLE blk_tx (
 );
 
 
-ALTER TABLE public.blk_tx OWNER TO postgres;
-
---
--- Name: inout; Type: VIEW; Schema: public; Owner: postgres
---
-
-CREATE VIEW "inout" AS
- SELECT txin.id AS txin_id,
-    tx.id AS tx_id,
-    b.id AS txout_id
-   FROM ((txin
-     JOIN tx ON ((tx.hash = txin.prev_out)))
-     JOIN txout b ON (((b.tx_id = tx.id) AND (b.tx_idx = txin.prev_out_index))));
-
-
-ALTER TABLE public."inout" OWNER TO postgres;
-
---
--- Name: orphan; Type: MATERIALIZED VIEW; Schema: public; Owner: postgres; Tablespace: 
---
-
-CREATE MATERIALIZED VIEW orphan AS
- SELECT l.blk_id,
-    l.tx_id
-   FROM blk_tx l
-  WHERE (NOT (EXISTS ( SELECT 1
-           FROM blk i
-          WHERE (l.blk_id = i.id))))
-  WITH NO DATA;
-
-
-ALTER TABLE public.orphan OWNER TO postgres;
-
---
--- Name: tx_inv; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
---
-
-CREATE TABLE tx_inv (
-    id integer,
-    hash bytea,
-    txin_num bigint,
-    txin_value numeric
-);
-
-
-ALTER TABLE public.tx_inv OWNER TO postgres;
-
---
--- Name: tx_outv; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
---
-
-CREATE TABLE tx_outv (
-    id integer,
-    hash bytea,
-    txout_num bigint,
-    txout_value numeric
-);
-
-
-ALTER TABLE public.tx_outv OWNER TO postgres;
-
---
--- Name: tx_fee; Type: VIEW; Schema: public; Owner: postgres
---
-
-CREATE VIEW tx_fee AS
- SELECT tx_inv.id,
-    (tx_inv.txin_value - tx_outv.txout_value) AS fee
-   FROM (tx_inv
-     JOIN tx_outv ON ((tx_outv.id = tx_inv.id)));
-
-
-ALTER TABLE public.tx_fee OWNER TO postgres;
+ALTER TABLE blk_tx OWNER TO postgres;
 
 --
 -- Name: tx_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -425,7 +406,7 @@ CREATE SEQUENCE tx_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.tx_id_seq OWNER TO postgres;
+ALTER TABLE tx_id_seq OWNER TO postgres;
 
 --
 -- Name: tx_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -446,7 +427,7 @@ CREATE SEQUENCE txin_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.txin_id_seq OWNER TO postgres;
+ALTER TABLE txin_id_seq OWNER TO postgres;
 
 --
 -- Name: txin_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -467,7 +448,7 @@ CREATE SEQUENCE txout_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.txout_id_seq OWNER TO postgres;
+ALTER TABLE txout_id_seq OWNER TO postgres;
 
 --
 -- Name: txout_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -477,18 +458,15 @@ ALTER SEQUENCE txout_id_seq OWNED BY txout.id;
 
 
 --
--- Name: utx; Type: VIEW; Schema: public; Owner: postgres
+-- Name: utx; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
 --
 
-CREATE VIEW utx AS
- SELECT l.id
-   FROM tx l
-  WHERE (NOT (EXISTS ( SELECT 1
-           FROM blk_tx i
-          WHERE (l.id = i.tx_id))));
+CREATE TABLE utx (
+    id integer
+);
 
 
-ALTER TABLE public.utx OWNER TO postgres;
+ALTER TABLE utx OWNER TO postgres;
 
 --
 -- Name: id; Type: DEFAULT; Schema: public; Owner: postgres
@@ -526,19 +504,19 @@ ALTER TABLE ONLY txout ALTER COLUMN id SET DEFAULT nextval('txout_id_seq'::regcl
 
 
 --
--- Name: addr_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
---
-
-ALTER TABLE ONLY addr
-    ADD CONSTRAINT addr_pkey PRIMARY KEY (id);
-
-
---
 -- Name: blk_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
 --
 
 ALTER TABLE ONLY blk
     ADD CONSTRAINT blk_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: naddr_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
+--
+
+ALTER TABLE ONLY addr
+    ADD CONSTRAINT naddr_pkey PRIMARY KEY (id);
 
 
 --
@@ -566,24 +544,34 @@ ALTER TABLE ONLY txout
 
 
 --
--- Name: addr_hash160_index; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+-- Name: uniq_addr_address; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
 --
 
-CREATE INDEX addr_hash160_index ON addr USING btree (hash160);
-
-
---
--- Name: addr_txout_addr_id_index; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
---
-
-CREATE INDEX addr_txout_addr_id_index ON addr_txout USING btree (addr_id);
+ALTER TABLE ONLY addr
+    ADD CONSTRAINT uniq_addr_address UNIQUE (address);
 
 
 --
--- Name: addr_txout_txout_id_index; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+-- Name: uniq_blk_hash; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
 --
 
-CREATE INDEX addr_txout_txout_id_index ON addr_txout USING btree (txout_id);
+ALTER TABLE ONLY blk
+    ADD CONSTRAINT uniq_blk_hash UNIQUE (hash);
+
+
+--
+-- Name: uniq_tx_hash; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
+--
+
+ALTER TABLE ONLY tx
+    ADD CONSTRAINT uniq_tx_hash UNIQUE (hash);
+
+
+--
+-- Name: addr_txout_index; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE UNIQUE INDEX addr_txout_index ON addr_txout USING btree (addr_id, txout_id);
 
 
 --
@@ -622,6 +610,13 @@ CREATE INDEX blk_tx_tx_id_index ON blk_tx USING btree (tx_id);
 
 
 --
+-- Name: inaddr_txout_index; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX inaddr_txout_index ON addr_txout USING btree (txout_id);
+
+
+--
 -- Name: tx_hash_index; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
 --
 
@@ -657,80 +652,12 @@ CREATE INDEX txout_txid_index ON txout USING btree (tx_id);
 
 
 --
--- Name: vvout_hash160; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
---
-
-CREATE INDEX vvout_hash160 ON vvout USING btree (hash160);
-
-
---
--- Name: _RETURN; Type: RULE; Schema: public; Owner: postgres
---
-
-CREATE RULE "_RETURN" AS
-    ON SELECT TO blk_out DO INSTEAD  SELECT blk.height,
-    count(DISTINCT blk_tx.tx_id) AS tx_num,
-    count(txout.id) AS txout_num,
-    sum(txout.value) AS txout_value
-   FROM ((blk
-     JOIN blk_tx ON ((blk_tx.blk_id = blk.id)))
-     LEFT JOIN txout ON ((txout.tx_id = blk_tx.tx_id)))
-  GROUP BY blk.id;
-
-
---
--- Name: _RETURN; Type: RULE; Schema: public; Owner: postgres
---
-
-CREATE RULE "_RETURN" AS
-    ON SELECT TO blk_in DO INSTEAD  SELECT blk.height,
-    count(DISTINCT blk_tx.tx_id) AS tx_num,
-    count(txin.id) AS txin_num,
-    sum(txout.value) AS txin_value
-   FROM ((((blk
-     JOIN blk_tx ON ((blk_tx.blk_id = blk.id)))
-     JOIN txin ON ((txin.tx_id = blk_tx.tx_id)))
-     JOIN tx ON ((tx.hash = txin.prev_out)))
-     JOIN txout ON (((txout.tx_id = tx.id) AND (txout.tx_idx = txin.prev_out_index))))
-  GROUP BY blk.id;
-
-
---
--- Name: _RETURN; Type: RULE; Schema: public; Owner: postgres
---
-
-CREATE RULE "_RETURN" AS
-    ON SELECT TO tx_inv DO INSTEAD  SELECT a.id,
-    a.hash,
-    count(txin.id) AS txin_num,
-    sum(txout.value) AS txin_value
-   FROM (((tx a
-     JOIN txin ON ((txin.tx_id = a.id)))
-     JOIN tx b ON ((b.hash = txin.prev_out)))
-     JOIN txout ON (((txout.tx_id = b.id) AND (txout.tx_idx = txin.prev_out_index))))
-  GROUP BY a.id;
-
-
---
--- Name: _RETURN; Type: RULE; Schema: public; Owner: postgres
---
-
-CREATE RULE "_RETURN" AS
-    ON SELECT TO tx_outv DO INSTEAD  SELECT tx.id,
-    tx.hash,
-    count(txout.id) AS txout_num,
-    sum(txout.value) AS txout_value
-   FROM (tx
-     JOIN txout ON ((txout.tx_id = tx.id)))
-  GROUP BY tx.id;
-
-
---
--- Name: public; Type: ACL; Schema: -; Owner: postgres
+-- Name: public; Type: ACL; Schema: -; Owner: daniel
 --
 
 REVOKE ALL ON SCHEMA public FROM PUBLIC;
-REVOKE ALL ON SCHEMA public FROM postgres;
+REVOKE ALL ON SCHEMA public FROM daniel;
+GRANT ALL ON SCHEMA public TO daniel;
 GRANT ALL ON SCHEMA public TO postgres;
 GRANT ALL ON SCHEMA public TO PUBLIC;
 
