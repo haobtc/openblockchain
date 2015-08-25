@@ -468,6 +468,37 @@ CREATE TABLE utx (
 
 ALTER TABLE utx OWNER TO postgres;
 
+
+--
+-- Name: utxo; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW utxo AS
+ SELECT g.address,
+    g.id AS addr_id,
+    a.id AS txout_id,
+    c.id AS txin_id,
+    e.id AS txin_tx_id,
+    b.id AS txout_tx_id,
+    b.hash AS txout_txhash,
+    a.value,
+    a.tx_idx,
+    blk.height,
+    blk."time",
+    a.pk_script
+   FROM (((((((txout a
+     LEFT JOIN tx b ON ((b.id = a.tx_id)))
+     LEFT JOIN txin c ON (((c.prev_out = b.hash) AND (c.prev_out_index = a.tx_idx))))
+     LEFT JOIN tx e ON ((e.id = c.tx_id)))
+     LEFT JOIN addr_txout f ON ((f.txout_id = a.id)))
+     LEFT JOIN addr g ON ((g.id = f.addr_id)))
+     JOIN blk_tx ON ((blk_tx.tx_id = a.tx_id)))
+     JOIN blk ON ((blk.id = blk_tx.blk_id)))
+  WHERE (c.id IS NULL);
+
+
+ALTER TABLE utxo OWNER TO postgres;
+
 --
 -- Name: id; Type: DEFAULT; Schema: public; Owner: postgres
 --
