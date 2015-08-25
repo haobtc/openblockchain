@@ -2,7 +2,7 @@
 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, Table, Column, Integer, String, Text, MetaData
-from sqlalchemy.dialects.postgresql import BIGINT, BIT, BOOLEAN, BYTEA, INTEGER, BOOLEAN
+from sqlalchemy.dialects.postgresql import BIGINT, BIT, BOOLEAN, BYTEA, INTEGER, BOOLEAN, TEXT
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import ForeignKey, PrimaryKeyConstraint
 from sqlalchemy.orm import relationship, backref
@@ -11,7 +11,7 @@ from sqlalchemy.orm import relationship, backref
 #logging.basicConfig()
 #logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
-engine = create_engine('postgresql://postgres@127.0.0.1:5432/bitcoin',
+engine = create_engine('postgresql://postgres:c1u2u9z@@127.0.0.1:5432/test',
                        echo=False)
 db_session = scoped_session(sessionmaker(autocommit=False,
                                          autoflush=False,
@@ -44,6 +44,12 @@ class Block(SQLBase):
     blk_size = Column(INTEGER)
     chain = Column(INTEGER)
     work = Column(BYTEA)
+    total_in_count  = Column(INTEGER)
+    total_in_value  = Column(BIGINT)
+    fees            = Column(BIGINT)
+    total_out_count = Column(INTEGER)
+    total_out_value = Column(BIGINT)
+    tx_count        = Column(INTEGER) 
 
     def __repr__(self):
         return "<('%s')>" % (self.hash.decode('hex'))
@@ -58,6 +64,11 @@ class Tx(SQLBase):
     coinbase = Column(BOOLEAN)
     tx_size = Column(BIGINT)
     nhash = Column(BYTEA)
+    in_count  = Column(INTEGER)
+    in_value  = Column(BIGINT )
+    out_count = Column(INTEGER)
+    out_value = Column(BIGINT )
+    fee       = Column(BIGINT )
 
     def __repr__(self):
         return "<('%s')>" % (self.hash.encode('hex'))
@@ -91,3 +102,21 @@ class TxOut(SQLBase):
     pk_script = Column(BYTEA)
     value = Column(BIGINT)
     type = Column(INTEGER)
+
+
+class UTXO(SQLBase):
+    __tablename__ = 'utxo'
+    hash160 = Column(TEXT, primary_key=True)
+    addr_id = Column(INTEGER)
+    txout_id = Column(INTEGER)
+    txin_id = Column(INTEGER)
+    txin_tx_id = Column(INTEGER)
+    txout_tx_id = Column(INTEGER)
+    txout_txhash = Column(BYTEA)
+    value = Column(BIGINT)
+    tx_idx = Column(INTEGER)
+    height = Column(INTEGER)
+    time  = Column(BIGINT)
+    pk_script  = Column(BYTEA)
+    rev_time  = Column(BIGINT)
+ 

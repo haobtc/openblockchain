@@ -13,13 +13,14 @@ def db2t_tx(conn, dtx, db_block=None):
     t.hash = hexlify(dtx.hash)
     t.version = dtx.version
 
-    blkid = BlockTx.query.filter(
-        BlockTx.tx_id == dtx.id).limit(1).first().blk_id
-    blk = Block.query.filter(Block.id == blkid).limit(1).first()
-    if blk:
-        t.block = db2t_block(conn, blk)
-        t.blockIndex = BlockTx.query.filter(
-            BlockTx.blk_id == blkid, BlockTx.tx_id == dtx.id).first().idx
+    blktx = BlockTx.query.filter(BlockTx.tx_id == dtx.id).limit(1).first()
+    if blktx != None:
+        blkid = blktx.blk_id
+        blk = Block.query.filter(Block.id == blkid).limit(1).first()
+        if blk:
+            t.block = db2t_block(conn, blk)
+            t.blockIndex = BlockTx.query.filter(
+                BlockTx.blk_id == blkid, BlockTx.tx_id == dtx.id).first().idx
 
     txinlist = TxIn.query.filter(TxIn.tx_id == dtx.id).all()
     for vin in txinlist:
@@ -105,55 +106,33 @@ def send_tx(conn, stx):
             code="tx_exist",
             message="tx already exists in the blockchain")
 
-# UTXO related
-def get_utxo(conn, dtx, output, i):
-    utxo = ttypes.UTXO(nettype=get_nettype(conn))
-    utxo.address = output['addrs'][0]
-    utxo.amountSatoshi = output['v']
-    utxo.txid = dtx['hash']
-    utxo.vout = i
-    utxo.scriptPubKey = output['s']
-
-    b, index = get_tx_db_block(conn, dtx)
-    if b:
-        tip = get_tip_block(conn)
-        utxo.confirmations = tip.height - b['height'] + 1
-        utxo.timestamp = b['timestamp']
-    else:
-        utxo.confirmations = 0
-        utxo.timestamp = int(time.mktime(dtx['_id'].generation_time.replace(
-            tzinfo=pytz.utc).utctimetuple()))
-        #utxo.timestamp = int(time.time())
-    return utxo
-
-
 def get_unspent(conn, addresses):
     addr_set = set(addresses)
-    output_txes = conn.tx.find({'oa': {'$in': addresses}},
-                               projection=['hash', 'vout'])
-    input_txes = conn.tx.find({'ia': {'$in': addresses}},
-                              projection=['hash', 'vin'])
+    for address in addresses:
+        hash160 = hash160 + "'" + bc_address_to_hash_160(address).encode(
+            'hex') + "',"
+    hash160 = hash160[:-1]
+ 
 
     utxos = []
-    spent_set = set([])
-    for dtx in input_txes:
-        for input in dtx['vin']:
-            if not input.get('addrs'):
-                continue
-            # FIXME: consider multiple addrs
-            addr = input['addrs'][0]
-            if addr in addr_set:
-                spent_set.add((input['hash'], input['n']))
+    utxos.append(get_utxo(conn, dtx, output, i))
+    res = UTXO.query.filter(UTXO.hash160 in hash160).limit(10)
+    for u in res:
+        utxo = ttypes.UTXO(nettype=get_nettype(conn))
+        utxo.address = u.hash160
+        utxo.amountSatoshi = u.value
+        utxo.txid = u.txout_txhash
+        utxo.vout = u.tx_idx
+        utxo.scriptPubKey = u.pk_script
+        if u.height>0:
+            tip = get_tip_block(conn)
+            utxo.confirmations = tip.height - u.height + 1
+            utxo.timestamp = u.time
+        else:
+            utxo.confirmations = 0
+            utxo.timestamp = u.rev_time
 
-    for dtx in output_txes:
-        for i, output in enumerate(dtx['vout']):
-            if not output.get('addrs'):
-                continue
-            #FIXME: consider multiple addrs
-            addr = output['addrs'][0]
-            if addr in addr_set:
-                if (dtx['hash'], i) not in spent_set:
-                    utxos.append(get_utxo(conn, dtx, output, i))
+        utxos.append(utxo)
 
     return utxos
 
@@ -165,7 +144,8 @@ def get_related_txid_list(conn, addresses):
             'hex') + "',"
     hash160 = hash160[:-1]
     txes = engine.execute(text(
-        "select hash from tx a join txout b on (b.tx_id=a.id) join addr_txout c on (c.txout_id=b.id) join addr d on (d.id=c.addr_id) where d.hash160 in (%s) limit 10"
+        #"select hash from tx a join txout b on (b.tx_id=a.id) join addr_txout c on (c.txout_id=b.id) join addr d on (d.id=c.addr_id) and d.hash160 in (%s) limit 10"
+        "select txout_txhash from utxo where hash160 in (%s) limit 10"
         % hash160)).fetchall()
     return [hexlify(tx[0]) for tx in txes]
 
@@ -177,7 +157,8 @@ def get_related_tx_list(conn, addresses):
             'hex') + "',"
     hash160 = hash160[:-1]
     txes = engine.execute(text(
-        "select hash from tx a join txout b on (b.tx_id=a.id) join addr_txout c on (c.txout_id=b.id) join addr d on (d.id=c.addr_id) where d.hash160 in (%s) limit 10"
+        #"select hash from tx a join txout b on (b.tx_id=a.id) join addr_txout c on (c.txout_id=b.id) join addr d on (d.id=c.addr_id) and d.hash160 in (%s) limit 10"
+        "select txout_tx_id from vout where hash160 in (%s) limit 10"
         % hash160)).fetchall()
-    return [db2t_tx(conn, Tx.query.filter(Tx.hash == tx[0]).limit(1).first())
+    return [db2t_tx(conn, Tx.query.filter(Tx.id == tx[0]).limit(1).first())
             for tx in txes]
