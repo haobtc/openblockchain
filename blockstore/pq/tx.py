@@ -5,8 +5,6 @@ from sqlalchemy.sql import text
 from binascii import hexlify
 from deserialize import extract_public_key
 from database import Tx, Block, BlockTx, TxIn, TxOut, engine
-from base58 import bc_address_to_hash_160
-
 
 def db2t_tx(conn, dtx, db_block=None):
     t = ttypes.Tx(nettype=get_nettype(conn))
@@ -108,18 +106,13 @@ def send_tx(conn, stx):
 
 def get_unspent(conn, addresses):
     addr_set = set(addresses)
-    for address in addresses:
-        hash160 = hash160 + "'" + bc_address_to_hash_160(address).encode(
-            'hex') + "',"
-    hash160 = hash160[:-1]
- 
 
     utxos = []
     utxos.append(get_utxo(conn, dtx, output, i))
-    res = UTXO.query.filter(UTXO.hash160 in hash160).limit(10)
+    res = UTXO.query.filter(UTXO.addresses in addresses).limit(10)
     for u in res:
         utxo = ttypes.UTXO(nettype=get_nettype(conn))
-        utxo.address = u.hash160
+        utxo.address = u.addresses
         utxo.amountSatoshi = u.value
         utxo.txid = u.txout_txhash
         utxo.vout = u.tx_idx
@@ -138,27 +131,23 @@ def get_unspent(conn, addresses):
 
 
 def get_related_txid_list(conn, addresses):
-    hash160 = ''
+    params = ''
     for address in addresses:
-        hash160 = hash160 + "'" + bc_address_to_hash_160(address).encode(
-            'hex') + "',"
-    hash160 = hash160[:-1]
+        params = params + "'" + address + "',"
+    params = params[:-1]
     txes = engine.execute(text(
-        #"select hash from tx a join txout b on (b.tx_id=a.id) join addr_txout c on (c.txout_id=b.id) join addr d on (d.id=c.addr_id) and d.hash160 in (%s) limit 10"
-        "select txout_txhash from utxo where hash160 in (%s) limit 10"
-        % hash160)).fetchall()
+        "select txout_txhash from utxo where address in (%s) limit 10"
+        % params)).fetchall()
     return [hexlify(tx[0]) for tx in txes]
 
 
 def get_related_tx_list(conn, addresses):
-    hash160 = ''
+    params = ''
     for address in addresses:
-        hash160 = hash160 + "'" + bc_address_to_hash_160(address).encode(
-            'hex') + "',"
-    hash160 = hash160[:-1]
+        params = params + "'" + address + "',"
+    params = params[:-1]
     txes = engine.execute(text(
-        #"select hash from tx a join txout b on (b.tx_id=a.id) join addr_txout c on (c.txout_id=b.id) join addr d on (d.id=c.addr_id) and d.hash160 in (%s) limit 10"
-        "select txout_tx_id from vout where hash160 in (%s) limit 10"
-        % hash160)).fetchall()
+        "select txout_tx_id from vout where address  in (%s) limit 10"
+        % params)).fetchall()
     return [db2t_tx(conn, Tx.query.filter(Tx.id == tx[0]).limit(1).first())
             for tx in txes]
