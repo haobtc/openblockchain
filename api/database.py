@@ -124,9 +124,9 @@ class TxOut(SQLBase):
 class Addr(SQLBase):
     __tablename__ = 'addr'
     id = Column(INTEGER, primary_key=True)
+    address = Column(TEXT, primary_key=True)
     hash160 = Column(TEXT)
     balance = Column(BIGINT)
-    type = Column(INTEGER)
 
     def todict(self):
         return to_dict(self, self.__class__)
@@ -134,7 +134,8 @@ class Addr(SQLBase):
 
 class UTXO(SQLBase):
     __tablename__ = 'utxo'
-    hash160 = Column(TEXT, primary_key=True)
+    address = Column(TEXT, primary_key=True)
+    hash160 = Column(TEXT)
     addr_id = Column(INTEGER)
     txout_id = Column(INTEGER)
     txin_id = Column(INTEGER)

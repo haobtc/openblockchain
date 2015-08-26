@@ -88,12 +88,11 @@ def blk(blkhash):
 
 @app.route('/addr/<address>')
 def address(address, num=10):
-    hash160 = bc_address_to_hash_160( address).encode('hex')
-    res = Addr.query.filter(Addr.hash160 == hash160).first()
+    res = Addr.query.filter(Addr.address == address).first()
     addr=res.todict()
-    txidlist = UTXO.query.with_entities(UTXO.txout_tx_id).filter(UTXO.hash160 == hash160 and UTXO.txin_id == None).limit(10).all()
+    txidlist = UTXO.query.with_entities(UTXO.txout_tx_id).filter(UTXO.address == address).limit(10).all()
     if txidlist ==None:
-        txidlist = UTXO.query.with_entities(UTXO.txout_tx_id).filter(UTXO.hash160 == hash160).limit(10).all()
+        txidlist = UTXO.query.with_entities(UTXO.txout_tx_id).filter(UTXO.address == address).limit(10).all()
 
     txs=[]
     for txid in txidlist:
