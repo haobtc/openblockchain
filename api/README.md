@@ -6,6 +6,9 @@
 
 /mempool/<txhash>
 
+/addr/<address>
+
+
 /mininginfo
 
 /blockchaininfo
@@ -18,6 +21,3 @@
 
 /txoutsetinfo
 
-TODO:
-
-/addr

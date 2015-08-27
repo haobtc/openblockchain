@@ -10,7 +10,7 @@ from deserialize import extract_public_key
 from base58 import bc_address_to_hash_160
 from database import *
 
-RPC_URL = "http://bitcoinrpc:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX@127.0.0.1:8333"
+RPC_URL = "http://bitcoinrpc:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX@127.0.0.1:8332"
 access = AuthServiceProxy(RPC_URL)
 
 app = Flask(__name__)
@@ -21,16 +21,12 @@ def buffer_to_json(python_object):
     raise TypeError(repr(python_object) + ' is not JSON serializable')
 
 @app.route('/tx/<txhash>')
-def tx(txhash):                                                                                                                                                                  
-    """
-    """
-    #txhash = "\\x".join(txhash)
+def tx(txhash):
     txhash = txhash.decode('hex')
     res = Tx.query.filter(Tx.hash == txhash).first()
     tx= res.todict()
     tx_id = tx['id']
 
-    txins = []
     txins = TxIn.query.filter(TxIn.tx_id==tx_id).all()
     tx['in'] = [txin.todict() for txin in txins ]
     txouts = TxOut.query.filter(TxOut.tx_id==tx_id).all()
@@ -39,10 +35,10 @@ def tx(txhash):
 
 @app.route('/height/<height>')
 def blkheight(height=0):
-
     res = Block.query.filter(Block.height == height).first()
     blk = res.todict()
-    res = BlockTx.query.with_entities(BlockTx.tx_id).filter(BlockTx.blk_id == blk['id']).limit(10);
+    res = BlockTx.query.with_entities(BlockTx.tx_id).filter(BlockTx.blk_id == blk['id']).limit(10)
+
     txs=[]
     for txid in res:
        res = Tx.query.filter(Tx.id==txid).first()
@@ -53,17 +49,16 @@ def blkheight(height=0):
        txouts = TxOut.query.filter(TxOut.tx_id==tx['id']).all()
        tx['out'] = [txout.todict() for txout in txouts]
        txs.append(tx)
+
     blk['tx']=txs
     return  json.dumps(blk, default=buffer_to_json, indent=4)
 
 @app.route('/blk/<blkhash>')
 def blk(blkhash):
-    """
-    """
-
     res = Block.query.filter(Block.hash == blkhash.decode('hex')).first()
     blk = res.todict()
-    res = BlockTx.query.with_entities(BlockTx.tx_id).filter(BlockTx.blk_id ==  blk['id']).limit(10);
+    res = BlockTx.query.with_entities(BlockTx.tx_id).filter(BlockTx.blk_id == blk['id']).limit(10)
+
     txs=[]
     for txid in res:
        res = Tx.query.filter(Tx.id==txid).first()
@@ -74,6 +69,7 @@ def blk(blkhash):
        txouts = TxOut.query.filter(TxOut.tx_id==tx['id']).all()
        tx['out'] = [txout.todict() for txout in txouts]
        txs.append(tx)
+
     blk['tx']=txs
     return  json.dumps(blk, default=buffer_to_json, indent=4)
 
@@ -81,7 +77,7 @@ def blk(blkhash):
 def address(address, num=10):
     res = Addr.query.filter(Addr.address == address).first()
     addr=res.todict()
-    txidlist = UTXO.query.with_entities(UTXO.txout_tx_id).filter(UTXO.address == address).limit(10).all()
+    txidlist = UTXO.query.with_entities(UTXO.txout_tx_id).filter(UTXO.address == address).limit(10)
 
     txs=[]
     for txid in txidlist:
@@ -100,13 +96,13 @@ def address(address, num=10):
     return  json.dumps(addr, default=buffer_to_json, indent=4)
 
 
-@app.route('/mempool/<txhash>')
+@app.route('/mempool')
 def getrawmempool():                                                                                                                                                                  
-    return access.getrawmempool()
+    return access.getrawmempool(True)
     
 @app.route('/nodeinfo')
-def getaddednodeinfo (node):
-    return access.getaddednodeinfo('dns', node)
+def getaddednodeinfo ():
+    return access.getaddednodeinfo(True)
 
 @app.route('/mininginfo')
 def getmininginfo():
@@ -126,7 +122,7 @@ def getnetworkinfo():
  
 @app.route('/peerinfo')
 def getpeerinfo():
-    return access.getpeerinf()
+    return access.getpeerinfo()
 
 @app.route('/txoutsetinfo')
 def gettxoutsetinfo():
