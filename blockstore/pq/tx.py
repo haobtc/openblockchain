@@ -136,7 +136,7 @@ def get_related_txid_list(conn, addresses):
         params = params + "'" + address + "',"
     params = params[:-1]
     txes = engine.execute(text(
-        "select txout_txhash from utxo where address in (%s) limit 10"
+        "select txout_txhash from vout where address in (%s) limit 10"
         % params)).fetchall()
     return [hexlify(tx[0]) for tx in txes]
 

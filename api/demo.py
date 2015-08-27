@@ -14,15 +14,6 @@ RPC_URL = "http://bitcoinrpc:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX@127.0.
 access = AuthServiceProxy(RPC_URL)
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://postgres@127.0.0.1/bitcoin'
-db = SQLAlchemy(app)
-
-txColumns=('hash','version','lock_time','coinbase','size')
-txinColumns=('sequence', 'script_sig', 'prev_out', 'prev_out_index' )
-txoutColumns=('scriptPubKey', 'value', 'type')
-blkColumns=('hash','height','version','prev_hash','mrkl_root','time','bits','nonce','blk_size','work')
-addr=('address', 'hash160', 'tx_in_sz', 'tx_out_sz', 'btc_in', 'btc_out', 'balance' , 'tx_sz')
-
 
 def buffer_to_json(python_object):
     if isinstance(python_object, (buffer, )):
@@ -91,8 +82,6 @@ def address(address, num=10):
     res = Addr.query.filter(Addr.address == address).first()
     addr=res.todict()
     txidlist = UTXO.query.with_entities(UTXO.txout_tx_id).filter(UTXO.address == address).limit(10).all()
-    if txidlist ==None:
-        txidlist = UTXO.query.with_entities(UTXO.txout_tx_id).filter(UTXO.address == address).limit(10).all()
 
     txs=[]
     for txid in txidlist:
