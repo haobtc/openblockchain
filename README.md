@@ -21,7 +21,7 @@ make -j
 
 cd api 
 
-change RPC_URL and app.config['SQLALCHEMY_DATABASE_URI'] by your bitcoind and postgres server config
+change RPC_URL and engine = create_engine('postgresql://postgres:c1u2u9z@@127.0.0.1:5433/test', echo=True) by your bitcoind and postgres server config
 
 python demo.py
 
