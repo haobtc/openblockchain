@@ -68,10 +68,13 @@ ALTER FUNCTION public.add_tx_statics(txid integer, inc integer, outc integer, in
 
 CREATE FUNCTION delete_blk(blkhash bytea) RETURNS void
     LANGUAGE plpgsql
-    AS $$                        
-    declare blkid integer;
-    BEGIN
-    blkid=(select id from blk where hash=blkhash);
+    AS $$                                                                                                                     
+    declare blkid integer;                                                                                                    
+    declare txid integer;                                                                                                    
+    BEGIN                                                                                                                     
+    blkid=(select id from blk where hash=blkhash);                                                                            
+    txid=(select tx_id from blk_tx where blk_id=blkid and idx=0);
+    perform delete_tx(txid);
     insert into utx select tx_id from blk_tx where blk_id=blkid;
     delete from blk_tx where blk_id=blkid;
     delete from blk where id=blkid;
@@ -90,8 +93,8 @@ CREATE FUNCTION delete_tx(txid integer) RETURNS void
     AS $_$
     DECLARE ntx RECORD;
 BEGIN
-     FOR ntx IN select txin_tx_id from vout where txout_tx_id=$1 and txout_tx_id!=txin_tx_id LOOP
-         perform delete_tx(ntx.txin_tx_id);
+     FOR ntx IN select txout_tx_id from vout where txin_tx_id=$1 and txout_tx_id!=txin_tx_id LOOP
+         perform delete_tx(ntx.txout_tx_id);
      END LOOP;
      perform  rollback_addr_balance($1);
      delete from addr_txout where txout_id in (select id from txout where tx_id=$1);
@@ -104,24 +107,24 @@ $_$;
 ALTER FUNCTION public.delete_tx(txid integer) OWNER TO postgres;
 
 --
--- Name: insert_addr(text, text, integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: insert_addr(text, text); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION insert_addr(a text, h text, t integer) RETURNS integer
+CREATE FUNCTION insert_addr(a text, h text) RETURNS integer
     LANGUAGE plpgsql
-    AS $$
-    declare addrid integer;
-BEGIN
-    addrid = (select id from addr where address = a);
-    IF addrid is NULL THEN
-        insert into addr (address, hash160, type) values(a, h,t) RETURNING id into addrid;
-    END IF;
-    return addrid;
-END
+    AS $$                                                                                                                     
+    declare addrid integer;                                                                                                   
+BEGIN                                                                                                                         
+    addrid = (select id from addr where address = a);                                                                         
+    IF addrid is NULL THEN                                                                                                    
+        insert into addr (address, hash160) values(a, h) RETURNING id into addrid;                                            
+    END IF;                                                                                                                   
+    return addrid;                                                                                                            
+END                                                                                                                           
 $$;
 
 
-ALTER FUNCTION public.insert_addr(a text, h text, t integer) OWNER TO postgres;
+ALTER FUNCTION public.insert_addr(a text, h text) OWNER TO postgres;
 
 --
 -- Name: rollback_addr_balance(integer); Type: FUNCTION; Schema: public; Owner: postgres
@@ -198,7 +201,6 @@ CREATE TABLE addr (
     id integer NOT NULL,
     address text NOT NULL,
     hash160 text NOT NULL,
-    type integer,
     balance bigint DEFAULT 0
 );
 
@@ -249,7 +251,6 @@ CREATE TABLE tx (
     lock_time bigint NOT NULL,
     coinbase boolean NOT NULL,
     tx_size integer NOT NULL,
-    nhash bytea,
     in_count integer,
     in_value bigint,
     out_count integer,
@@ -273,8 +274,7 @@ CREATE TABLE txin (
     prev_out_index bigint NOT NULL,
     sequence bigint NOT NULL,
     script_sig bytea,
-    prev_out bytea,
-    p2sh_type integer
+    prev_out bytea
 );
 
 
@@ -347,7 +347,6 @@ CREATE TABLE blk (
     bits bigint NOT NULL,
     nonce bigint NOT NULL,
     blk_size integer NOT NULL,
-    chain integer NOT NULL,
     work bytea,
     total_in_count integer,
     total_in_value bigint,
@@ -467,7 +466,6 @@ CREATE TABLE utx (
 
 
 ALTER TABLE utx OWNER TO postgres;
-
 
 --
 -- Name: utxo; Type: VIEW; Schema: public; Owner: postgres
@@ -680,7 +678,6 @@ CREATE INDEX txout_txid_idx_index ON txout USING btree (tx_id, tx_idx);
 --
 
 CREATE INDEX txout_txid_index ON txout USING btree (tx_id);
-
 
 --
 -- Name: public; Type: ACL; Schema: -; Owner: daniel
