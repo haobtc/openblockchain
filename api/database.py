@@ -47,7 +47,6 @@ class Block(SQLBase):
     bits = Column(BIGINT)
     nonce = Column(BIGINT)
     blk_size = Column(INTEGER)
-    chain = Column(INTEGER)
     work = Column(BYTEA)
     total_in_count  = Column(INTEGER)
     total_in_value  = Column(BIGINT)
@@ -72,7 +71,6 @@ class Tx(SQLBase):
     lock_time = Column(BIGINT)
     coinbase = Column(BOOLEAN)
     tx_size = Column(BIGINT)
-    nhash = Column(BYTEA)
     in_count  = Column(INTEGER)
     in_value  = Column(BIGINT )
     out_count = Column(INTEGER)
@@ -103,7 +101,6 @@ class TxIn(SQLBase):
     sequence = Column(BIGINT)
     script_sig = Column(BYTEA)
     prev_out = Column(BYTEA)
-    p2sh_type = Column(INTEGER)
 
     def todict(self):
         return to_dict(self, self.__class__)
