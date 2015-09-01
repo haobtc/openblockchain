@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import division 
 import os 
 import sys
 import simplejson as json
@@ -17,6 +18,9 @@ from bitcoinrpc.authproxy import AuthServiceProxy
 
 RPC_URL = "http://bitcoinrpc:A4MjCQEiCyMeK9b3w2aLL2P5m1wGaHFXV25TLPjM4yoS@127.0.0.1:8332"
 access = AuthServiceProxy(RPC_URL)
+
+
+vout_type ={'nonstandard':0, 'pubkey':1, 'pubkeyhash':2, 'scripthash':3, 'multisig':4, 'nulldata':5}
  
 def read_tx(txhash):
   return json.loads(access.getrawtransaction(txhash,1))
@@ -37,8 +41,8 @@ def verifyTxOut(txout1,  txout2):
 
     assert txout1.tx_idx    == txout2['n']
     assert txout1.pk_script == txout2['scriptPubKey']['hex'].decode('hex')
-    #assert txout1.value     == long(txout2['value'] * 100000000)
-    #assert txout1.type      == txout2['scriptPubKey']['type']
+    assert txout1.value     == round(txout2['value'] * 100000000)
+    assert txout1.type      == vout_type[txout2['scriptPubKey']['type']]
 
 def verifyTx(txhash, coinbase):  
     tx1 = Tx.query.filter(Tx.hash == txhash.decode('hex')).first()
@@ -67,9 +71,9 @@ def verifyTx(txhash, coinbase):
         verifyTxOut(txout1, txout2)
         outvalue += txout2['value']
 
-    assert tx1.out_value == long(outvalue * 100000000)
-    assert tx1.in_value  == long(invalue  * 100000000) 
-    assert tx1.fee       == long((invalue  * 100000000) -(outvalue * 100000000))
+    assert tx1.out_value == round(outvalue * 100000000)
+    assert tx1.in_value  == round(invalue  * 100000000) 
+    assert tx1.fee       == round((invalue  * 100000000) -(outvalue * 100000000))
     return tx1
 
 def verifyBlkTx(txhash,blkid, idx,coinbase):  
@@ -101,11 +105,10 @@ def verifyBlkTx(txhash,blkid, idx,coinbase):
         verifyTxOut(txout1, txout2)
         outvalue += txout2['value']
 
-    #import pdb;pdb.set_trace()
-    #assert tx1.out_value == long(outvalue * 100000000)
-    #assert tx1.in_value  == long(invalue  * 100000000)
-    #if not coinbase:
-    #    assert tx1.fee       == long((invalue  * 100000000) -(outvalue * 100000000))
+    assert tx1.out_value == round(outvalue * 100000000)
+    assert tx1.in_value  == round(invalue  * 100000000)
+    if not coinbase:
+        assert tx1.fee       == round((invalue  * 100000000) -(outvalue * 100000000))
     return tx1
  
  
@@ -164,4 +167,4 @@ def verifyAddr(address):
 
 verifyBlk('000000000000000007b66b3ca329af38380bfd6bed9df8f3fa14d74ddee8d3dc')
 verifyTx('aeca55bbeb9495e50500fefcd1e80d4c4aa592f5c277a2a859494ae4b06818a4',False)
-verifyAddr('1AytLgGSigqiMGYyy4ces7rSHm7hgCJTv2');
+#verifyAddr('1AytLgGSigqiMGYyy4ces7rSHm7hgCJTv2');
