@@ -72,7 +72,6 @@ class Tx(SQLBase):
     lock_time = Column(BIGINT)
     coinbase = Column(BOOLEAN)
     tx_size = Column(BIGINT)
-    nhash = Column(BYTEA)
     in_count  = Column(INTEGER)
     in_value  = Column(BIGINT )
     out_count = Column(INTEGER)
