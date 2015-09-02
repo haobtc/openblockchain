@@ -98,8 +98,10 @@ BEGIN
      END LOOP;
      perform  rollback_addr_balance($1);
      delete from addr_txout where txout_id in (select id from txout where tx_id=$1);
-     delete from txin where tx_id=$1;                                                                                              delete from txout where tx_id=$1;
-     delete from tx where id=$1;                                                                                                   delete from utx where id=$1;
+     delete from txin where tx_id=$1;
+     delete from txout where tx_id=$1;
+     delete from tx where id=$1;
+     delete from utx where id=$1;
 END;
 $_$;
 
