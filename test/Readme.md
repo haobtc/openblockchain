@@ -1,7 +1,7 @@
 
 #test.py
 
- 基于blockchain数据,需要建立txindx索引(bitcoin.conf里加txindx=1),运行前关闭bitcoind
+ 基于blockchain数据,需要建立txindex索引(bitcoin.conf里加txindex=1),运行前关闭bitcoind
 
 #test_rpc.py
 
