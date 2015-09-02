@@ -297,44 +297,6 @@ CREATE TABLE txout (
 ALTER TABLE public.txout OWNER TO postgres;
 
 --
--- Name: vvout; Type: MATERIALIZED VIEW; Schema: public; Owner: postgres; Tablespace: 
---
-
-CREATE MATERIALIZED VIEW vvout AS
- SELECT g.address,
-    g.id AS addr_id,
-    a.id AS txout_id,
-    c.id AS txin_id,
-    e.id AS txin_tx_id,
-    b.id AS txout_tx_id,
-    a.value
-   FROM (((((txout a
-     LEFT JOIN tx b ON ((b.id = a.tx_id)))
-     LEFT JOIN txin c ON (((c.prev_out = b.hash) AND (c.prev_out_index = a.tx_idx))))
-     LEFT JOIN tx e ON ((e.id = c.tx_id)))
-     LEFT JOIN addr_txout f ON ((f.txout_id = a.id)))
-     LEFT JOIN addr g ON ((g.id = f.addr_id)))
-  WITH NO DATA;
-
-
-ALTER TABLE public.vvout OWNER TO postgres;
-
---
--- Name: b; Type: MATERIALIZED VIEW; Schema: public; Owner: postgres; Tablespace: 
---
-
-CREATE MATERIALIZED VIEW b AS
- SELECT vvout.addr_id,
-    sum(vvout.value) AS value
-   FROM vvout
-  WHERE (vvout.txin_id IS NULL)
-  GROUP BY vvout.addr_id
-  WITH NO DATA;
-
-
-ALTER TABLE public.b OWNER TO postgres;
-
---
 -- Name: vout; Type: VIEW; Schema: public; Owner: postgres
 --
 
@@ -716,13 +678,6 @@ CREATE INDEX txout_txid_idx_index ON txout USING btree (tx_id, tx_idx);
 --
 
 CREATE INDEX txout_txid_index ON txout USING btree (tx_id);
-
-
---
--- Name: vvout_address; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
---
-
-CREATE INDEX vvout_address ON vvout USING btree (addr_id);
 
 
 --
