@@ -124,7 +124,7 @@ def verifyBlk(blkhash):
     assert blk1.mrkl_root       == blk2['merkleroot'].decode('hex')  
     assert blk1.time            == blk2['time']
     assert blk1.bits            == int(blk2['bits'],16)
-    #assert blk1.nonce           == blk2['nNonce']
+    assert blk1.nonce           == blk2['nNonce']
     assert blk1.blk_size        == blk2['size']
 
     total_in_count  = 0
@@ -167,4 +167,4 @@ def verifyAddr(address):
 
 verifyBlk('000000000000000007b66b3ca329af38380bfd6bed9df8f3fa14d74ddee8d3dc')
 verifyTx('aeca55bbeb9495e50500fefcd1e80d4c4aa592f5c277a2a859494ae4b06818a4',False)
-#verifyAddr('1AytLgGSigqiMGYyy4ces7rSHm7hgCJTv2');
+verifyAddr('1AytLgGSigqiMGYyy4ces7rSHm7hgCJTv2');
