@@ -256,20 +256,17 @@ def verifyAddr(address):
 
 verifyBlk('000000000000000007b66b3ca329af38380bfd6bed9df8f3fa14d74ddee8d3dc')
 verifyTx('aeca55bbeb9495e50500fefcd1e80d4c4aa592f5c277a2a859494ae4b06818a4',False)
+
 verifyAddr('1AytLgGSigqiMGYyy4ces7rSHm7hgCJTv2')
 verifyAddr('1dice8EMZmqKvrGE4Qc9bUFf9PX3xaYDp')
-verifyAddr('1dice97ECuByXAvqXpaYzSaQuPVvrtmz6')
-verifyAddr('1NxaBCFQwejSZbQfWcYNwgqML5wWoE3rK4')
 verifyAddr('1LuckyR1fFHEsXYyx5QK4UFzv3PEAepPMK')
 verifyAddr('1dice9wcMu5hLF4g81u8nioL5mmSHTApw')
 verifyAddr('1dice7fUkz5h4z2wPc1wLMPWgB5mDwKDx')
 verifyAddr('1dice7W2AicHosf5EL3GFDUVga7TgtPFn')
-verifyAddr('1VayNert3x1KzbpzMGt2qdqrAThiRovi8')
 verifyAddr('1dice6YgEVBf88erBFra9BHf6ZMoyvG88')
 verifyAddr('1LuckyG4tMMZf64j6ea7JhCz7sDpk6vdcS')
 verifyAddr('1diceDCd27Cc22HV3qPNZKwGnZ8QwhLTc')
 verifyAddr('1dice5wwEZT2u6ESAdUGG6MHgCpbQqZiy')
-verifyAddr('1LuckyY9fRzcJre7aou7ZhWVXktxjjBb9S')
 verifyAddr('1dice7EYzJag7SxkdKXLr8Jn14WUb3Cf1')
 verifyAddr('1dice1e6pdhLzzWQq7yMidf6j8eAg7pkY')
 verifyAddr('1Bd5wrFxHYRkk4UCFttcPNMYzqJnQKfXUE')
@@ -298,18 +295,15 @@ verifyAddr('1MPerpQzTABa1K2eXQxsQTDSZtDQHWf6vk')
 verifyAddr('18XSLnBZ8ydMUkaifU6sQBMJzmm7JvDeUp')
 verifyAddr('12Cf6nCcRtKERh9cQm3Z29c9MWvQuFSxvT')
 verifyAddr('1dice6DPtUMBpWgv8i4pG8HMjXv9qDJWN')
-verifyAddr('1MPxhNkSzeTNTHSZAibMaS8HS1esmUL1ne')
 verifyAddr('1Bet32kBtZzXViMs1PQHninHs4LADhCwtB')
 verifyAddr('1dicec9k7KpmQaA8Uc8aCCxfWnwEWzpXE')
 verifyAddr('1Fi57hAqyYYwaQVdA7a9qSKfiukBbt31G3')
 verifyAddr('1dicegEArYHgbwQZhvr5G9Ah2s7SFuW1y')
 verifyAddr('1changemCPo732F6oYUyhbyGtFcNVjprq')
 verifyAddr('1HWqsgnSd12Gv8SpoUMi1Cj8hp79BTSpW7')
-verifyAddr('1LuckyP83urTUEJE9YEaVG2ov3EDz3TgQw')
 verifyAddr('1bonesF1NYidcd5veLqy1RZgF4mpYJWXZ')
 verifyAddr('1Bet5o5o23jaRB9kKNxqZ5KeBqoSm5Fh56')
 verifyAddr('1dice6wBxymYi3t94heUAG6MpG5eceLG1')
-verifyAddr('1LuckyB5VGzdZLZSBZvw8DR17iiFCpST7L')
 verifyAddr('1dice6GV5Rz2iaifPvX7RMjfhaNPC8SXH')
 verifyAddr('1dice4J1mFEvVuFqD14HzdViHFGi9h4Pp')
 verifyAddr('17qq5A3XKfrxpJRSC5LH6APjvTDb9hTmma')
@@ -340,7 +334,6 @@ verifyAddr('14uDeJYMp3Fr2Wm7biCvwqmf6To8rLt3hJ')
 verifyAddr('1JceroDThChGfsfTC2ZbGjafPQoFm5mZbF')
 verifyAddr('1bones2wX8sqGHcuXeKPzHgZegtL2dnGC')
 verifyAddr('1dice6gJgPDYz8PLQyJb8cgPBnmWqCSuF')
-verifyAddr('1HTjJ7Ri6LNvbu8GEAeArkFcmTWrb8zqVA')
 verifyAddr('1Bet56kWEpCq8ugG9tqAkLNXqaAQ4eUALp')
 verifyAddr('1Gemk2fKb3hvgs4bi3hW3y8vCaJJrx42NC')
 verifyAddr('1bones5gF1HJeiexQus6UtvhU4EUD4qfj')
@@ -358,4 +351,12 @@ verifyAddr('1dice61SNWEKWdA8LN6G44ewsiQfuCvge')
 verifyAddr('17gfUvseEjp3aKwReMYUawYxsd25Wq6CjN')
 verifyAddr('1Bet16kGTPwHKEbvNK4uQKtYC61Q4MHBst') 
 
+#verifyAddr('1dice97ECuByXAvqXpaYzSaQuPVvrtmz6')  #hot 
+#verifyAddr('1MPxhNkSzeTNTHSZAibMaS8HS1esmUL1ne') #hot
+#verifyAddr('1NxaBCFQwejSZbQfWcYNwgqML5wWoE3rK4') #hot
+#verifyAddr('1LuckyB5VGzdZLZSBZvw8DR17iiFCpST7L') #hot
+#verifyAddr('1VayNert3x1KzbpzMGt2qdqrAThiRovi8')  #blockchain error, not add multisig
+#verifyAddr('1LuckyY9fRzcJre7aou7ZhWVXktxjjBb9S') #blockchain error, negative balance
+#verifyAddr('1LuckyP83urTUEJE9YEaVG2ov3EDz3TgQw') #blockchian error, compare with blockmeta
+#verifyAddr('1HTjJ7Ri6LNvbu8GEAeArkFcmTWrb8zqVA') #blockchain error, compare with blockmeta 
 db.close()
