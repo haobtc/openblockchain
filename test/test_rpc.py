@@ -163,7 +163,7 @@ def verifyAddr(address):
 
     assert addr2.address == addr1['address']
     assert addr2.hash160 == addr1['hash160']
-    assert addr2.balance == int(addr1['final_balance'])*100000000
+    assert addr2.balance == int(addr1['final_balance'])
 
 verifyBlk('000000000000000007b66b3ca329af38380bfd6bed9df8f3fa14d74ddee8d3dc')
 verifyTx('aeca55bbeb9495e50500fefcd1e80d4c4aa592f5c277a2a859494ae4b06818a4',False)
