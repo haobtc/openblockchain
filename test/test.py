@@ -14,7 +14,7 @@ import requests
 from database import *
 from sqlalchemy import and_
 
-datadir = '/media/fast/btcdata/' #bitcoin data directory
+datadir = '~/.bitcoin' #bitcoin data directory
 verifystatics =False
 
 def _open_blkindex(datadir):
