@@ -25,3 +25,8 @@ change RPC_URL and engine = create_engine('postgresql://postgres:c1u2u9z@@127.0.
 
 python demo.py
 
+#install
+
+apt-get install libleveldb1 libleveldb-dev
+sudo pip install plyvel
+
