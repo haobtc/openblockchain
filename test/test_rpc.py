@@ -16,7 +16,7 @@ from sqlalchemy import and_
 
 from bitcoinrpc.authproxy import AuthServiceProxy
 
-RPC_URL = "http://bitcoinrpc:A4MjCQEiCyMeK9b3w2aLL2P5m1wGaHFXV25TLPjM4yoS@127.0.0.1:8332"
+RPC_URL = "http://bitcoinrpc:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX@127.0.0.1:8332"
 access = AuthServiceProxy(RPC_URL)
 
 
