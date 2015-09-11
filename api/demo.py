@@ -1,17 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from flask import Flask
+from flask import Flask, render_template, url_for,redirect,request
 from flask_sqlalchemy import SQLAlchemy
 import simplejson as json
 import binascii
-from bitcoinrpc.authproxy import AuthServiceProxy
-from deserialize import extract_public_key
-from base58 import bc_address_to_hash_160
 from database import *
-
-RPC_URL = "http://bitcoinrpc:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX@127.0.0.1:8332"
-access = AuthServiceProxy(RPC_URL)
+from sqlalchemy import and_
 
 app = Flask(__name__)
 
@@ -19,6 +14,10 @@ def buffer_to_json(python_object):
     if isinstance(python_object, (buffer, )):
         return binascii.hexlify(python_object)
     raise TypeError(repr(python_object) + ' is not JSON serializable')
+
+@app.route('/')
+def home():                                                                                                                                                                  
+    return render_template('home.html')
 
 @app.route('/tx/<txhash>')
 def tx(txhash):
@@ -28,113 +27,110 @@ def tx(txhash):
     tx_id = tx['id']
 
     txins = TxIn.query.filter(TxIn.tx_id==tx_id).all()
-    tx['in'] = [txin.todict() for txin in txins ]
+    tx['vin'] = [txin.todict() for txin in txins ]
+    for txin in tx['vin']:
+        txin['address']=VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txin_tx_id==txin['id']).all()
     txouts = TxOut.query.filter(TxOut.tx_id==tx_id).all()
-    tx['out'] = [txout.todict() for txout in txouts]
-    return json.dumps(tx, default=buffer_to_json, indent=4)
+    tx['vout'] = [txout.todict() for txout in txouts]
+    for txout in tx['vin']:
+        txout['address'] = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txout_tx_id==txout['id']).all()
+    return render_template("tx.html",tx=tx)
 
 @app.route('/height/<height>')
 def blkheight(height=0):
     res = Block.query.filter(Block.height == height).first()
     blk = res.todict()
+    res = Block.query.with_entities(Block.hash).filter(Block.height == (int(height)-1)).first()
+    blk['previousblockhash']=binascii.hexlify(res[0])
+    res = Block.query.with_entities(Block.hash).filter(Block.height == (int(height)+1)).first()
+    blk['nextblockhash']=binascii.hexlify(res[0])
     res = BlockTx.query.with_entities(BlockTx.tx_id).filter(BlockTx.blk_id == blk['id']).limit(10)
 
     txs=[]
     for txid in res:
        res = Tx.query.filter(Tx.id==txid).first()
        tx= res.todict()
-       txins = []
-       txins = TxIn.query.filter(TxIn.tx_id==tx['id']).all()
-       tx['in'] = [txin.todict() for txin in txins ]
-       txouts = TxOut.query.filter(TxOut.tx_id==tx['id']).all()
-       tx['out'] = [txout.todict() for txout in txouts]
+       txins = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txin_tx_id==txid).all()
+       tx['in'] = txins
+       txouts = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txout_tx_id==txid).all()
+       tx['out'] = txouts
        txs.append(tx)
 
+
     blk['tx']=txs
-    return  json.dumps(blk, default=buffer_to_json, indent=4)
+    return render_template("blk.html",blk=blk)
 
 @app.route('/blk/<blkhash>')
 def blk(blkhash):
     res = Block.query.filter(Block.hash == blkhash.decode('hex')).first()
     blk = res.todict()
+    res = Block.query.with_entities(Block.hash).filter(Block.height == (int(blk['height'])-1)).first()
+    blk['previousblockhash']=binascii.hexlify(res[0])
+    res = Block.query.with_entities(Block.hash).filter(Block.height == (int(blk['height'])+1)).first()
+    blk['nextblockhash']=binascii.hexlify(res[0])
     res = BlockTx.query.with_entities(BlockTx.tx_id).filter(BlockTx.blk_id == blk['id']).limit(10)
 
     txs=[]
     for txid in res:
        res = Tx.query.filter(Tx.id==txid).first()
        tx= res.todict()
-       txins = []
-       txins = TxIn.query.filter(TxIn.tx_id==tx['id']).all()
-       tx['in'] = [txin.todict() for txin in txins ]
-       txouts = TxOut.query.filter(TxOut.tx_id==tx['id']).all()
-       tx['out'] = [txout.todict() for txout in txouts]
+       txins = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txin_tx_id==txid).all()
+       tx['in'] = txins
+       txouts = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txout_tx_id==txid).all()
+       tx['out'] = txouts
        txs.append(tx)
 
     blk['tx']=txs
-    return  json.dumps(blk, default=buffer_to_json, indent=4)
-
+    return render_template("blk.html",blk=blk)
+ 
 @app.route('/addr/<address>')
-def address(address, num=10):
+@app.route('/addr/<address>/<page>')
+def address(address, page=0, num=10):
     res = Addr.query.filter(Addr.address == address).first()
     addr=res.todict()
-    txidlist = UTXO.query.with_entities(UTXO.txout_tx_id).filter(UTXO.address == address).limit(10)
+    txidlist = VOUT.query.with_entities(VOUT.txout_tx_id).filter(VOUT.address == address).limit(10)
+    #txidlist = VOUT.query.with_entities(VOUT.txout_tx_id).filter(and_(VOUT.address == address, VOUT.txin_tx_id==None )).limit(10)
+    #if txidlist == None:
 
     txs=[]
     for txid in txidlist:
         res = Tx.query.filter(Tx.id==txid).first()
         tx= res.todict()
-        txins = []
-        txins = TxIn.query.filter(TxIn.tx_id==tx['id']).all()
-        tx['in'] = [txin.todict() for txin in txins ]
-        txouts = TxOut.query.filter(TxOut.tx_id==tx['id']).all()
-        tx['out'] = [txout.todict() for txout in txouts]
+        txins = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txin_tx_id==txid).all()
+        tx['vin'] = txins
+        txouts = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txout_tx_id==txid).all()
+        tx['vout'] = txouts
         txs.append(tx)
  
-    addr['tx']=txs
+    addr['txs']=txs
     addr['address']=address
+    print addr
 
-    return  json.dumps(addr, default=buffer_to_json, indent=4)
+    return render_template("addr.html", addr=addr,page=page)
 
+@app.route('/search', methods=['GET', 'POST'])
+def search(sid=0):                                                                                                                                                                  
 
-@app.route('/mempool')
-def getrawmempool():                                                                                                                                                                  
-    return access.getrawmempool(True)
-    
-@app.route('/nodeinfo')
-def getaddednodeinfo ():
-    return access.getaddednodeinfo(True)
+    sid = sid or request.args.get('sid')
 
-@app.route('/mininginfo')
-def getmininginfo():
-    return json.dumps(access.getmininginfo())
+    slen = len(sid)
+    if slen == 64:
+        #should be tx hash or blk hash
+        try:
+            return redirect("/tx/%s" % sid, code=302)
+        except:
+            try:
+               return redirect("/blk/%s" % sid, code=302)
+            except:
+               return redirect("/", code=302)
+    if slen <= 34 and slen >=26:
+         return redirect("/addr/%s" % sid, code=302)
+    elif slen <9:
+        #as blk height
+        return redirect("/height/%s" % sid, code=302)
+    else:
+        return redirect("/", code=302)
  
-@app.route('/blockchaininfo')
-def getblockchaininfo():
-    return access.getblockchaininfo()
-
-@app.route('/info')
-def getinfo():
-    return access.getinfo()
-
-@app.route('/networkinfo')
-def getnetworkinfo():
-    return access.getnetworkinfo()
- 
-@app.route('/peerinfo')
-def getpeerinfo():
-    return access.getpeerinfo()
-
-@app.route('/txoutsetinfo')
-def gettxoutsetinfo():
-    return access.gettxoutsetinfo()
- 
-@app.route('/orphantx')
-def orphantx():                                                                                                                                                                  
-    return "todo"
- 
-@app.route('/orphanblk')
-def orphanblk():                                                                                                                                                                  
-    return "todo"
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)

@@ -129,8 +129,8 @@ class Addr(SQLBase):
         return to_dict(self, self.__class__)
  
 
-class UTXO(SQLBase):
-    __tablename__ = 'utxo'
+class VOUT(SQLBase):
+    __tablename__ = 'vout'
     address = Column(TEXT, primary_key=True)
     hash160 = Column(TEXT)
     addr_id = Column(INTEGER)

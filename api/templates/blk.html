@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+     <div class="col-lg-12">
+        <h1>
+            Block Height: {{ blk.height }}</h1>
+        <table class="table table-striped">
+                <tr> <td> 大小 </td> <td> {{ blk.blk_size}} </td> </tr>
+                <tr> <td> 版本 </td> <td> {{ blk.version }} </td> </tr>
+                <tr> <td> 梅克尔树 </td> <td> {{ blk.mrkl_root}} </td> </tr>
+                <tr> <td> 确认时间 </td> <td> {{ blk.time }} </td> </tr>
+                <tr> <td> 随机数 </td> <td> {{ blk.nonce }} </td> </tr>
+                <tr> <td> 计算目标 </td> <td> {{ blk.bits }} </td> </tr>
+                <tr> <td> 交易数 </td> <td> {{ blk.tx_count}} </td> </tr>
+                <tr> <td> 前一个块 </td> <td> <a href="../blk/{{ blk.previousblockhash }}"> {{ blk.previousblockhash }} </a></td> </tr>
+                <tr> <td> 后一个块 </td> <td> <a href="../blk/{{ blk.nextblockhash }}"> {{ blk.nextblockhash }} </a></td> </tr>
+         </table>
+
+        <h4> 交易列表:</h4>
+        <table>
+            {% for tx in blk.tx %}
+            <tr> <td>  </td> </tr>
+                <tr> <td>   <a href="../tx/{{tx.hash}}"> {{ tx.hash }} </a></td> </tr>
+            {% endfor %}
+        </table>
+    </div>
+ 
+{% endblock %}

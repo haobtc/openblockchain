@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="transaction-wrap col-lg-12">
+    <h1> 比特币交易信息:</small> </h1>
+<div class="transaction_section">
+    <div class="transaction" >
+        <div class="transaction_hash">
+            <a class="nos-link" href="../tx/{{ tx.hash }}"> {{ tx.hash}} </a>
+        </div>
+     <div class="currency_btn">
+        <button class="btn btn-success cb">
+            <span> {{tx.out_value|float}} </span>
+        </button>
+    </div>    
+
+        <div class="tx_input">
+            {% if tx.coinbase %}
+            <span class="pull-left">
+                <span> 新块奖励 </span>
+            </span>
+            {% else %}
+            {% for txin in tx.vin %}
+            <a href="../tx/{{txin.txid}}"> {{txin.txid}} </a>
+            <span class="pull-right">
+                <span> <a href={{txin.txid}}></a></span>
+            </span>
+            </br>
+            {% endfor %}
+            {% endif %}
+        </div>
+
+        <div class="tx_arrow">
+            <i class="fa fa-arrow-right fa-3x">
+            </i>
+        </div>
+        <div class="tx_output">
+            {% for txout in tx.vout %}
+            {% for addr in txout.addresses%}
+            <a href="../addr/{{ addr }}"> {{ addr }}</a>
+            {% endfor %}
+            <span class="pull-right">
+                <span> ({{txout.value|float}}  BTC)</span>
+            </span>
+            </br>
+            {% endfor %}
+        </div>
+
+    </div>
+    </div>
+
+</div>
+
+
+<div class="middle-section">
+    <div class="col-lg-7">
+        <table class="table table-striped">
+            <tbody>
+            <tr> <th colspan="2"> 交易信息 </th> </tr>
+            <tr> <td> 版本 </td> <td> {{tx.version}}</td> </tr>
+            <tr> <td> locktime </td> <td> {{tx.lock_time}}</td> </tr>
+            <tr> <td> 接收时间</td> <td> {{tx.recv_time}}</td> </tr>
+            <tr> <td> 大小 </td> <td> {{tx.size}}</td> </tr>
+            <tr> <td> 输入 </td> <td> {{tx.in_value|float}} BTC</td> </tr>
+            <tr> <td> 输出 </td> <td> {{tx.out_value|float}} BTC</td> </tr>
+            <tr> <td> 交易费 </td> <td> {{tx.fee|float}} BTC</td> </tr>
+        </tr>
+        </tbody>
+    </table>
+        {% if tx.coinbase %}
+            <h4> Coinbase:</h4>
+            <table class="table table-striped">
+                <tr> <td> {{tx.coinbase}} </td> </tr>
+            </table>
+        {% else %}
+            <h4> 输入列表: </h4>
+            <table class="table table-striped">
+                {% for txin in tx.vin %}
+                <tr> <td> {{txin.script_sig}} </td> </tr>
+                {% endfor %}
+            </table>
+        {% endif %}
+        <h4> 输出列表: </h4>
+        <table class="table table-striped">
+            {% for txout in tx.vout %}
+            <tr> <td> {{txout.pk_script}} </td> </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+ 
+
+{% endblock %}
