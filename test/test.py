@@ -8,21 +8,22 @@ import binascii
 import plyvel
 from BCDataStream import *
 from deserialize import *
-from util import double_sha256
+from util import double_sha256,determine_db_dir
 
 import requests
 from database import *
 from sqlalchemy import and_
 
-datadir = '~/.bitcoin' #bitcoin data directory
+datadir = determine_db_dir()
 verifystatics =False
 
 def _open_blkindex(datadir):
   try:
     db=plyvel.DB(os.path.join(datadir, 'blocks', 'index'),compression=None)
-  except:
-    logging.error("Couldn't open blocks/index.  Try quitting any running Bitcoin apps.")
+  except Exception as e:
+    logging.error("Couldn't open %s.  Try quitting any running Bitcoin apps. %s", datadir, e)
     sys.exit(1)
+
   return db
  
 db = _open_blkindex(datadir)
@@ -104,6 +105,13 @@ def _read_block(db, blkhash):
   vds = BCDataStream()
   vds.clear(); vds.write(value)
   block_data = _parse_block_index(vds)
+
+  print block_data
+
+  if block_data['nStatus'] & 8 == False:
+    raise 'no block data, maybe data is downloaded?'
+    return
+  
   block = _dump_block(datadir, block_data['nFile'], block_data['nBlockPos'], blkhash)
   block['hash256'] = blkhash
   block['nHeight'] = block_data['nHeight']
