@@ -9,6 +9,7 @@ from database import *
 from sqlalchemy import and_
 
 app = Flask(__name__)
+app = Flask(__name__, static_url_path='/static')
 
 def buffer_to_json(python_object):
     if isinstance(python_object, (buffer, )):

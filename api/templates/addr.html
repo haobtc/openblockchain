@@ -4,6 +4,7 @@
 
 <div class="col-lg-12">
     <h1> 地址: {{ addr.address }}</h1>
+    <span> hash160: {{ addr.hash160 }} </span>
     <button class="btn btn-success">
         <span> 余额: {{ addr.balance|float }} </span>
     </button>
@@ -14,7 +15,7 @@
     <div class="transaction_section"> 
         <div class="transaction" > 
             <div class="transaction_hash">
-                <a href=/tx/{{ tx.hash }}  >  {{tx.hash[0:15]}}... </a>
+                <a href=/tx/{{ tx.hash }}  >  {{tx.hash}} </a>
                 <span class="pull-right"> <span> 输入:  {{tx.in_value |float}}  BTC
                         输出:  {{tx.out_value}}  BTC
                         交易费:  {{tx.fee}}
@@ -29,9 +30,10 @@
             </div>
         {% else %}  
             <div class="tx_input">
+               <span> input </span>
                 {% for txin in tx.vin %}
-                <a href="/tx/{{ txin[0]}} ">  {{txin}}   </a>
-                <span class="pull-right"> <span>  {{txin[1]| float}}  BTC     </span></span> 
+                <a href="/tx/{{ txin[0]}} ">  {{txin[0]}}   </a>
+                <span class="pull-right"> <span>  {{txin[1]| float}}  BTC </span></span> 
                 {% endfor %}
             </div>
         {% endif %}  
@@ -40,6 +42,7 @@
 
             <div class="tx_output">
 
+               <span> output </span>
                 {% for txout in tx.vout %}
                 <a href="/addr/{{txout[0]}} ">  {{txout[0]}}   </a>
                 <span class="pull-right"> <span>  {{txout[1]| float}}  BTC </span></span> 
