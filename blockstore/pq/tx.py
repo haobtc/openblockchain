@@ -37,7 +37,7 @@ def db2t_tx(conn, dtx, db_block=None):
                     TxOut.tx_id == prev_tx.id,
                     TxOut.tx_idx == vin.prev_out_index).first()
                 if prev_txout:
-                    inp.address = ''.join(
+                    inp.address = ','.join(
                         extract_public_key(prev_txout.pk_script))
                     inp.amountSatoshi = str(prev_txout.value)
         t.inputs.append(inp)
@@ -45,7 +45,7 @@ def db2t_tx(conn, dtx, db_block=None):
     txoutlist = TxOut.query.filter(TxOut.tx_id == dtx.id).all()
     for vout in txoutlist:
         outp = ttypes.TxOutput()
-        outp.address = ''.join(extract_public_key(vout.pk_script))
+        outp.address = ','.join(extract_public_key(vout.pk_script))
         outp.amountSatoshi = str(vout.value)
         outp.script = hexlify(vout.pk_script)
         t.outputs.append(outp)
