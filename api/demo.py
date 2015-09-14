@@ -85,11 +85,21 @@ def blk(blkhash):
     return render_template("blk.html",blk=blk)
  
 @app.route('/addr/<address>')
-@app.route('/addr/<address>/<page>')
-def address(address, page=0, num=10):
+@app.route('/addr/<address>/<int:page>')
+def address(address, page=0, page_size=10):
     res = Addr.query.filter(Addr.address == address).first()
     addr=res.todict()
-    txidlist = VOUT.query.with_entities(VOUT.txout_tx_id).filter(VOUT.address == address).limit(10)
+    txidlist = VOUT.query.with_entities(VOUT.txout_tx_id).filter(VOUT.address == address)
+    if page_size:
+        query = query.limit(page_size)
+
+    if page <0:
+        pass = 0
+        
+    if page: 
+        query = query.offset(page*page_size)
+    return query
+
     #txidlist = VOUT.query.with_entities(VOUT.txout_tx_id).filter(and_(VOUT.address == address, VOUT.txin_tx_id==None )).limit(10)
     #if txidlist == None:
 
