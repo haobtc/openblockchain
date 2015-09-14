@@ -60,9 +60,9 @@
             <div class="span10">
                 <ul class="pager">
                     {% if page > 0 %}
-                    <li><a href=/addr/{{address}}/{{ page - 1 }}>Prev page</a></li>
+                    <li><a href=/addr/{{addr.address}}/{{ page - 1 }}>Prev page</a></li>
                     {% endif %}
-                    <li><a href=/addr/{{address}}/{{ page + 1 }}>Next page</a></li>
+                    <li><a href=/addr/{{addr.address}}/{{ page + 1 }}>Next page</a></li>
                 </ul>  
             </div>
         </div>
