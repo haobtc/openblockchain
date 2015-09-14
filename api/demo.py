@@ -94,7 +94,7 @@ def address(address, page=0, page_size=10):
         query = query.limit(page_size)
 
     if page <0:
-        pass = 0
+        page = 0
         
     if page: 
         query = query.offset(page*page_size)
