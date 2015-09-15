@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from flask import Flask, render_template, url_for,redirect,request
+from flask import Flask, render_template, url_for,redirect,request,jsonify
 from flask_sqlalchemy import SQLAlchemy
 import simplejson as json
 import binascii
@@ -21,7 +21,8 @@ def home():
     return render_template('home.html')
 
 @app.route('/tx/<txhash>')
-def tx(txhash):
+@app.route('/tx/<txhash>/<render_type>')
+def tx(txhash,render_type='html'):
     txhash = txhash.decode('hex')
     res = Tx.query.filter(Tx.hash == txhash).first()
     tx= res.todict()
@@ -35,10 +36,16 @@ def tx(txhash):
     tx['vout'] = [txout.todict() for txout in txouts]
     for txout in tx['vin']:
         txout['address'] = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txout_tx_id==txout['id']).all()
+    if render_type == 'json':
+        return jsonify(tx)
+
     return render_template("tx.html",tx=tx)
 
+
 @app.route('/height/<height>')
-def blkheight(height=0):
+@app.route('/height/<height>/')
+@app.route('/height/<height>/<render_type>')
+def blkheight(height=0,render_type='html'):
     res = Block.query.filter(Block.height == height).first()
     blk = res.todict()
     res = Block.query.with_entities(Block.hash).filter(Block.height == (int(height)-1)).first()
@@ -57,12 +64,16 @@ def blkheight(height=0):
        tx['out'] = txouts
        txs.append(tx)
 
-
     blk['tx']=txs
+    if render_type == 'json':
+        return jsonify(blk)
+
     return render_template("blk.html",blk=blk)
 
 @app.route('/blk/<blkhash>')
-def blk(blkhash):
+@app.route('/blk/<blkhash>/')
+@app.route('/blk/<blkhash>/<render_type>')
+def blk(blkhash,render_type='html'):
     res = Block.query.filter(Block.hash == blkhash.decode('hex')).first()
     blk = res.todict()
     res = Block.query.with_entities(Block.hash).filter(Block.height == (int(blk['height'])-1)).first()
@@ -82,11 +93,17 @@ def blk(blkhash):
        txs.append(tx)
 
     blk['tx']=txs
+
+    if render_type == 'json':
+        return jsonify(blk)
+
     return render_template("blk.html",blk=blk)
- 
+
 @app.route('/addr/<address>')
-@app.route('/addr/<address>/<int:page>')
-def address(address, page=0, page_size=10):
+@app.route('/addr/<address>/')
+@app.route('/addr/<address>/<render_type>')
+@app.route('/addr/<address>/<int:page>/<render_type>')
+def address(address, page=0, page_size=10,render_type='html'):
     res = Addr.query.filter(Addr.address == address).first()
     addr=res.todict()
     txidlist = VOUT.query.with_entities(VOUT.txout_tx_id).filter(VOUT.address == address)
@@ -114,7 +131,9 @@ def address(address, page=0, page_size=10):
  
     addr['txs']=txs
     addr['address']=address
-    print addr
+
+    if render_type == 'json':
+        return jsonify(addr)
 
     return render_template("addr.html", addr=addr,page=page)
 
