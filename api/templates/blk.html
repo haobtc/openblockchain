@@ -15,16 +15,16 @@
                 <tr> <td> 交易数 </td> <td> {{ blk.tx_count}} </td> </tr>
                  
                 {% if blk.height>0 %}
-                <tr> <td> 前一个块 </td> <td> <a href="../blk/{{ blk.prev_hash }}"> {{ blk.prev_hash }} </a></td> </tr>
+                <tr> <td> 前一个块 </td> <td> <a href="/blk/{{ blk.prev_hash }}"> {{ blk.prev_hash }} </a></td> </tr>
                 {% endif %}
-                <tr> <td> 后一个块 </td> <td> <a href="../blk/{{ blk.nextblockhash }}"> {{ blk.nextblockhash }} </a></td> </tr>
+                <tr> <td> 后一个块 </td> <td> <a href="/blk/{{ blk.nextblockhash }}"> {{ blk.nextblockhash }} </a></td> </tr>
          </table>
 
         <h4> 交易列表:</h4>
         <table>
             {% for tx in blk.tx %}
             <tr> <td>  </td> </tr>
-                <tr> <td>   <a href="../tx/{{tx.hash}}"> {{ tx.hash }} </a></td> </tr>
+                <tr> <td>   <a href="/tx/{{tx.hash}}"> {{ tx.hash }} </a></td> </tr>
             {% endfor %}
         </table>
     </div>

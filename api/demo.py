@@ -15,6 +15,7 @@ app = Flask(__name__, static_url_path='/static')
 def home():                                                                                                                                                                  
     return render_template('home.html')
 
+@app.route('/tx/<txhash>')
 @app.route('/tx/<txhash>/<render_type>')
 def tx(txhash,render_type='html'):
     res = Tx.query.filter(Tx.hash == txhash.decode('hex')).first()
@@ -37,7 +38,6 @@ def tx(txhash,render_type='html'):
 
 
 @app.route('/height/<height>')
-@app.route('/height/<height>/')
 @app.route('/height/<height>/<render_type>')
 def blkheight(height=0,render_type='html'):
     res = Block.query.filter(Block.height == height).first()
@@ -72,7 +72,6 @@ def blkheight(height=0,render_type='html'):
     return render_template("blk.html",blk=blk)
 
 @app.route('/blk/<blkhash>')
-@app.route('/blk/<blkhash>/')
 @app.route('/blk/<blkhash>/<render_type>')
 def blk(blkhash,render_type='html'):
     res = Block.query.filter(Block.hash == blkhash.decode('hex')).first()
@@ -105,7 +104,7 @@ def blk(blkhash,render_type='html'):
     return render_template("blk.html",blk=blk)
 
 @app.route('/addr/<address>')
-@app.route('/addr/<address>/')
+@app.route('/addr/<address>/<int:page>')
 @app.route('/addr/<address>/<render_type>')
 @app.route('/addr/<address>/<int:page>/<render_type>')
 def address(address, page=0, page_size=10,render_type='html'):

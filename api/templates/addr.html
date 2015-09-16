@@ -16,9 +16,12 @@
         <div class="transaction" > 
             <div class="transaction_hash">
                 <a href=/tx/{{ tx.hash }}  >  {{tx.hash}} </a>
-                <span class="pull-right"> <span> 输入:  {{tx.in_value/100000000 |float}}  BTC
-                        输出:  {{tx.out_value /100000000 |float}}  BTC
+                <span class="pull-right"> <span> 
+                        {% if not tx.coinbase %}
                         交易费:  {{tx.fee/100000000 |float}}
+                        输入:  {{tx.in_value/100000000 |float}}  BTC
+                        {% endif %}
+                        输出:  {{tx.out_value /100000000 |float}}  BTC
                         大小:  {{tx.size}}
                         时间:  {{tx.recv_time}}
                 </span> </span>
@@ -26,9 +29,9 @@
 
             {% if tx.coinbase %}
             <div class="tx_input">
-                <a href="/tx/{{ tx.hash}} "> Coinbase: {{tx.in[0].script_sig }}... </a>
+                <a href="/tx/{{ tx.hash}} "> Coinbase... </a>
             </div>
-        {% else %}  
+            {% else %}  
             <div class="tx_input">
                 {% for txin in tx.vin %}
                 <a href="/tx/{{ txin[0]}} ">  {{txin[0]}}   </a>
