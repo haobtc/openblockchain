@@ -30,6 +30,7 @@ def tx(txhash,render_type='html'):
 
     tx['in_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txin_tx_id==tx['id']).all()
     tx['out_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txout_tx_id==tx['id']).all()
+    tx['confirm'] = db_session.execute('select get_confirm(%d)' % tx['id']).first()[0];
  
     if render_type == 'json':
         return jsonify(tx)
@@ -117,7 +118,7 @@ def address(address, page=0, page_size=10,render_type='html'):
     if page <0:
         page = 0
 
-    txidlist = VOUT.query.with_entities(VOUT.txout_tx_id).filter(VOUT.address == address).offset(page*page_size).limit(page_size)
+    txidlist = VOUT.query.with_entities(VOUT.txout_tx_id).filter(VOUT.address == address).order_by(VOUT.txout_tx_id.desc()).offset(page*page_size).limit(page_size)
 
     txs=[]
     for txid in txidlist:
