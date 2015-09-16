@@ -7,7 +7,7 @@
 <div class="transaction_section">
     <div class="transaction" >
         <div class="transaction_hash">
-            <a class="nos-link" href="../tx/{{ tx.hash }}"> {{ tx.hash}} </a>
+            <a class="nos-link" href="/tx/{{ tx.hash }}"> {{ tx.hash}} </a>
         </div>
      <div class="currency_btn">
         <button class="btn btn-success cb">
@@ -22,7 +22,7 @@
             </span>
             {% else %}
             {% for addr in tx.in_addresses%}
-            <a href="../addr/{{ addr.address }}"> {{ addr.address }}</a>
+            <a href="/addr/{{ addr.address }}"> {{ addr.address }}</a>
             <span class="pull-right">
                 <span> ({{addr.value/100000000|float}}  BTC)</span>
             </span>
@@ -39,7 +39,7 @@
  
         <div class="tx_output">
             {% for addr in tx.out_addresses%}
-            <a href="../addr/{{ addr.address }}"> {{ addr.address }}</a>
+            <a href="/addr/{{ addr.address }}"> {{ addr.address }}</a>
             <span class="pull-right">
                 <span> ({{addr.value/100000000|float}}  BTC)</span>
             </span>
