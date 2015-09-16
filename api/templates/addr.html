@@ -34,7 +34,7 @@
             {% else %}  
             <div class="tx_input">
                 {% for txin in tx.vin %}
-                <a href="/tx/{{ txin[0]}} ">  {{txin[0]}}   </a>
+                <a href="/addr/{{ txin[0]}} ">  {{txin[0]}}   </a>
                 <span class="pull-right"> <span>  {{txin[1]/100000000| float}}  BTC </span></span> 
                 {% endfor %}
             </div>
