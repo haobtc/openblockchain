@@ -40,7 +40,6 @@
             <div class="tx_arrow"> <i class="fa fa-arrow-right fa-3x"> </i> </div>
 
             <div class="tx_output">
-
                 {% for txout in tx.vout %}
                 <a href="/addr/{{txout[0]}} ">  {{txout[0]}}   </a>
                 <span class="pull-right"> <span>  {{txout[1]/100000000| float}}  BTC </span></span> 
@@ -50,7 +49,8 @@
             <div class="currency_btn"> <button class="btn btn-success cb">
                     <span>  {{ tx.out_value/100000000 |float }} </span>
                 </button> 
-        </div> </div>
+            </div> 
+        </div>
 
         {% endfor %}
 
