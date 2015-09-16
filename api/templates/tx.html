@@ -58,6 +58,7 @@
         <table class="table table-striped">
             <tbody>
             <tr> <th colspan="2"> 交易信息 </th> </tr>
+            <tr> <td> 确认数 </td> <td> {{tx.confirm }}</td> </tr>
             <tr> <td> 版本 </td> <td> {{tx.version}}</td> </tr>
             <tr> <td> locktime </td> <td> {{tx.lock_time}}</td> </tr>
             {% if tx.recv_time %}
