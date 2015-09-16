@@ -13,7 +13,10 @@
                 <tr> <td> 随机数 </td> <td> {{ blk.nonce }} </td> </tr>
                 <tr> <td> 计算目标 </td> <td> {{ blk.bits }} </td> </tr>
                 <tr> <td> 交易数 </td> <td> {{ blk.tx_count}} </td> </tr>
-                <tr> <td> 前一个块 </td> <td> <a href="../blk/{{ blk.previousblockhash }}"> {{ blk.previousblockhash }} </a></td> </tr>
+                 
+                {% if blk.height>0 %}
+                <tr> <td> 前一个块 </td> <td> <a href="../blk/{{ blk.prev_hash }}"> {{ blk.prev_hash }} </a></td> </tr>
+                {% endif %}
                 <tr> <td> 后一个块 </td> <td> <a href="../blk/{{ blk.nextblockhash }}"> {{ blk.nextblockhash }} </a></td> </tr>
          </table>
 
