@@ -60,9 +60,6 @@ def blkheight(height=0,render_type='html'):
            txs.append(tx)
     blk['tx']=txs
 
-    res = Block.query.with_entities(Block.hash).filter(Block.height == (int(height)-1)).first()
-    if res!= None:
-        blk['previousblockhash']=binascii.hexlify(res[0])
     res = Block.query.with_entities(Block.hash).filter(Block.height == (int(height)+1)).first()
     if res!= None:
         blk['nextblockhash']=binascii.hexlify(res[0])
