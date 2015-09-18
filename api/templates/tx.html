@@ -61,11 +61,11 @@
             <tr> <td> 确认数 </td> <td> {{tx.confirm }}</td> </tr>
             <tr> <td> 版本 </td> <td> {{tx.version}}</td> </tr>
             <tr> <td> locktime </td> <td> {{tx.lock_time}}</td> </tr>
-            {% if tx.recv_time %}
-            <tr> <td> 接收时间</td> <td> {{tx.recv_time}}</td> </tr>
+            {% if tx.recv_time!='' %}
+            <tr> <td> 接收时间</td> <td> {{(tx.recv_time/1000000)|datetime}}</td> </tr>
             {% endif %}
-            {% if tx.ip %}
-            <tr> <td> relay IP</td> <td> {{tx.ip}}</td> </tr>
+            {% if tx.time != None %}
+            <tr> <td> 确认时间</td> <td> {{tx.time|datetime}}</td> </tr>
             {% endif %}
             <tr> <td> 大小 </td> <td> {{tx.tx_size}}</td> </tr>
             {% if not tx.coinbase %}

@@ -23,7 +23,11 @@
                         {% endif %}
                         输出:  {{tx.out_value /100000000 |float}}  BTC
                         大小:  {{tx.size}}
-                        时间:  {{tx.recv_time}}
+                        {% if tx.recv_time!='' %}
+                        时间:  {{(tx.recv_time/1000000)|datetime}}
+                        {% elif tx.time != None %}
+                        时间:  {{tx.time|datetime}}
+                        {% endif %}
                 </span> </span>
             </div>
 

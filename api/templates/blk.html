@@ -9,7 +9,7 @@
                 <tr> <td> 大小 </td> <td> {{ blk.blk_size}} </td> </tr>
                 <tr> <td> 版本 </td> <td> {{ blk.version }} </td> </tr>
                 <tr> <td> 梅克尔树 </td> <td> {{ blk.mrkl_root}} </td> </tr>
-                <tr> <td> 确认时间 </td> <td> {{ blk.time }} </td> </tr>
+                <tr> <td> 创建时间 </td> <td> {{ blk.time |datetime}} </td> </tr>
                 <tr> <td> 随机数 </td> <td> {{ blk.nonce }} </td> </tr>
                 <tr> <td> 计算目标 </td> <td> {{ blk.bits }} </td> </tr>
                 <tr> <td> 交易数 </td> <td> {{ blk.tx_count}} </td> </tr>
