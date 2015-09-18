@@ -64,7 +64,7 @@ class Block(SQLBase):
 
 
 class Tx(SQLBase):
-    __tablename__ = 'tx'
+    __tablename__ = 'vtx'
     id = Column(INTEGER, primary_key=True)
     hash = Column(BYTEA)
     version = Column(BIGINT)
@@ -76,6 +76,11 @@ class Tx(SQLBase):
     out_count = Column(INTEGER)
     out_value = Column(BIGINT )
     fee       = Column(BIGINT )
+    recv_time = Column(BIGINT )
+    ip  = Column(TEXT)
+    idx  = Column(INTEGER)
+    height  = Column(INTEGER)
+    time  = Column(BIGINT)
 
     def todict(self):
         return to_dict(self, self.__class__)
@@ -140,11 +145,6 @@ class VOUT(SQLBase):
     txout_tx_id = Column(INTEGER)
     txout_txhash = Column(BYTEA)
     value = Column(BIGINT)
-    tx_idx = Column(INTEGER)
-    height = Column(INTEGER)
-    time  = Column(BIGINT)
-    pk_script  = Column(BYTEA)
-    rev_time  = Column(BIGINT)
 
     @property
     def todict(self):
