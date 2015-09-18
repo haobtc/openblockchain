@@ -22,11 +22,12 @@ def home():
 
 @app.route('/tx/<txhash>')
 @app.route('/tx/<txhash>/<render_type>')
-def tx(txhash,render_type='html'):
-    res = Tx.query.filter(Tx.hash == txhash.decode('hex')).first()
-    # if res== None:
-    #     return render_template('404.html'), 404
-    tx= res.todict()
+def tx_handle(txhash,tx=None,render_type='html'):
+    if tx ==None:
+        tx = Tx.query.filter(Tx.hash == txhash.decode('hex')).first()
+    if tx == None:
+        return render_template('404.html'), 404
+    tx= tx.todict()
 
     txins = TxIn.query.filter(TxIn.tx_id==tx['id']).all()
     tx['vin'] = [txin.todict() for txin in txins ]
@@ -35,7 +36,11 @@ def tx(txhash,render_type='html'):
 
     tx['in_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txin_tx_id==tx['id']).all()
     tx['out_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txout_tx_id==tx['id']).all()
-    tx['confirm'] = db_session.execute('select get_confirm(%d)' % tx['id']).first()[0];
+    confirm = db_session.execute('select get_confirm(%d)' % tx['id']).first()[0];
+    if confirm ==None:
+        tx['confirm'] = u"未确认"
+    else:
+        tx['confirm'] = confirm
  
     if render_type == 'json':
         return jsonify(tx)
@@ -45,12 +50,12 @@ def tx(txhash,render_type='html'):
 
 @app.route('/height/<height>')
 @app.route('/height/<height>/<render_type>')
-def blkheight(height=0,render_type='html'):
-    res = Block.query.filter(Block.height == height).first()
-    if res== None:
+def blkheight_handle(height=0,render_type='html'):
+    blk = Block.query.filter(Block.height == height).first()
+    if blk== None:
         return render_template('404.html'), 404
 
-    blk = res.todict()
+    blk = blk.todict()
 
     res = BlockTx.query.with_entities(BlockTx.tx_id).filter(BlockTx.blk_id == blk['id']).limit(10)
     if res!= None:
@@ -76,12 +81,13 @@ def blkheight(height=0,render_type='html'):
 
 @app.route('/blk/<blkhash>')
 @app.route('/blk/<blkhash>/<render_type>')
-def blk(blkhash,render_type='html'):
-    res = Block.query.filter(Block.hash == blkhash.decode('hex')).first()
-    if res== None:
+def blk_handle(blkhash, blk=None, render_type='html'):
+    if blk==None:
+       blk = Block.query.filter(Block.hash == blkhash.decode('hex')).first()
+    if blk== None:
         return render_template('404.html'), 404
 
-    blk = res.todict()
+    blk = blk.todict()
 
     res = BlockTx.query.with_entities(BlockTx.tx_id).filter(BlockTx.blk_id == blk['id']).order_by(BlockTx.tx_id.asc()).limit(10)
     if res!= None:
@@ -110,11 +116,11 @@ def blk(blkhash,render_type='html'):
 @app.route('/addr/<address>/<int:page>')
 @app.route('/addr/<address>/<render_type>')
 @app.route('/addr/<address>/<int:page>/<render_type>')
-def address(address, page=0, page_size=10,render_type='html'):
-    res = Addr.query.filter(Addr.address == address).first()
-    if res== None:
+def address_handle(address, page=0, page_size=10,render_type='html'):
+    addr = Addr.query.filter(Addr.address == address).first()
+    if addr == None:
         return render_template('404.html'), 404
-    addr=res.todict()
+    addr=addr.todict()
 
     page =int(page)
     if page <0:
@@ -150,13 +156,20 @@ def search(sid=0):
     if slen == 64:
         #should be tx hash or blk hash
         try:
-            return redirect("/tx/%s" % sid, code=302)
+          hash = sid.decode('hex')
         except:
-            try:
-               return redirect("/blk/%s" % sid, code=302)
-            except:
+          return redirect("/", code=302)
+          
+        tx = Tx.query.filter(Tx.hash ==hash ).first()
+        if tx!=None:
+            return tx_handle(sid,tx)
+        else:
+            blk = Block.query.filter(Block.hash == hash).first()
+            if blk!=None:
+               return blk_handle(sid,blk)
+            else:
                return redirect("/", code=302)
-    if slen <= 34 and slen >=26:
+    elif slen <= 34 and slen >=26:
          return redirect("/addr/%s" % sid, code=302)
     elif slen <9:
         #as blk height
