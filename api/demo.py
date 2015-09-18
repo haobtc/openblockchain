@@ -7,9 +7,14 @@ import simplejson as json
 import binascii
 from database import *
 from sqlalchemy import and_
+from datetime import datetime
 
 app = Flask(__name__)
 app = Flask(__name__, static_url_path='/static')
+
+@app.template_filter('datetime')
+def _jinja2_filter_datetime(date, fmt=None):
+    return datetime.utcfromtimestamp(date).ctime()
 
 @app.route('/')
 def home():                                                                                                                                                                  
