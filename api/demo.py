@@ -24,8 +24,8 @@ def home():
 @app.route('/tx/<txhash>/<render_type>')
 def tx(txhash,render_type='html'):
     res = Tx.query.filter(Tx.hash == txhash.decode('hex')).first()
-    if res== None:
-        return render_template('404.html'), 404
+    # if res== None:
+    #     return render_template('404.html'), 404
     tx= res.todict()
 
     txins = TxIn.query.filter(TxIn.tx_id==tx['id']).all()
@@ -65,9 +65,6 @@ def blkheight(height=0,render_type='html'):
            txs.append(tx)
     blk['tx']=txs
 
-    res = Block.query.with_entities(Block.hash).filter(Block.height == (int(height)-1)).first()
-    if res!= None:
-        blk['previousblockhash']=binascii.hexlify(res[0])
     res = Block.query.with_entities(Block.hash).filter(Block.height == (int(height)+1)).first()
     if res!= None:
         blk['nextblockhash']=binascii.hexlify(res[0])
@@ -86,7 +83,7 @@ def blk(blkhash,render_type='html'):
 
     blk = res.todict()
 
-    res = BlockTx.query.with_entities(BlockTx.tx_id).filter(BlockTx.blk_id == blk['id']).limit(10)
+    res = BlockTx.query.with_entities(BlockTx.tx_id).filter(BlockTx.blk_id == blk['id']).order_by(BlockTx.tx_id.asc()).limit(10)
     if res!= None:
         txs=[]
         for txid in res:
@@ -133,6 +130,7 @@ def address(address, page=0, page_size=10,render_type='html'):
         tx['vin'] = txins
         txouts = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txout_tx_id==txid).all()
         tx['vout'] = txouts
+        tx['confirm'] = db_session.execute('select get_confirm(%d)' % tx['id']).first()[0];
         txs.append(tx)
  
     addr['txs']=txs
