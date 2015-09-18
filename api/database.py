@@ -12,7 +12,7 @@ from sqlalchemy.orm import relationship, backref
 #logging.basicConfig()
 #logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
-engine = create_engine('postgresql://postgres:c1u2u9z@@127.0.0.1:5433/test',
+engine = create_engine('postgresql://postgres:c1u2u9z@@103.249.253.242:5433/test',
                        echo=True)
 db_session = scoped_session(sessionmaker(autocommit=False,
                                          autoflush=False,
@@ -137,13 +137,11 @@ class Addr(SQLBase):
 class VOUT(SQLBase):
     __tablename__ = 'vout'
     address = Column(TEXT, primary_key=True)
-    hash160 = Column(TEXT)
     addr_id = Column(INTEGER)
     txout_id = Column(INTEGER)
     txin_id = Column(INTEGER)
     txin_tx_id = Column(INTEGER)
     txout_tx_id = Column(INTEGER)
-    txout_txhash = Column(BYTEA)
     value = Column(BIGINT)
 
     @property

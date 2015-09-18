@@ -114,7 +114,15 @@ ALTER FUNCTION public.delete_tx(txid integer) OWNER TO postgres;
 
 CREATE FUNCTION get_confirm(txid integer) RETURNS integer
     LANGUAGE plpgsql
-    AS $_$                                                                                                                         DECLARE tx_height integer;                                                                                                    DECLARE max_height integer;                                                                                               BEGIN                                                                                                                             tx_height=(select c.height from tx a join blk_tx b on(b.tx_id=a.id) join blk c on (c.id=b.blk_id) where a.id=$1);             max_height=(select max(height) from blk);                                                                                     return (max_height-tx_height);                                                                                            END;                                                                                                                          $_$;
+    AS $_$                                                                                                                     
+    DECLARE tx_height integer;                                                                                                
+    DECLARE max_height integer;                                                                                               
+BEGIN                                                                                                                         
+    tx_height=(select c.height from tx a join blk_tx b on(b.tx_id=a.id) join blk c on (c.id=b.blk_id) where a.id=$1);         
+    max_height=(select max(height) from blk);                                                                                 
+    return (max_height-tx_height+1);                                                                                            
+END;                                                                                                                          
+$_$;
 
 
 ALTER FUNCTION public.get_confirm(txid integer) OWNER TO postgres;
