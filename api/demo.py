@@ -57,7 +57,7 @@ def blkheight_handle(height=0,render_type='html'):
 
     blk = blk.todict()
 
-    res = BlockTx.query.with_entities(BlockTx.tx_id).filter(BlockTx.blk_id == blk['id']).limit(10)
+    res = BlockTx.query.with_entities(BlockTx.tx_id).filter(BlockTx.blk_id == blk['id'])order_by(BlockTx.tx_id.asc()).limit(10)
     if res!= None:
         txs=[]
         for txid in res:
