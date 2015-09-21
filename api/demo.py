@@ -50,23 +50,27 @@ def tx_handle(txhash,tx=None,render_type='html'):
 
 @app.route('/height/<height>')
 @app.route('/height/<height>/<render_type>')
-def blkheight_handle(height=0,render_type='html'):
+def blkheight_handle(height=0, page=0, page_size=10, render_type='html'):
     blk = Block.query.filter(Block.height == height).first()
     if blk== None:
         return render_template('404.html'), 404
 
     blk = blk.todict()
 
-    res = BlockTx.query.with_entities(BlockTx.tx_id).filter(BlockTx.blk_id == blk['id']).limit(10)
+    page =int(page)
+    if page <0:
+        page = 0
+ 
+    res = BlockTx.query.with_entities(BlockTx.tx_id).filter(BlockTx.blk_id == blk['id']).order_by(BlockTx.idx).offset(page*page_size).limit(page_size)
     if res!= None:
         txs=[]
         for txid in res:
            res = Tx.query.filter(Tx.id==txid).first()
            tx= res.todict()
            txins = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txin_tx_id==txid).all()
-           tx['in'] = txins
+           tx['in_addresses'] = txins
            txouts = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txout_tx_id==txid).all()
-           tx['out'] = txouts
+           tx['out_addresses'] = txouts
            txs.append(tx)
     blk['tx']=txs
 
@@ -77,11 +81,13 @@ def blkheight_handle(height=0,render_type='html'):
     if render_type == 'json':
         return jsonify(blk)
 
-    return render_template("blk.html",blk=blk)
+    return render_template("blk.html",blk=blk, page=page)
 
 @app.route('/blk/<blkhash>')
+@app.route('/blk/<blkhash>/<int:page>')
 @app.route('/blk/<blkhash>/<render_type>')
-def blk_handle(blkhash, blk=None, render_type='html'):
+@app.route('/blk/<blkhash>/<int:page>/<render_type>')
+def blk_handle(blkhash, blk=None, page=0, page_size=10, render_type='html'):
     if blk==None:
        blk = Block.query.filter(Block.hash == blkhash.decode('hex')).first()
     if blk== None:
@@ -89,16 +95,20 @@ def blk_handle(blkhash, blk=None, render_type='html'):
 
     blk = blk.todict()
 
-    res = BlockTx.query.with_entities(BlockTx.tx_id).filter(BlockTx.blk_id == blk['id']).order_by(BlockTx.tx_id.asc()).limit(10)
+    page =int(page)
+    if page <0:
+        page = 0
+ 
+    res = BlockTx.query.with_entities(BlockTx.tx_id).filter(BlockTx.blk_id == blk['id']).order_by(BlockTx.idx).offset(page*page_size).limit(page_size)
     if res!= None:
         txs=[]
         for txid in res:
            res = Tx.query.filter(Tx.id==txid).first()
            tx= res.todict()
            txins = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txin_tx_id==txid).all()
-           tx['in'] = txins
+           tx['in_addresses'] = txins
            txouts = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txout_tx_id==txid).all()
-           tx['out'] = txouts
+           tx['out_addresses'] = txouts
            txs.append(tx)
 
     blk['tx']=txs
@@ -110,7 +120,7 @@ def blk_handle(blkhash, blk=None, render_type='html'):
     if render_type == 'json':
         return jsonify(blk)
 
-    return render_template("blk.html",blk=blk)
+    return render_template("blk.html",blk=blk, page=page)
 
 @app.route('/addr/<address>')
 @app.route('/addr/<address>/<int:page>')

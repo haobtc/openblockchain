@@ -20,13 +20,69 @@
                 <tr> <td> 后一个块 </td> <td> <a href="/blk/{{ blk.nextblockhash }}"> {{ blk.nextblockhash }} </a></td> </tr>
          </table>
 
-        <h4> 交易列表:</h4>
-        <table>
-            {% for tx in blk.tx %}
-            <tr> <td>  </td> </tr>
-                <tr> <td>   <a href="/tx/{{tx.hash}}"> {{ tx.hash }} </a></td> </tr>
-            {% endfor %}
-        </table>
+    {% for tx in blk.tx %}
+    <div class="transaction_section"> 
+        <div class="transaction" > 
+            <div class="transaction_hash">
+                <a href=/tx/{{ tx.hash }}  >  {{tx.hash}} </a>
+                <span class="pull-right"> <span> 
+                        {% if not tx.coinbase %}
+                        交易费:  {{tx.fee/100000000 |float}}
+                        输入:  {{tx.in_value/100000000 |float}}  BTC
+                        {% endif %}
+                        输出:  {{tx.out_value /100000000 |float}}  BTC
+                        大小:  {{tx.size}}
+                        {% if tx.recv_time!='' %}
+                        时间:  {{(tx.recv_time/1000000)|datetime}}
+                        {% elif tx.time != None %}
+                        时间:  {{tx.time|datetime}}
+                        {% endif %}
+                </span> </span>
+            </div>
+
+            {% if tx.coinbase %}
+            <div class="tx_input">
+                <a href="/tx/{{ tx.hash}} "> Coinbase... </a>
+            </div>
+            {% else %}  
+            <div class="tx_input">
+                {% for txin in tx.in_addresses %}
+                <a href="/addr/{{ txin[0]}} ">  {{txin[0]}}   </a>
+                <span class="pull-right"> <span>  {{txin[1]/100000000| float}}  BTC </span></span> 
+                {% endfor %}
+            </div>
+            {% endif %}  
+
+            <div class="tx_arrow"> <i class="fa fa-arrow-right fa-3x"> </i> </div>
+
+            <div class="tx_output">
+                {% for txout in tx.out_addresses %}
+                <a href="/addr/{{txout[0]}} ">  {{txout[0]}}   </a>
+                <span class="pull-right"> <span>  {{txout[1]/100000000| float}}  BTC </span></span> 
+                {% endfor %}
+            </div>
+
+            <div class="currency_btn"> <button class="btn btn-success cb">
+                    <span>  {{ tx.out_value/100000000 |float }} </span>
+                </button> 
+            </div> 
+        </div>
+
+        {% endfor %}
+
+        <div class="row">
+            <div class="span10">
+                <ul class="pager">
+                    {% if page > 0 %}
+                    <li><a href=/blk/{{blk.hash}}/{{ page - 1 }}>Prev page</a></li>
+                    {% endif %}
+                  <li><a href=/blk/{{blk.hash}}/{{ page + 1 }}>Next page</a></li>
+                </ul>  
+            </div>
+        </div>
+    </div>
+</div>
+ 
     </div>
  
 {% endblock %}
