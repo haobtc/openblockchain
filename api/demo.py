@@ -47,14 +47,8 @@ def tx_handle(txhash,tx=None,render_type='html'):
 
     return render_template("tx.html",tx=tx)
 
-
-@app.route('/height/<height>')
-@app.route('/height/<height>/<render_type>')
-def blkheight_handle(height=0, page=0, page_size=10, render_type='html'):
-    blk = Block.query.filter(Block.height == height).first()
-    if blk== None:
-        return render_template('404.html'), 404
-
+def render_blk(blk=None, page=0, page_size=10, render_type='html'):
+ 
     blk = blk.todict()
 
     page =int(page)
@@ -74,7 +68,7 @@ def blkheight_handle(height=0, page=0, page_size=10, render_type='html'):
            txs.append(tx)
     blk['tx']=txs
 
-    res = Block.query.with_entities(Block.hash).filter(Block.height == (int(height)+1)).first()
+    res = Block.query.with_entities(Block.hash).filter(Block.height == (int(blk['height'])+1)).first()
     if res!= None:
         blk['nextblockhash']=binascii.hexlify(res[0])
 
@@ -82,6 +76,15 @@ def blkheight_handle(height=0, page=0, page_size=10, render_type='html'):
         return jsonify(blk)
 
     return render_template("blk.html",blk=blk, page=page)
+
+@app.route('/height/<height>')
+@app.route('/height/<height>/<render_type>')
+def blkheight_handle(height=0, page=0, page_size=10, render_type='html'):
+    blk = Block.query.filter(Block.height == height).first()
+    if blk== None:
+        return render_template('404.html'), 404
+
+    return render_blk(blk, page, page_size, render_type)
 
 @app.route('/blk/<blkhash>')
 @app.route('/blk/<blkhash>/<int:page>')
@@ -93,34 +96,7 @@ def blk_handle(blkhash, blk=None, page=0, page_size=10, render_type='html'):
     if blk== None:
         return render_template('404.html'), 404
 
-    blk = blk.todict()
-
-    page =int(page)
-    if page <0:
-        page = 0
- 
-    res = BlockTx.query.with_entities(BlockTx.tx_id).filter(BlockTx.blk_id == blk['id']).order_by(BlockTx.idx).offset(page*page_size).limit(page_size)
-    if res!= None:
-        txs=[]
-        for txid in res:
-           res = Tx.query.filter(Tx.id==txid).first()
-           tx= res.todict()
-           txins = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txin_tx_id==txid).all()
-           tx['in_addresses'] = txins
-           txouts = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txout_tx_id==txid).all()
-           tx['out_addresses'] = txouts
-           txs.append(tx)
-
-    blk['tx']=txs
-
-    res = Block.query.with_entities(Block.hash).filter(Block.height == (int(blk['height'])+1)).first()
-    if res!= None:
-        blk['nextblockhash']=binascii.hexlify(res[0])
-
-    if render_type == 'json':
-        return jsonify(blk)
-
-    return render_template("blk.html",blk=blk, page=page)
+    return render_blk(blk, page, page_size, render_type)
 
 @app.route('/addr/<address>')
 @app.route('/addr/<address>/<int:page>')
