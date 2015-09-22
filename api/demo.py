@@ -47,15 +47,25 @@ def lastest_data(render_type='html'):
         tx['in_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txin_tx_id==tx['id']).all()
         tx['out_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txout_tx_id==tx['id']).all()
         txs.append(tx)
- 
+    
+    last_data={}
+    last_data['blks'] = blks
+    last_data['txs'] = txs
+    
     if render_type == 'json':
         return jsonify(last_data)
 
     return render_template('home.html', blks=blks,txs=txs)
  
 @app.route('/')
+@app.route('/<render_type>')
 def home():                                                                                                                                                                  
     return lastest_data(render_type='html')
+
+@app.route('/news')
+@app.route('/news/<render_type>')
+def news():                                                                                                                                                                  
+    return lastest_data(render_type='json')
 
 @app.route('/tx/<txhash>')
 @app.route('/tx/<txhash>/<render_type>')
