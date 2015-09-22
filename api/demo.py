@@ -20,6 +20,12 @@ def _jinja2_filter_datetime(date):
 def _jinja2_filter_reward(blk):
     i = int(blk['height']) / 210000
     return float(blk['fees'])/100000000 + float(50)/(i+1)
+
+@app.template_filter('btc')
+def _jinja2_filter_btc(value):
+    if value=='':
+       return 0
+    return float(value)/100000000
  
 def lastest_data(render_type='html'):                                                                                                                                                                  
     res = Block.query.order_by(Block.id.desc()).limit(10).all()

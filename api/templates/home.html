@@ -34,10 +34,10 @@
                 <a href=/tx/{{ tx.hash }}  >  {{tx.hash}} </a>
                 <span class="pull-right"> <span> 
                         {% if not tx.coinbase %}
-                        交易费:  {{tx.fee/100000000 |float}}
-                        输入:  {{tx.in_value/100000000 |float}}  BTC
+                        交易费:  {{tx.fee |btc}}
+                        输入:  {{tx.in_value |btc}}  BTC
                         {% endif %}
-                        输出:  {{tx.out_value /100000000 |float}}  BTC
+                        输出:  {{tx.out_value  |btc}}  BTC
                         大小:  {{tx.size}}
                         {% if tx.recv_time!='' %}
                         时间:  {{(tx.recv_time/1000000)|datetime}}
@@ -55,7 +55,7 @@
             <div class="tx_input">
                 {% for txin in tx.in_addresses%}
                 <a href="/addr/{{ txin[0]}} ">  {{txin[0]}}   </a>
-                <span class="pull-right"> <span>  {{txin[1]/100000000| float}}  BTC </span></span> 
+                <span class="pull-right"> <span>  {{txin[1]| btc}}  BTC </span></span> 
                 {% endfor %}
             </div>
             {% endif %}  
@@ -65,12 +65,12 @@
             <div class="tx_output">
                 {% for txout in tx.out_addresses%}
                 <a href="/addr/{{txout[0]}} ">  {{txout[0]}}   </a>
-                <span class="pull-right"> <span>  {{txout[1]/100000000| float}}  BTC </span></span> 
+                <span class="pull-right"> <span>  {{txout[1]| btc}}  BTC </span></span> 
                 {% endfor %}
             </div>
 
             <div class="currency_btn"> <button class="btn btn-success cb">
-                    <span>  {{ tx.out_value/100000000 |float }} </span>
+                    <span>  {{ tx.out_value |btc }} </span>
                 </button> 
             </div> 
         </div>
