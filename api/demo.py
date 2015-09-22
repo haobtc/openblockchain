@@ -13,12 +13,34 @@ app = Flask(__name__)
 app = Flask(__name__, static_url_path='/static')
 
 @app.template_filter('datetime')
-def _jinja2_filter_datetime(date, fmt=None):
+def _jinja2_filter_datetime(date):
     return datetime.utcfromtimestamp(date).ctime()
 
+@app.template_filter('reward')
+def _jinja2_filter_reward(blk):
+    i = int(blk['height']) / 210000
+    return float(blk['fees'])/100000000 + float(50)/(i+1)
+ 
+def lastest_data(render_type='html'):                                                                                                                                                                  
+    res = Block.query.order_by(Block.id.desc()).limit(10).all()
+    blks=[blk.todict() for blk in res]
+
+    txs=[]
+    res = Tx.query.order_by(Tx.id.desc()).limit(10).all()
+    for tx in res:
+        tx= tx.todict()
+        tx['in_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txin_tx_id==tx['id']).all()
+        tx['out_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txout_tx_id==tx['id']).all()
+        txs.append(tx)
+ 
+    if render_type == 'json':
+        return jsonify(last_data)
+
+    return render_template('home.html', blks=blks,txs=txs)
+ 
 @app.route('/')
 def home():                                                                                                                                                                  
-    return render_template('home.html')
+    return lastest_data(render_type='html')
 
 @app.route('/tx/<txhash>')
 @app.route('/tx/<txhash>/<render_type>')

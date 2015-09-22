@@ -2,4 +2,81 @@
 
 {% block content %}
 
+<div class="col-lg-12"><h3>最新的BLOCK</h3>
+  <table class="table table-condensed table-striped">
+    <thead>
+      <tr>
+        <th class="text-center">高度</th>
+        <th class="text-center">时间</th>
+        <th class="text-center">区块大小(byte)</th>
+        <th class="text-center">交易数目</th>
+        <th class="text-center">区块奖励<br/>(BTC)</th>
+      </tr>
+    </thead>
+    <tbody id="liveblock">
+     {% for blk in blks %}
+     <tr>      
+        <td class="text-center"><a href="/blk/{{blk.hash}}">{{blk.height}}</a></td>
+        <td class="text-center"><abbr class="timeago" rel="tooltip" data-animation="false" >{{blk.time|datetime}}</abbr></td>
+        <td class="text-center">{{blk.blk_size}}</td>
+        <td class="text-center">{{blk.tx_count}}</td>
+        <td class="text-right">{{blk|reward}}</td>
+    </tr>
+     {% endfor %}
+    </tbody>
+  </table> 
+  
+     {% for tx in txs %}
+
+    <div class="transaction_section"> 
+        <div class="transaction" > 
+            <div class="transaction_hash">
+                <a href=/tx/{{ tx.hash }}  >  {{tx.hash}} </a>
+                <span class="pull-right"> <span> 
+                        {% if not tx.coinbase %}
+                        交易费:  {{tx.fee/100000000 |float}}
+                        输入:  {{tx.in_value/100000000 |float}}  BTC
+                        {% endif %}
+                        输出:  {{tx.out_value /100000000 |float}}  BTC
+                        大小:  {{tx.size}}
+                        {% if tx.recv_time!='' %}
+                        时间:  {{(tx.recv_time/1000000)|datetime}}
+                        {% elif tx.time != None %}
+                        时间:  {{tx.time|datetime}}
+                        {% endif %}
+                </span> </span>
+            </div>
+
+            {% if tx.coinbase %}
+            <div class="tx_input">
+                <a href="/tx/{{ tx.hash}} "> Coinbase... </a>
+            </div>
+            {% else %}  
+            <div class="tx_input">
+                {% for txin in tx.in_addresses%}
+                <a href="/addr/{{ txin[0]}} ">  {{txin[0]}}   </a>
+                <span class="pull-right"> <span>  {{txin[1]/100000000| float}}  BTC </span></span> 
+                {% endfor %}
+            </div>
+            {% endif %}  
+
+            <div class="tx_arrow"> <i class="fa fa-arrow-right fa-3x"> </i> </div>
+
+            <div class="tx_output">
+                {% for txout in tx.out_addresses%}
+                <a href="/addr/{{txout[0]}} ">  {{txout[0]}}   </a>
+                <span class="pull-right"> <span>  {{txout[1]/100000000| float}}  BTC </span></span> 
+                {% endfor %}
+            </div>
+
+            <div class="currency_btn"> <button class="btn btn-success cb">
+                    <span>  {{ tx.out_value/100000000 |float }} </span>
+                </button> 
+            </div> 
+        </div>
+
+        {% endfor %}
+
+    </div>
+</div>           
 {% endblock %}
