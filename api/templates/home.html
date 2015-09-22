@@ -38,8 +38,8 @@
                         输入:  {{tx.in_value/100000000 |float}}  BTC
                         {% endif %}
                         输出:  {{tx.out_value /100000000 |float}}  BTC
-                        大小:  {{tx.size}}
-                        {% if tx.recv_time!='' %}
+                        大小:  {{tx.tx_size}}
+                        {% if tx.recv_time!=0 %}
                         时间:  {{(tx.recv_time/1000000)|datetime}}
                         {% elif tx.time != None %}
                         时间:  {{tx.time|datetime}}
