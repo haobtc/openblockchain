@@ -8,6 +8,7 @@ import binascii
 from database import *
 from sqlalchemy import and_
 from datetime import datetime
+from util     import calculate_target, calculate_difficulty
 
 app = Flask(__name__)
 app = Flask(__name__, static_url_path='/static')
@@ -27,6 +28,14 @@ def _jinja2_filter_btc(value):
        return 0
     return float(value)/100000000
  
+@app.template_filter('target')
+def _jinja2_filter_target(value):
+    return calculate_target(value)
+
+@app.template_filter('difficulty')
+def _jinja2_filter_target(value):
+    return calculate_difficulty(value)
+
 def lastest_data(render_type='html'):                                                                                                                                                                  
     res = Block.query.order_by(Block.id.desc()).limit(10).all()
     blks=[blk.todict() for blk in res]

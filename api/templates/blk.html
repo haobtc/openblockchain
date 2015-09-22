@@ -12,6 +12,8 @@
                 <tr> <td> 创建时间 </td> <td> {{ blk.time |datetime}} </td> </tr>
                 <tr> <td> 随机数 </td> <td> {{ blk.nonce }} </td> </tr>
                 <tr> <td> 计算目标 </td> <td> {{ blk.bits }} </td> </tr>
+                <tr> <td> target </td> <td> {{ blk.bits |target }} </td> </tr>
+                <tr> <td> difficulty </td> <td> {{ blk.bits |difficulty }} </td> </tr>
                 <tr> <td> 交易数 </td> <td> {{ blk.tx_count}} </td> </tr>
                 <tr> <td> 转入量 </td> <td> {{ blk.total_in_value|btc}} </td> </tr>
                 <tr> <td> 转出量 </td> <td> {{ blk.total_out_value|btc}} </td> </tr>
