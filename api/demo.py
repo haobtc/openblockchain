@@ -18,8 +18,14 @@ def _jinja2_filter_datetime(date):
 
 @app.template_filter('reward')
 def _jinja2_filter_reward(blk):
-    i = int(blk['height']) / 210000
-    return float(blk['fees'])/100000000 + float(50)/(i+1)
+    halvings = int(blk['height']) / 210000
+
+    # Force block reward to zero when right shift is undefined.
+    if halvings >= 64:
+        return float(blk['fees'])/100000000
+
+    # Subsidy is cut in half every 210,000 blocks which will occur approximately every 4 years.
+    return float(blk['fees'])/100000000 + float(50)/(halvings+1)
  
 def lastest_data(render_type='html'):                                                                                                                                                                  
     res = Block.query.order_by(Block.id.desc()).limit(10).all()
@@ -29,8 +35,8 @@ def lastest_data(render_type='html'):
     res = Tx.query.order_by(Tx.id.desc()).limit(10).all()
     for tx in res:
         tx= tx.todict()
-        tx['in_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txin_tx_id==tx['id']).all()
-        tx['out_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txout_tx_id==tx['id']).all()
+        tx['in_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txin_tx_id==tx['id']).order_by(VOUT.addr_id).all()
+        tx['out_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txout_tx_id==tx['id']).order_by(VOUT.addr_id).all()
         txs.append(tx)
     
     last_data={}
@@ -66,8 +72,8 @@ def tx_handle(txhash,tx=None,render_type='html'):
     txouts = TxOut.query.filter(TxOut.tx_id==tx['id']).all()
     tx['vout'] = [txout.todict() for txout in txouts]
 
-    tx['in_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txin_tx_id==tx['id']).all()
-    tx['out_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txout_tx_id==tx['id']).all()
+    tx['in_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txin_tx_id==tx['id']).order_by(VOUT.addr_id).all()
+    tx['out_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txout_tx_id==tx['id']).order_by(VOUT.addr_id).all()
     confirm = db_session.execute('select get_confirm(%d)' % tx['id']).first()[0];
     if confirm ==None:
         tx['confirm'] = u"未确认"
@@ -93,9 +99,9 @@ def render_blk(blk=None, page=0, page_size=10, render_type='html'):
         for txid in res:
            res = Tx.query.filter(Tx.id==txid).first()
            tx= res.todict()
-           txins = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txin_tx_id==txid).all()
+           txins = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txin_tx_id==txid).order_by(VOUT.addr_id).all()
            tx['in_addresses'] = txins
-           txouts = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txout_tx_id==txid).all()
+           txouts = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txout_tx_id==txid).order_by(VOUT.addr_id).all()
            tx['out_addresses'] = txouts
            txs.append(tx)
     blk['tx']=txs
@@ -130,6 +136,9 @@ def blk_handle(blkhash, blk=None, page=0, page_size=10, render_type='html'):
 
     return render_blk(blk, page, page_size, render_type)
 
+def confirm(txs): 
+     return txs['confirm'] 
+
 @app.route('/addr/<address>')
 @app.route('/addr/<address>/<int:page>')
 @app.route('/addr/<address>/<render_type>')
@@ -144,10 +153,24 @@ def address_handle(address, page=0, page_size=10,render_type='html'):
     if page <0:
         page = 0
 
-    txidlist = VOUT.query.with_entities(VOUT.txout_tx_id).filter(VOUT.address == address).order_by(VOUT.txout_tx_id.desc()).offset(page*page_size).limit(page_size)
-
     txs=[]
-    for txid in txidlist:
+    txids=[]
+    txout_tx_ids =[]
+    txin_tx_ids = []
+    txidlist = VOUT.query.with_entities(VOUT.txout_tx_id, VOUT.txin_tx_id).filter(VOUT.address == address).order_by(VOUT.txout_tx_id.desc()).offset(page*page_size).limit(page_size)
+    for txout_tx_id,txin_tx_id in txidlist:
+        print txout_tx_id,txin_tx_id
+        txout_tx_ids.append(txout_tx_id)
+        if txin_tx_id is not None:
+            txin_tx_ids.append(txin_tx_id)
+
+    txids = txout_tx_ids
+
+    for txin_tx_id in txin_tx_ids:
+        if txin_tx_id not in txout_tx_ids:
+            txids.append(txin_tx_id)
+
+    for txid in txids:
         res = Tx.query.filter(Tx.id==txid).first()
         tx= res.todict()
         txins = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txin_tx_id==txid).all()
@@ -156,8 +179,8 @@ def address_handle(address, page=0, page_size=10,render_type='html'):
         tx['vout'] = txouts
         tx['confirm'] = db_session.execute('select get_confirm(%d)' % tx['id']).first()[0];
         txs.append(tx)
- 
-    addr['txs']=txs
+    
+    addr['txs']=sorted(txs,key = confirm)
     addr['address']=address
 
     if render_type == 'json':
