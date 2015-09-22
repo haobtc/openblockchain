@@ -13,6 +13,9 @@
                 <tr> <td> 随机数 </td> <td> {{ blk.nonce }} </td> </tr>
                 <tr> <td> 计算目标 </td> <td> {{ blk.bits }} </td> </tr>
                 <tr> <td> 交易数 </td> <td> {{ blk.tx_count}} </td> </tr>
+                <tr> <td> 转入量 </td> <td> {{ blk.total_in_value}} </td> </tr>
+                <tr> <td> 转出量 </td> <td> {{ blk.total_out_value}} </td> </tr>
+                <tr> <td> 交易费 </td> <td> {{ blk.fees/100000000 | float }} </td> </tr>
                  
                 {% if blk.height>0 %}
                 <tr> <td> 前一个块 </td> <td> <a href="/blk/{{ blk.prev_hash }}"> {{ blk.prev_hash }} </a></td> </tr>
