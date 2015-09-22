@@ -42,6 +42,7 @@
             <a href="/addr/{{ addr.address }}"> {{ addr.address }}</a>
             <span class="pull-right">
                 <span> ({{addr.value|btc}}  BTC)</span>
+                <span class="pull-right"> <span>  {% if addr.txin_tx_id!=None %} 已花费 {% else %}未花费{% endif %} </span></span> 
             </span>
             </br>
             {% endfor %}

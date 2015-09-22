@@ -38,8 +38,8 @@
             {% else %}  
             <div class="tx_input">
                 {% for txin in tx.vin %}
-                <a href="/addr/{{ txin[0]}} ">  {{txin[0]}}   </a>
-                <span class="pull-right"> <span>  {{txin[1]| btc}}  BTC </span></span> 
+                <a href="/addr/{{txin.address}} ">  {{txin.address}}   </a>
+                <span class="pull-right"> <span>  {{txin.value| btc}}  BTC </span></span> 
                 {% endfor %}
             </div>
             {% endif %}  
@@ -48,8 +48,9 @@
 
             <div class="tx_output">
                 {% for txout in tx.vout %}
-                <a href="/addr/{{txout[0]}} ">  {{txout[0]}}   </a>
-                <span class="pull-right"> <span>  {{txout[1]| btc}}  BTC </span></span> 
+                <a href="/addr/{{txout.address}} ">  {{txout.address}}   </a>
+                <span class="pull-right"> <span>  {{txout.value| btc}}  BTC </span></span> 
+                <span class="pull-right"> <span>  {% if txout.txin_tx_id!=None %} 已花费 {% else %}未花费{% endif %} </span></span> 
                 {% endfor %}
             </div>
 

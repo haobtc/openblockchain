@@ -62,8 +62,8 @@ def tx_handle(txhash,tx=None,render_type='html'):
     txouts = TxOut.query.filter(TxOut.tx_id==tx['id']).all()
     tx['vout'] = [txout.todict() for txout in txouts]
 
-    tx['in_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txin_tx_id==tx['id']).all()
-    tx['out_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txout_tx_id==tx['id']).all()
+    tx['in_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txin_tx_id==tx['id']).all()
+    tx['out_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txout_tx_id==tx['id']).all()
     confirm = db_session.execute('select get_confirm(%d)' % tx['id']).first()[0];
     if confirm ==None:
         tx['confirm'] = u"未确认"
@@ -89,9 +89,9 @@ def render_blk(blk=None, page=0, page_size=10, render_type='html'):
         for txid in res:
            res = Tx.query.filter(Tx.id==txid).first()
            tx= res.todict()
-           txins = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txin_tx_id==txid).all()
+           txins = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txin_tx_id==txid).all()
            tx['in_addresses'] = txins
-           txouts = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txout_tx_id==txid).all()
+           txouts = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txout_tx_id==txid).all()
            tx['out_addresses'] = txouts
            txs.append(tx)
     blk['tx']=txs
@@ -146,9 +146,9 @@ def address_handle(address, page=0, page_size=10,render_type='html'):
     for txid in txidlist:
         res = Tx.query.filter(Tx.id==txid).first()
         tx= res.todict()
-        txins = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txin_tx_id==txid).all()
+        txins = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txin_tx_id==txid).all()
         tx['vin'] = txins
-        txouts = VOUT.query.with_entities(VOUT.address, VOUT.value).filter(VOUT.txout_tx_id==txid).all()
+        txouts = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txout_tx_id==txid).all()
         tx['vout'] = txouts
         tx['confirm'] = db_session.execute('select get_confirm(%d)' % tx['id']).first()[0];
         txs.append(tx)
