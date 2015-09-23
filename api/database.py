@@ -143,6 +143,8 @@ class VOUT(SQLBase):
     txin_tx_id = Column(INTEGER)
     txout_tx_id = Column(INTEGER)
     value = Column(BIGINT)
+    in_idx = Column(INTEGER)
+    out_idx = Column(INTEGER)
 
     @property
     def todict(self):
