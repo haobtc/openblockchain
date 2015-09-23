@@ -13,6 +13,21 @@ from util     import calculate_target, calculate_difficulty
 app = Flask(__name__)
 app = Flask(__name__, static_url_path='/static')
 
+pool_info=json.loads(open('pools.json','r').read())
+def get_pool(blk_id):
+    coinbase_txout_id = db_session.execute('select a.id from txout a join tx b on(b.id=a.tx_id) join blk_tx c on (c.tx_id=b.id and c.idx=0) where c.blk_id=%d' % blk_id).first()[0];
+    if coinbase_txout_id==None:
+        return ''
+    coinbase_addr = VOUT.query.with_entities(VOUT.address).filter(VOUT.txout_id==coinbase_txout_id).first()
+    if coinbase_addr==None:
+        return ''
+    pool= pool_info['payout_addresses'].get(coinbase_addr[0])
+    if pool!=None:
+        return  pool['name']
+    else:
+        return ''
+
+
 @app.template_filter('datetime')
 def _jinja2_filter_datetime(date):
     return datetime.utcfromtimestamp(date).ctime()
@@ -42,9 +57,14 @@ def _jinja2_filter_target(value):
 def _jinja2_filter_target(value):
     return calculate_difficulty(value)
 
-def lastest_data(render_type='html'):                                                                                                                                                                  
+def lastest_data(render_type='html'):
+
+    blks=[]
     res = Block.query.order_by(Block.id.desc()).limit(10).all()
-    blks=[blk.todict() for blk in res]
+    for blk in res:
+        blk=blk.todict() 
+        blk['pool'] = get_pool(blk['id'])
+	blks.append(blk)
 
     txs=[]
     res = Tx.query.order_by(Tx.id.desc()).limit(10).all()

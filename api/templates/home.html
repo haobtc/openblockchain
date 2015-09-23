@@ -11,6 +11,7 @@
         <th class="text-center">区块大小(byte)</th>
         <th class="text-center">交易数目</th>
         <th class="text-center">区块奖励<br/>(BTC)</th>
+        <th class="text-center">k矿池<br/></th>
       </tr>
     </thead>
     <tbody id="liveblock">
@@ -21,6 +22,7 @@
         <td class="text-center">{{blk.blk_size}}</td>
         <td class="text-center">{{blk.tx_count}}</td>
         <td class="text-right">{{blk|reward}}</td>
+        <td class="text-right">{{blk.pool}}</td>
     </tr>
      {% endfor %}
     </tbody>
