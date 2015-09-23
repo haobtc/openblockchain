@@ -172,31 +172,33 @@ def address_handle(address, page=0, page_size=10,render_type='html'):
     txids=[]
     txout_tx_ids =[]
     txin_tx_ids = []
-    txidlist = VOUT.query.with_entities(VOUT.txout_tx_id, VOUT.txin_tx_id).filter(VOUT.address == address).order_by(VOUT.txout_tx_id.desc()).offset(page*page_size).limit(page_size)
-    for txout_tx_id,txin_tx_id in txidlist:
-        print txout_tx_id,txin_tx_id
-        txout_tx_ids.append(txout_tx_id)
-        if txin_tx_id is not None:
-            txin_tx_ids.append(txin_tx_id)
+    txidlist = db_session.execute("select txid from ((select txout_tx_id as txid,addr_id from vout where address='%s')  union (select txin_tx_id as txid,addr_id from vout where address='%s')) as t where txid is not NULL order by txid desc offset %d limit %d;" % (address,address,page*page_size,page_size)).fetchall();
 
-    txids = txout_tx_ids
-
-    for txin_tx_id in txin_tx_ids:
-        if txin_tx_id not in txout_tx_ids:
-            txids.append(txin_tx_id)
-
-    for txid in txids:
+    in_value = 0 
+    out_value = 0 
+    for txid in txidlist:
+        txid=txid[0]
         res = Tx.query.filter(Tx.id==txid).first()
         tx= res.todict()
+
         txins = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txin_tx_id==txid).all()
         tx['vin'] = txins
+        for vin in txins:
+            if vin.address==address:
+                in_value = in_value - vin.value
+
         txouts = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txout_tx_id==txid).all()
         tx['vout'] = txouts
+        for vout in txouts:
+            if vout.address==address:
+                out_value = out_value + vout.value
+
         tx['confirm'] = db_session.execute('select get_confirm(%d)' % tx['id']).first()[0];
         txs.append(tx)
     
     addr['txs']=sorted(txs,key = confirm)
     addr['address']=address
+    addr['spent']= in_value + out_value
 
     if render_type == 'json':
         return jsonify(addr)
