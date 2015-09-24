@@ -13,6 +13,8 @@ from util     import calculate_target, calculate_difficulty
 app = Flask(__name__)
 app = Flask(__name__, static_url_path='/static')
 
+page_size=10
+
 pool_info=json.loads(open('pools.json','r').read())
 def get_pool(blk_id):
     coinbase_txout_id = db_session.execute('select a.id from txout a join tx b on(b.id=a.tx_id) join blk_tx c on (c.tx_id=b.id and c.idx=0) where c.blk_id=%d' % blk_id).first()[0];
@@ -57,14 +59,19 @@ def _jinja2_filter_target(value):
 def _jinja2_filter_target(value):
     return calculate_difficulty(value)
 
-def lastest_data(render_type='html'):
+def render_404(render_type='html'):
+    if render_type=='html':
+        return render_template('404.html'), 404
+    elif render_type=='json':
+        return jsonify({"error":"Not found"})
 
+def lastest_data(render_type='html'):
     blks=[]
     res = Block.query.order_by(Block.id.desc()).limit(10).all()
     for blk in res:
         blk=blk.todict() 
         blk['pool'] = get_pool(blk['id'])
-	blks.append(blk)
+        blks.append(blk)
 
     txs=[]
     res = Tx.query.order_by(Tx.id.desc()).limit(10).all()
@@ -84,22 +91,23 @@ def lastest_data(render_type='html'):
     return render_template('home.html', blks=blks,txs=txs)
  
 @app.route('/')
-@app.route('/<render_type>')
-def home():                                                                                                                                                                  
+def home():
+    render_type=request.args.get('type') or 'html'
     return lastest_data(render_type='html')
 
 @app.route('/news')
-@app.route('/news/<render_type>')
-def news():                                                                                                                                                                  
+def news():
+    render_type=request.args.get('type') or 'html'
     return lastest_data(render_type='json')
 
-@app.route('/tx/<txhash>')
-@app.route('/tx/<txhash>/<render_type>')
-def tx_handle(txhash,tx=None,render_type='html'):
+@app.route('/tx/<txhash>', methods=['GET', 'POST'])
+def tx_handle(txhash,tx=None):
+    render_type=request.args.get('type') or 'html'
+    page= request.args.get('page') or 0
     if tx ==None:
         tx = Tx.query.filter(Tx.hash == txhash.decode('hex')).first()
     if tx == None:
-        return render_template('404.html'), 404
+        return render_404(render_type)
     tx= tx.todict()
 
     txins = TxIn.query.filter(TxIn.tx_id==tx['id']).all()
@@ -120,7 +128,7 @@ def tx_handle(txhash,tx=None,render_type='html'):
 
     return render_template("tx.html",tx=tx)
 
-def render_blk(blk=None, page=0, page_size=10, render_type='html'):
+def render_blk(blk=None, page=0, render_type='html'):
  
     blk = blk.todict()
 
@@ -150,38 +158,37 @@ def render_blk(blk=None, page=0, page_size=10, render_type='html'):
 
     return render_template("blk.html",blk=blk, page=page)
 
-@app.route('/height/<height>')
-@app.route('/height/<height>/<render_type>')
-def blkheight_handle(height=0, page=0, page_size=10, render_type='html'):
+@app.route('/height/<height>', methods=['GET', 'POST'])
+def blkheight_handle(height=0):
+    render_type=request.args.get('type') or 'html'
+    page= request.args.get('page') or 0
     blk = Block.query.filter(Block.height == height).first()
     if blk== None:
-        return render_template('404.html'), 404
+        return render_404(render_type)
 
-    return render_blk(blk, page, page_size, render_type)
+    return render_blk(blk, page, render_type)
 
-@app.route('/blk/<blkhash>')
-@app.route('/blk/<blkhash>/<int:page>')
-@app.route('/blk/<blkhash>/<render_type>')
-@app.route('/blk/<blkhash>/<int:page>/<render_type>')
-def blk_handle(blkhash, blk=None, page=0, page_size=10, render_type='html'):
+@app.route('/blk/<blkhash>', methods=['GET', 'POST'])
+def blk_handle(blkhash, blk=None):
+    render_type=request.args.get('type') or 'html'
+    page= request.args.get('page') or 0
     if blk==None:
        blk = Block.query.filter(Block.hash == blkhash.decode('hex')).first()
     if blk== None:
-        return render_template('404.html'), 404
+        return render_404(render_type)
 
-    return render_blk(blk, page, page_size, render_type)
+    return render_blk(blk, page, render_type)
 
 def confirm(txs): 
      return txs['confirm'] 
 
-@app.route('/addr/<address>')
-@app.route('/addr/<address>/<int:page>')
-@app.route('/addr/<address>/<render_type>')
-@app.route('/addr/<address>/<int:page>/<render_type>')
-def address_handle(address, page=0, page_size=10,render_type='html'):
+@app.route('/addr/<address>', methods=['GET', 'POST'])
+def address_handle(address):
+    render_type=request.args.get('type') or 'html'
+    page= request.args.get('page') or 0
     addr = Addr.query.filter(Addr.address == address).first()
     if addr == None:
-        return render_template('404.html'), 404
+        return render_404(render_type)
     addr=addr.todict()
 
     page =int(page)
@@ -226,9 +233,9 @@ def address_handle(address, page=0, page_size=10,render_type='html'):
     return render_template("addr.html", addr=addr,page=page)
 
 @app.route('/search', methods=['GET', 'POST'])
-def search(sid=0):                                                                                                                                                                  
-
-    sid = sid or request.args.get('sid')
+def search(sid=0):
+    sid = request.args.get('sid') or sid
+    render_type=request.args.get('type') or 'html'
 
     slen = len(sid)
     if slen == 64:
@@ -246,15 +253,14 @@ def search(sid=0):
             if blk!=None:
                return blk_handle(sid,blk)
             else:
-               return redirect("/", code=302)
+               return render_404(render_type)
     elif slen <= 34 and slen >=26:
          return redirect("/addr/%s" % sid, code=302)
     elif slen <9:
         #as blk height
         return redirect("/height/%s" % sid, code=302)
     else:
-        return redirect("/", code=302)
- 
+        return render_404(render_type)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
