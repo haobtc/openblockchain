@@ -97,17 +97,14 @@ def home():
 @app.route('/news')
 def news():
     render_type=request.args.get('type') or 'html'
-    return lastest_data(render_type='html')
+    return lastest_data(render_type)
 
-@app.route('/tx/<txhash>', methods=['GET', 'POST'])
-def tx_handle(txhash,tx=None):
-    render_type=request.args.get('type') or 'html'
-    page= request.args.get('page') or 0
-    if tx ==None:
-        tx = Tx.query.filter(Tx.hash == txhash.decode('hex')).first()
-    if tx == None:
-        return render_404(render_type)
+def render_tx(tx=None, page=0, render_type='html'):
     tx= tx.todict()
+
+    page =int(page)
+    if page <0:
+        page = 0
 
     txins = TxIn.query.filter(TxIn.tx_id==tx['id']).all()
     tx['vin'] = [txin.todict() for txin in txins ]
@@ -126,6 +123,17 @@ def tx_handle(txhash,tx=None):
         return jsonify(tx)
 
     return render_template("tx.html",tx=tx)
+
+@app.route('/tx/<txhash>', methods=['GET', 'POST'])
+def tx_handle(txhash,tx=None):
+    render_type=request.args.get('type') or 'html'
+    page= request.args.get('page') or 0
+    if tx ==None:
+        tx = Tx.query.filter(Tx.hash == txhash.decode('hex')).first()
+    if tx == None:
+        return render_404(render_type)
+
+    return render_tx(tx, page, render_type)
 
 def render_blk(blk=None, page=0, render_type='html'):
  
@@ -181,15 +189,12 @@ def blk_handle(blkhash, blk=None):
 def confirm(txs): 
      return txs['confirm'] 
 
-@app.route('/addr/<address>', methods=['GET', 'POST'])
-def address_handle(address):
-    render_type=request.args.get('type') or 'html'
-    page= request.args.get('page') or 0
+def render_addr(address=None, page=0, render_type='html'):
     addr = Addr.query.filter(Addr.address == address).first()
     if addr == None:
         return render_404(render_type)
-    addr=addr.todict()
 
+    addr=addr.todict()
     page =int(page)
     if page <0:
         page = 0
@@ -236,6 +241,14 @@ def address_handle(address):
 
     return render_template("addr.html", addr=addr,page=page)
 
+@app.route('/addr/<address>', methods=['GET', 'POST'])
+def address_handle(address):
+    render_type=request.args.get('type') or 'html'
+    page= request.args.get('page') or 0
+
+    return render_addr(address, page, render_type)
+   
+
 @app.route('/search', methods=['GET', 'POST'])
 def search(sid=0):
     sid = request.args.get('sid') or sid
@@ -245,24 +258,30 @@ def search(sid=0):
     if slen == 64:
         #should be tx hash or blk hash
         try:
-          hash = sid.decode('hex')
+            hash = sid.decode('hex')
         except:
-          return redirect("/", code=302)
+            return render_404(render_type)
           
         tx = Tx.query.filter(Tx.hash ==hash ).first()
         if tx!=None:
-            return tx_handle(sid,tx)
+            return render_tx(tx, 0, render_type)
         else:
             blk = Block.query.filter(Block.hash == hash).first()
             if blk!=None:
-               return blk_handle(sid,blk)
+               return render_blk(blk, 0, render_type)
             else:
                return render_404(render_type)
     elif slen <= 34 and slen >=26:
-         return redirect("/addr/%s" % sid, code=302)
+        addr = sid
+        return render_addr(addr,0, render_type)
     elif slen <9:
         #as blk height
-        return redirect("/height/%s" % sid, code=302)
+        height = sid
+        blk = Block.query.filter(Block.height == height).first()
+        if blk== None:
+            return render_404(render_type)
+
+        return render_blk(blk, 0, render_type)
     else:
         return render_404(render_type)
 
