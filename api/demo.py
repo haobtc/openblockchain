@@ -230,7 +230,6 @@ def address_handle(address):
     
     addr['txs']=sorted(txs,key = confirm)
     addr['address']=address
-    addr['spent']= in_value + out_value
 
     if render_type == 'json':
         return jsonify(addr)
