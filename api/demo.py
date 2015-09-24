@@ -67,14 +67,14 @@ def render_404(render_type='html'):
 
 def lastest_data(render_type='html'):
     blks=[]
-    res = Block.query.order_by(Block.id.desc()).limit(10).all()
+    res = Block.query.order_by(Block.id.desc()).limit(6).all()
     for blk in res:
         blk=blk.todict() 
         blk['pool'] = get_pool(blk['id'])
         blks.append(blk)
 
     txs=[]
-    res = Tx.query.order_by(Tx.id.desc()).limit(10).all()
+    res = Tx.query.order_by(Tx.id.desc()).limit(7).all()
     for tx in res:
         tx= tx.todict()
         tx['in_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txin_tx_id==tx['id']).order_by(VOUT.in_idx).all()
@@ -99,12 +99,8 @@ def news():
     render_type=request.args.get('type') or 'html'
     return lastest_data(render_type)
 
-def render_tx(tx=None, page=0, render_type='html'):
+def render_tx(tx=None, render_type='html'):
     tx= tx.todict()
-
-    page =int(page)
-    if page <0:
-        page = 0
 
     txins = TxIn.query.filter(TxIn.tx_id==tx['id']).all()
     tx['vin'] = [txin.todict() for txin in txins ]
@@ -127,23 +123,30 @@ def render_tx(tx=None, page=0, render_type='html'):
 @app.route('/tx/<txhash>', methods=['GET', 'POST'])
 def tx_handle(txhash,tx=None):
     render_type=request.args.get('type') or 'html'
-    page= request.args.get('page') or 0
     if tx ==None:
         tx = Tx.query.filter(Tx.hash == txhash.decode('hex')).first()
     if tx == None:
         return render_404(render_type)
 
-    return render_tx(tx, page, render_type)
+    return render_tx(tx, render_type)
 
-def render_blk(blk=None, page=0, render_type='html'):
- 
+def render_blk(blk=None, page=1, render_type='html'):
     blk = blk.todict()
 
+    total_page = blk['tx_count']/page_size
+    if blk['tx_count']%page_size:
+        total_page+=1
+    blk['total_page'] = total_page
+
     page =int(page)
-    if page <0:
-        page = 0
- 
-    res = BlockTx.query.with_entities(BlockTx.tx_id).filter(BlockTx.blk_id == blk['id']).order_by(BlockTx.idx).offset(page*page_size).limit(page_size)
+    if page <1:
+        page = 1
+    if page > total_page:
+        page = total_page
+
+    blk['page'] = page
+
+    res = BlockTx.query.with_entities(BlockTx.tx_id).filter(BlockTx.blk_id == blk['id']).order_by(BlockTx.idx).offset((page-1)*page_size).limit(page_size)
     if res!= None:
         txs=[]
         for txid in res:
@@ -168,7 +171,7 @@ def render_blk(blk=None, page=0, render_type='html'):
 @app.route('/height/<height>', methods=['GET', 'POST'])
 def blkheight_handle(height=0):
     render_type=request.args.get('type') or 'html'
-    page= request.args.get('page') or 0
+    page= request.args.get('page') or 1
     blk = Block.query.filter(Block.height == height).first()
     if blk== None:
         return render_404(render_type)
@@ -178,7 +181,8 @@ def blkheight_handle(height=0):
 @app.route('/blk/<blkhash>', methods=['GET', 'POST'])
 def blk_handle(blkhash, blk=None):
     render_type=request.args.get('type') or 'html'
-    page= request.args.get('page') or 0
+    page= request.args.get('page') or 1
+
     if blk==None:
        blk = Block.query.filter(Block.hash == blkhash.decode('hex')).first()
     if blk== None:
@@ -189,21 +193,24 @@ def blk_handle(blkhash, blk=None):
 def confirm(txs): 
      return txs['confirm'] 
 
-def render_addr(address=None, page=0, render_type='html'):
+def render_addr(address=None, page=1, render_type='html'):
     addr = Addr.query.filter(Addr.address == address).first()
     if addr == None:
         return render_404(render_type)
 
     addr=addr.todict()
+
     page =int(page)
-    if page <0:
-        page = 0
+    if page <1:
+        page = 1
+
+    addr['page'] = page
 
     txs=[]
     txids=[]
     txout_tx_ids =[]
     txin_tx_ids = []
-    txidlist = db_session.execute("select txid from ((select txout_tx_id as txid,addr_id from vout where address='%s')  union (select txin_tx_id as txid,addr_id from vout where address='%s')) as t where txid is not NULL order by txid desc offset %d limit %d;" % (address,address,page*page_size,page_size)).fetchall();
+    txidlist = db_session.execute("select txid from ((select txout_tx_id as txid,addr_id from vout where address='%s')  union (select txin_tx_id as txid,addr_id from vout where address='%s')) as t where txid is not NULL order by txid desc offset %d limit %d;" % (address,address,(page-1)*page_size,page_size)).fetchall();
 
     in_value = 0 
     out_value = 0 
@@ -234,6 +241,8 @@ def render_addr(address=None, page=0, render_type='html'):
         txs.append(tx)
     
     addr['txs']=sorted(txs,key = confirm)
+    addr['txs_len']=len(txs)
+    addr['page_size'] =page_size
     addr['address']=address
 
     if render_type == 'json':
@@ -244,7 +253,7 @@ def render_addr(address=None, page=0, render_type='html'):
 @app.route('/addr/<address>', methods=['GET', 'POST'])
 def address_handle(address):
     render_type=request.args.get('type') or 'html'
-    page= request.args.get('page') or 0
+    page= request.args.get('page') or 1
 
     return render_addr(address, page, render_type)
    
@@ -264,16 +273,16 @@ def search(sid=0):
           
         tx = Tx.query.filter(Tx.hash ==hash ).first()
         if tx!=None:
-            return render_tx(tx, 0, render_type)
+            return render_tx(tx, render_type)
         else:
             blk = Block.query.filter(Block.hash == hash).first()
             if blk!=None:
-               return render_blk(blk, 0, render_type)
+               return render_blk(blk, 1, render_type)
             else:
                return render_404(render_type)
     elif slen <= 34 and slen >=26:
         addr = sid
-        return render_addr(addr,0, render_type)
+        return render_addr(addr,1, render_type)
     elif slen <9:
         #as blk height
         height = sid
@@ -281,7 +290,7 @@ def search(sid=0):
         if blk== None:
             return render_404(render_type)
 
-        return render_blk(blk, 0, render_type)
+        return render_blk(blk, 1, render_type)
     else:
         return render_404(render_type)
 
