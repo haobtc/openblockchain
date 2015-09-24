@@ -54,12 +54,12 @@
                 {% endfor %}
             </div>
 
-            {% if addr.spent >0 %}
+            {% if tx.spent >0 %}
             <div class="currency_btn"> <button class="btn btn-success cb">
             {% else %}
             <div class="currency_btn"> <button class="btn btn-fail cb">
             {% endif %}
-                    <span>  {{ addr.spent |btc }} </span>
+                    <span>  {{ tx.spent |btc }} </span>
                 </button> 
             </div> 
         </div>
