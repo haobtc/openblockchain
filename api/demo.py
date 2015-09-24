@@ -92,13 +92,12 @@ def lastest_data(render_type='html'):
  
 @app.route('/')
 def home():
-    render_type=request.args.get('type') or 'html'
     return lastest_data(render_type='html')
 
 @app.route('/news')
 def news():
     render_type=request.args.get('type') or 'html'
-    return lastest_data(render_type='json')
+    return lastest_data(render_type='html')
 
 @app.route('/tx/<txhash>', methods=['GET', 'POST'])
 def tx_handle(txhash,tx=None):
@@ -204,6 +203,9 @@ def address_handle(address):
     in_value = 0 
     out_value = 0 
     for txid in txidlist:
+        tx_in_value = 0 
+        tx_out_value = 0 
+
         txid=txid[0]
         res = Tx.query.filter(Tx.id==txid).first()
         tx= res.todict()
@@ -212,15 +214,18 @@ def address_handle(address):
         tx['vin'] = txins
         for vin in txins:
             if vin.address==address:
+                tx_in_value = tx_in_value - vin.value
                 in_value = in_value - vin.value
 
         txouts = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txout_tx_id==txid).order_by(VOUT.out_idx).all()
         tx['vout'] = txouts
         for vout in txouts:
             if vout.address==address:
+                tx_out_value = tx_out_value + vout.value
                 out_value = out_value + vout.value
 
         tx['confirm'] = db_session.execute('select get_confirm(%d)' % tx['id']).first()[0];
+        tx['spent']= tx_in_value + tx_out_value
         txs.append(tx)
     
     addr['txs']=sorted(txs,key = confirm)
