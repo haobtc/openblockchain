@@ -164,3 +164,11 @@ class UTXO(SQLBase):
     def todict(self):
         return to_dict(self, self.__class__)
 
+class UTX(SQLBase):
+    __tablename__ = 'utx'
+    id = Column(INTEGER, primary_key=True)
+    
+    @property
+    def todict(self):
+        return to_dict(self, self.__class__)
+

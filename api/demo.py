@@ -20,11 +20,8 @@ from bitcoinrpc.authproxy import AuthServiceProxy
 RPC_URL = "http://bitcoinrpc:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX@127.0.0.1:8332"
 access = AuthServiceProxy(RPC_URL)
 
-def getdifficulty():
-  return json.loads(access.getdifficulty())
-
-def getnetworkhashps():
-  return json.loads(access.getnetworkhashps())
+def getmininginfo():
+  return json.loads(access.getmininginfo())
 
 pool_info=json.loads(open('pools.json','r').read())
 def get_pool(blk_id):
@@ -97,11 +94,12 @@ def lastest_data(render_type='html'):
     last_data={}
     last_data['blks'] = blks
     last_data['txs'] = txs
-    last_data['unconfirmed_txs'] = 0
-    work = (blks[0]["work"]).decode('hex')
-    print "work",blks[0]["work"], work
-    last_data['difficulty'] = getdifficulty()
-    last_data['networkhashps'] = getnetworkhashps()
+    last_data['unconfirmed_txs'] = UTX.query.count()
+
+
+    mininginfo = getmininginfo()
+    last_data['difficulty'] = mininginfo['difficulty']
+    last_data['networkhashps'] = mininginfo['networkhashps']
     
     if render_type == 'json':
         return jsonify(last_data)

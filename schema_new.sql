@@ -226,7 +226,7 @@ CREATE TABLE addr (
 );
 
 
-ALTER TABLE public.addr OWNER TO postgres;
+ALTER TABLE addr OWNER TO postgres;
 
 --
 -- Name: addr_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -240,7 +240,7 @@ CREATE SEQUENCE addr_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.addr_id_seq OWNER TO postgres;
+ALTER TABLE addr_id_seq OWNER TO postgres;
 
 --
 -- Name: addr_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -259,7 +259,7 @@ CREATE TABLE addr_txout (
 );
 
 
-ALTER TABLE public.addr_txout OWNER TO postgres;
+ALTER TABLE addr_txout OWNER TO postgres;
 
 --
 -- Name: tx; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
@@ -282,7 +282,7 @@ CREATE TABLE tx (
 );
 
 
-ALTER TABLE public.tx OWNER TO postgres;
+ALTER TABLE tx OWNER TO postgres;
 
 --
 -- Name: txin; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
@@ -299,7 +299,7 @@ CREATE TABLE txin (
 );
 
 
-ALTER TABLE public.txin OWNER TO postgres;
+ALTER TABLE txin OWNER TO postgres;
 
 --
 -- Name: txout; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
@@ -315,7 +315,7 @@ CREATE TABLE txout (
 );
 
 
-ALTER TABLE public.txout OWNER TO postgres;
+ALTER TABLE txout OWNER TO postgres;
 
 --
 -- Name: vout; Type: VIEW; Schema: public; Owner: postgres
@@ -328,7 +328,9 @@ CREATE VIEW vout AS
     c.id AS txin_id,
     e.id AS txin_tx_id,
     b.id AS txout_tx_id,
-    a.value
+    a.value,
+    a.tx_idx AS out_idx,
+    c.tx_idx AS in_idx
    FROM (((((txout a
      LEFT JOIN tx b ON ((b.id = a.tx_id)))
      LEFT JOIN txin c ON (((c.prev_out = b.hash) AND (c.prev_out_index = a.tx_idx))))
@@ -337,7 +339,7 @@ CREATE VIEW vout AS
      LEFT JOIN addr g ON ((g.id = f.addr_id)));
 
 
-ALTER TABLE public.vout OWNER TO postgres;
+ALTER TABLE vout OWNER TO postgres;
 
 --
 -- Name: balance; Type: VIEW; Schema: public; Owner: postgres
@@ -351,7 +353,7 @@ CREATE VIEW balance AS
   GROUP BY vout.addr_id;
 
 
-ALTER TABLE public.balance OWNER TO postgres;
+ALTER TABLE balance OWNER TO postgres;
 
 --
 -- Name: blk; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
@@ -378,7 +380,7 @@ CREATE TABLE blk (
 );
 
 
-ALTER TABLE public.blk OWNER TO postgres;
+ALTER TABLE blk OWNER TO postgres;
 
 --
 -- Name: blk_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -392,7 +394,7 @@ CREATE SEQUENCE blk_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.blk_id_seq OWNER TO postgres;
+ALTER TABLE blk_id_seq OWNER TO postgres;
 
 --
 -- Name: blk_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -412,7 +414,7 @@ CREATE TABLE blk_tx (
 );
 
 
-ALTER TABLE public.blk_tx OWNER TO postgres;
+ALTER TABLE blk_tx OWNER TO postgres;
 
 --
 -- Name: tx_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -426,7 +428,7 @@ CREATE SEQUENCE tx_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.tx_id_seq OWNER TO postgres;
+ALTER TABLE tx_id_seq OWNER TO postgres;
 
 --
 -- Name: tx_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -447,7 +449,7 @@ CREATE SEQUENCE txin_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.txin_id_seq OWNER TO postgres;
+ALTER TABLE txin_id_seq OWNER TO postgres;
 
 --
 -- Name: txin_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -468,7 +470,7 @@ CREATE SEQUENCE txout_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.txout_id_seq OWNER TO postgres;
+ALTER TABLE txout_id_seq OWNER TO postgres;
 
 --
 -- Name: txout_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -486,7 +488,7 @@ CREATE TABLE utx (
 );
 
 
-ALTER TABLE public.utx OWNER TO postgres;
+ALTER TABLE utx OWNER TO postgres;
 
 --
 -- Name: utxo; Type: VIEW; Schema: public; Owner: postgres
@@ -516,7 +518,35 @@ CREATE VIEW utxo AS
   WHERE (c.id IS NULL);
 
 
-ALTER TABLE public.utxo OWNER TO postgres;
+ALTER TABLE utxo OWNER TO postgres;
+
+--
+-- Name: vtx; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW vtx AS
+ SELECT a.id,
+    a.hash,
+    a.version,
+    a.lock_time,
+    a.coinbase,
+    a.tx_size,
+    a.in_count,
+    a.in_value,
+    a.out_count,
+    a.out_value,
+    a.fee,
+    a.recv_time,
+    a.ip,
+    b.idx,
+    c.height,
+    c."time"
+   FROM ((tx a
+     LEFT JOIN blk_tx b ON ((b.tx_id = a.id)))
+     LEFT JOIN blk c ON ((c.id = b.blk_id)));
+
+
+ALTER TABLE vtx OWNER TO postgres;
 
 --
 -- Name: id; Type: DEFAULT; Schema: public; Owner: postgres
