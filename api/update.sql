@@ -17,3 +17,5 @@ SELECT g.address,
      LEFT JOIN addr_txout f ON f.txout_id = a.id
      LEFT JOIN addr g ON g.id = f.addr_id;
 create view balance as SELECT vout.addr_id, sum(vout.value) AS value FROM vout WHERE vout.txin_id IS NULL GROUP BY vout.addr_id;
+
+create view vtx as select a.*,b.idx,c.height,c.time from tx a left join blk_tx b on(b.tx_id=a.id) left join blk c on (c.id=b.blk_id);
