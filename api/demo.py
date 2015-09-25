@@ -8,12 +8,23 @@ import binascii
 from database import *
 from sqlalchemy import and_
 from datetime import datetime
-from util     import calculate_target, calculate_difficulty
+from util     import calculate_target, calculate_difficulty,work_to_difficulty
 
 app = Flask(__name__)
 app = Flask(__name__, static_url_path='/static')
 
 page_size=10
+
+from bitcoinrpc.authproxy import AuthServiceProxy
+
+RPC_URL = "http://bitcoinrpc:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX@127.0.0.1:8332"
+access = AuthServiceProxy(RPC_URL)
+
+def getdifficulty():
+  return json.loads(access.getdifficulty())
+
+def getnetworkhashps():
+  return json.loads(access.getnetworkhashps())
 
 pool_info=json.loads(open('pools.json','r').read())
 def get_pool(blk_id):
@@ -79,11 +90,18 @@ def lastest_data(render_type='html'):
         tx= tx.todict()
         tx['in_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txin_tx_id==tx['id']).order_by(VOUT.in_idx).all()
         tx['out_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txout_tx_id==tx['id']).order_by(VOUT.out_idx).all()
+        if tx['recv_time'] == 0:
+            tx['recv_time'] = tx['time']
         txs.append(tx)
     
     last_data={}
     last_data['blks'] = blks
     last_data['txs'] = txs
+    last_data['unconfirmed_txs'] = 0
+    work = (blks[0]["work"]).decode('hex')
+    print "work",blks[0]["work"], work
+    last_data['difficulty'] = getdifficulty()
+    last_data['networkhashps'] = getnetworkhashps()
     
     if render_type == 'json':
         return jsonify(last_data)
