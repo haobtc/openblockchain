@@ -97,9 +97,9 @@ def lastest_data(render_type='html'):
     last_data['unconfirmed_txs'] = UTX.query.count()
 
 
-    mininginfo = getmininginfo()
-    last_data['difficulty'] = mininginfo['difficulty']
-    last_data['networkhashps'] = mininginfo['networkhashps']
+    # mininginfo = getmininginfo()
+    # last_data['difficulty'] = mininginfo['difficulty']
+    # last_data['networkhashps'] = mininginfo['networkhashps']
     
     if render_type == 'json':
         return jsonify(last_data)

@@ -110,6 +110,7 @@ CREATE INDEX addr_spent_address on addr_spent USING btree (addr_id);
 update addr set recv_value=a.recv_value, recv_count=a.txout_count from addr_recv a where addr.id=a.addr_id;
 update addr set spent_value=a.spent_value, spent_count=a.spent_txin_count from addr_spent a where addr.id=a.addr_id;
 
-DROP MATERIALIZED VIEW vvout;
 DROP MATERIALIZED VIEW addr_recv;
 DROP MATERIALIZED VIEW addr_spent;
+DROP MATERIALIZED VIEW vvout;
+
