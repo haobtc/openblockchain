@@ -8,6 +8,11 @@
         <span> 余额: {{ addr.balance|btc }} </span>
     </button>
     <h3> hash160: {{ addr.hash160 }} :</small> </h3>
+    <h3> recv : {{ addr.recv_value|btc}} :</small> </h3>
+    <h3> spent : {{ addr.recv_value|btc}} :</small> </h3>
+    <h3> recv tx count : {{ addr.recv_count }} :</small> </h3>
+    <h3> spent tx count : {{ addr.recv_count }} :</small> </h3>
+    <h3> total tx count : {{ addr.tx_count }} :</small> </h3>
     <h2> 交易列表: </h2>
 
     {% for tx in addr.txs %}

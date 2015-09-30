@@ -9,6 +9,7 @@ from database import *
 from sqlalchemy import and_
 from datetime import datetime
 from util     import calculate_target, calculate_difficulty,work_to_difficulty
+import re
 
 app = Flask(__name__)
 app = Flask(__name__, static_url_path='/static')
@@ -35,7 +36,11 @@ def get_pool(blk_id):
     if pool!=None:
         return  pool['name']
     else:
-        return ''
+        coinbase_str = db_session.execute('select a.script_sig from txin a join tx b on(b.id=a.tx_id) join blk_tx c on (c.tx_id=b.id and c.idx=0) where c.blk_id=%d' % blk_id).first()[0];
+        for tag in pool_info['coinbase_tags'].keys():
+            if re.search(tag, coinbase_str)!=None:
+               return  pool_info['coinbase_tags'][tag]['name']
+        return 'p2p or others'
 
 
 @app.template_filter('datetime')
@@ -215,6 +220,7 @@ def render_addr(address=None, page=1, render_type='html'):
         return render_404(render_type)
 
     addr=addr.todict()
+    addr['tx_count']=AddrTx.query.filter(AddrTx.addr_id==int(addr["id"])).count();
 
     page =int(page)
     if page <1:
@@ -226,7 +232,7 @@ def render_addr(address=None, page=1, render_type='html'):
     txids=[]
     txout_tx_ids =[]
     txin_tx_ids = []
-    txidlist = db_session.execute("select txid from ((select txout_tx_id as txid,addr_id from vout where address='%s')  union (select txin_tx_id as txid,addr_id from vout where address='%s')) as t where txid is not NULL order by txid desc offset %d limit %d;" % (address,address,(page-1)*page_size,page_size)).fetchall();
+    txidlist = AddrTx.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id==int(addr["id"])).order_by(AddrTx.tx_id.desc()).offset((page-1)*page_size).limit(page_size);
 
     in_value = 0 
     out_value = 0 
@@ -256,7 +262,7 @@ def render_addr(address=None, page=1, render_type='html'):
         tx['spent']= tx_in_value + tx_out_value
         txs.append(tx)
     
-    addr['txs']=sorted(txs,key = confirm)
+    addr['txs']=txs
     addr['txs_len']=len(txs)
     addr['page_size'] =page_size
     addr['address']=address

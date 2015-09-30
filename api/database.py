@@ -12,7 +12,7 @@ from sqlalchemy.orm import relationship, backref
 #logging.basicConfig()
 #logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
-engine = create_engine('postgresql://postgres:c1u2u9z@@127.0.0.1:5433/test',
+engine = create_engine('postgresql://postgres:c1u2u9z@@127.0.0.1:5432/test',
                        echo=False)
 db_session = scoped_session(sessionmaker(autocommit=False,
                                          autoflush=False,
