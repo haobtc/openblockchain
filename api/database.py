@@ -12,7 +12,7 @@ from sqlalchemy.orm import relationship, backref
 #logging.basicConfig()
 #logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
-engine = create_engine('postgresql://postgres:c1u2u9z@@127.0.0.1:5432/test',
+engine = create_engine('postgresql://postgres:c1u2u9z@@127.0.0.1:5433/test',
                        echo=False)
 db_session = scoped_session(sessionmaker(autocommit=False,
                                          autoflush=False,
@@ -129,10 +129,23 @@ class Addr(SQLBase):
     address = Column(TEXT, primary_key=True)
     hash160 = Column(TEXT)
     balance = Column(BIGINT)
+    recv_value  = Column(BIGINT)
+    recv_count  = Column(INTEGER)  
+    spent_value = Column(BIGINT) 
+    spent_count = Column(INTEGER)  
 
     def todict(self):
         return to_dict(self, self.__class__)
  
+class AddrTx(SQLBase):
+    __tablename__ = 'addr_tx'
+    addr_id = Column(INTEGER, ForeignKey("addr.id"))
+    tx_id = Column(INTEGER)
+    __table_args__ = (PrimaryKeyConstraint(addr_id, tx_id), )
+
+    def todict(self):
+        return to_dict(self, self.__class__)
+
 
 class VOUT(SQLBase):
     __tablename__ = 'vout'
