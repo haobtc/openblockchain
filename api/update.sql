@@ -76,12 +76,12 @@ BEGIN
 
     FOR o IN select distinct addr_id from vout where txin_tx_id=txid and addr_id is not NULL LOOP
        update addr set spent_count=(spent_count-1) where id=o.addr_id;
-       delete from addr_tx where addr_id=o.addr_id and tx_id=o.txid;
+       delete from addr_tx where addr_id=o.addr_id and tx_id=txid;
     END LOOP;
 
     FOR o IN select distinct addr_id from vout where txout_tx_id=txid and addr_id is not NULL LOOP
        update addr set recv_count=(recv_count-1) where id=o.addr_id;
-       delete from addr_tx where addr_id=o.addr_id and tx_id=o.txid;
+       delete from addr_tx where addr_id=o.addr_id and tx_id=txid;
     END LOOP;
 END;
 $$;
