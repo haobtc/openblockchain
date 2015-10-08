@@ -14,7 +14,7 @@ from sqlalchemy.orm import relationship, backref
 
 engine = create_engine('postgresql://postgres:c1u2u9z@@127.0.0.1:5432/test',
                        echo=False)
-db_session = scoped_session(sessionmaker(autocommit=False,
+db_session = scoped_session(sessionmaker(autocommit=True,
                                          autoflush=False,
                                          bind=engine))
 SQLBase = declarative_base()
