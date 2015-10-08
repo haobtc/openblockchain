@@ -222,6 +222,11 @@ def render_addr(address=None, page=1, render_type='html'):
     addr=addr.todict()
     addr['tx_count']=AddrTx.query.filter(AddrTx.addr_id==int(addr["id"])).count();
 
+    total_page = addr['tx_count']/page_size
+    if addr['tx_count']%page_size:
+        total_page+=1
+    addr['total_page'] = total_page
+    
     page =int(page)
     if page <1:
         page = 1
