@@ -70,15 +70,15 @@ CREATE FUNCTION delete_blk(blkhash bytea) RETURNS void
     LANGUAGE plpgsql
     AS $$                                                                                                                     
     declare blkid integer;                                                                                                    
-    declare txid integer;                                                                                                    
+    declare txid integer;                                                                                                     
     BEGIN                                                                                                                     
     blkid=(select id from blk where hash=blkhash);                                                                            
-    txid=(select tx_id from blk_tx where blk_id=blkid and idx=0);
-    perform delete_tx(txid);
-    insert into utx select tx_id from blk_tx where blk_id=blkid;
-    delete from blk_tx where blk_id=blkid;
-    delete from blk where id=blkid;
-    END
+    txid=(select tx_id from blk_tx where blk_id=blkid and idx=0);                                                             
+    insert into utx select tx_id from blk_tx where blk_id=blkid;                                                              
+    delete from blk_tx where blk_id=blkid;                                                                                    
+    delete from blk where id=blkid;                                                                                           
+    perform delete_tx(txid);                                                                                                  
+    END                                                                                                                       
 $$;
 
 
@@ -107,17 +107,19 @@ ALTER FUNCTION public.delete_height(blkheight integer) OWNER TO postgres;
 
 CREATE FUNCTION delete_tx(txid integer) RETURNS void
     LANGUAGE plpgsql
-    AS $_$
-    DECLARE ntx RECORD;
-BEGIN
-     FOR ntx IN select txout_tx_id from vout where txin_tx_id=$1 and txout_tx_id!=txin_tx_id LOOP
-         perform delete_tx(ntx.txout_tx_id);
-     END LOOP;
-     perform  rollback_addr_balance($1);
-     delete from addr_txout where txout_id in (select id from txout where tx_id=$1);
-     delete from txin where tx_id=$1;                                                                                              delete from txout where tx_id=$1;
-     delete from tx where id=$1;                                                                                                   delete from utx where id=$1;
-END;
+    AS $_$                                                                                                                     
+    DECLARE ntx RECORD;                                                                                                       
+BEGIN                                                                                                                         
+     FOR ntx IN select txin_tx_id from vout where txout_tx_id=$1 LOOP                                                         
+         perform delete_tx(ntx.txin_tx_id);                                                                                   
+     END LOOP;                                                                                                                
+     perform  rollback_addr_balance($1);                                                                                      
+     delete from addr_txout where txout_id in (select id from txout where tx_id=$1);                                          
+     delete from txin where tx_id=$1;                                                                                         
+     delete from txout where tx_id=$1;                                                                                        
+     delete from tx where id=$1;                                                                                              
+     delete from utx where id=$1;                                                                                             
+END;                                                                                                                          
 $_$;
 
 
