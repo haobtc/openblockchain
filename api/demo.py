@@ -132,7 +132,7 @@ def render_tx(tx=None, render_type='html'):
     tx['out_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txout_tx_id==tx['id']).order_by(VOUT.out_idx).all()
     confirm = db_session.execute('select get_confirm(%d)' % tx['id']).first()[0];
     if confirm ==None:
-        tx['confirm'] = u"未确认"
+        tx['confirm'] = 0
     else:
         tx['confirm'] = confirm
  
@@ -226,7 +226,7 @@ def render_addr(address=None, page=1, render_type='html'):
     if addr['tx_count']%page_size:
         total_page+=1
     addr['total_page'] = total_page
-    
+
     page =int(page)
     if page <1:
         page = 1
