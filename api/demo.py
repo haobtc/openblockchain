@@ -24,7 +24,6 @@ access = AuthServiceProxy(RPC_URL)
 def getmininginfo():
   return json.loads(access.getmininginfo())
 
-pool_info=json.loads(open('pools.json','r').read())
 def get_pool(blk_id):
     coinbase_txout_id = db_session.execute('select a.id from txout a join tx b on(b.id=a.tx_id) join blk_tx c on (c.tx_id=b.id and c.idx=0) where c.blk_id=%d' % blk_id).first()[0];
     if coinbase_txout_id==None:
@@ -214,7 +213,7 @@ def blk_handle(blkhash, blk=None):
 def confirm(txs): 
      return txs['confirm'] 
 
-def render_addr(address=None, page=1, render_type='html'):
+def render_addr(address=None, page=1, render_type='html', filter=0):
     addr = Addr.query.filter(Addr.address == address).first()
     if addr == None:
         return render_404(render_type)
@@ -237,7 +236,24 @@ def render_addr(address=None, page=1, render_type='html'):
     txids=[]
     txout_tx_ids =[]
     txin_tx_ids = []
-    txidlist = AddrTx.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id==int(addr["id"])).order_by(AddrTx.tx_id.desc()).offset((page-1)*page_size).limit(page_size);
+    txidlist=None
+    if filter==0:   #all
+        txidlist = AddrTx.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id==int(addr["id"])).order_by(AddrTx.tx_id.desc()).offset((page-1)*page_size).limit(page_size)
+    elif filter==1: #spent
+        txidlist = VOUT.query.with_entities(VOUT.txin_tx_id).distinct(VOUT.txin_tx_id).filter(and_(VOUT.addr_id==int(addr["id"]),VOUT.txin_tx_id!=None)).order_by(VOUT.txin_tx_id.desc()).offset((page-1)*page_size).limit(page_size)
+    elif filter==2: #recv
+        txidlist = VOUT.query.with_entities(VOUT.txout_tx_id).distinct(VOUT.txout_tx_id).filter(VOUT.addr_id==int(addr["id"])).order_by(VOUT.txout_tx_id.desc()).offset((page-1)*page_size).limit(page_size)
+    elif filter==3: #utxo
+        txidlist = VOUT.query.with_entities(VOUT.txout_tx_id).distinct(VOUT.txout_tx_id).filter(and_(VOUT.addr_id==int(addr["id"]),VOUT.txin_tx_id==None)).order_by(VOUT.txout_tx_id.desc()).offset((page-1)*page_size).limit(page_size)
+    elif filter==4: #unconfirm
+        txidlist =  AddrTxUC.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id==int(addr["id"])).order_by(AddrTx.tx_id.desc()).offset((page-1)*page_size).limit(page_size)
+    elif filter==5: #confirm
+        txidlist = AddrTxC.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id==int(addr["id"])).order_by(AddrTx.tx_id.desc()).offset((page-1)*page_size).limit(page_size)
+    else:
+        return render_404(render_type)
+
+    if txidlist==None:
+        return render_404(render_type)
 
     in_value = 0 
     out_value = 0 
@@ -281,8 +297,9 @@ def render_addr(address=None, page=1, render_type='html'):
 def address_handle(address):
     render_type=request.args.get('type') or 'html'
     page= request.args.get('page') or 1
+    filter= request.args.get('filter') or 0
 
-    return render_addr(address, page, render_type)
+    return render_addr(address, page, render_type, int(filter))
    
 
 @app.route('/search', methods=['GET', 'POST'])
