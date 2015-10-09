@@ -74,7 +74,9 @@ sudo pip install plyvel
 
 cd api 
 
-change RPC_URL and engine = create_engine('postgresql://postgres:c1u2u9z@@127.0.0.1:5433/test', echo=True) by your bitcoind and postgres server config
+cp config_sample.py config.py 
+
+modify config.py as server setting
 
 python demo.py
 
