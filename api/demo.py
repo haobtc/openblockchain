@@ -10,6 +10,7 @@ from sqlalchemy import and_
 from datetime import datetime
 from util     import calculate_target, calculate_difficulty,work_to_difficulty
 import re
+import config
 
 app = Flask(__name__)
 app = Flask(__name__, static_url_path='/static')
@@ -18,12 +19,12 @@ page_size=10
 
 from bitcoinrpc.authproxy import AuthServiceProxy
 
-RPC_URL = "http://bitcoinrpc:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX@127.0.0.1:8332"
-access = AuthServiceProxy(RPC_URL)
+access = AuthServiceProxy(config.RPC_URL)
 
 def getmininginfo():
   return json.loads(access.getmininginfo())
 
+pool_info=json.loads(open('pools.json','r').read())
 def get_pool(blk_id):
     coinbase_txout_id = db_session.execute('select a.id from txout a join tx b on(b.id=a.tx_id) join blk_tx c on (c.tx_id=b.id and c.idx=0) where c.blk_id=%d' % blk_id).first()[0];
     if coinbase_txout_id==None:
@@ -100,10 +101,9 @@ def lastest_data(render_type='html'):
     last_data['txs'] = txs
     last_data['unconfirmed_txs'] = UTX.query.count()
 
-
-    # mininginfo = getmininginfo()
-    # last_data['difficulty'] = mininginfo['difficulty']
-    # last_data['networkhashps'] = mininginfo['networkhashps']
+    mininginfo = getmininginfo()
+    last_data['difficulty'] = mininginfo['difficulty']
+    last_data['networkhashps'] = mininginfo['networkhashps']
     
     if render_type == 'json':
         return jsonify(last_data)
@@ -339,4 +339,4 @@ def search(sid=0):
         return render_404(render_type)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True)
+    app.run(host=config.HOST, port=config.PORT, debug=config.DEBUG)

@@ -8,12 +8,13 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import ForeignKey, PrimaryKeyConstraint
 from sqlalchemy.orm import relationship, backref
 
+import config
+
 #import logging
 #logging.basicConfig()
 #logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
-engine = create_engine('postgresql://postgres:c1u2u9z@@127.0.0.1:5432/test',
-                       echo=False)
+engine = create_engine(config.SQLALCHEMY_DATABASE_URI, echo=False)
 db_session = scoped_session(sessionmaker(autocommit=True,
                                          autoflush=False,
                                          bind=engine))
