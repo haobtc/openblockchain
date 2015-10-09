@@ -22,13 +22,13 @@ sudo apt-get install postgresql
 root#mkdir /usr/local/pgsql/data
 root#chown postgres /usr/local/pgsql/data
 root#su postgres
-postgres$/usr/lib/postgresql/9.3/bin/initdb -D /usr/local/pgsql/data
+postgres$/usr/lib/postgresql/9.4/bin/initdb -D /ssd/chaindb/
 
 You can now start the database server using:
 
-    /usr/lib/postgresql/9.3/bin/postgres -D /data/chaindb/
+    /usr/lib/postgresql/9.4/bin/postgres -D /ssd/chaindb/
 or
-    /usr/lib/postgresql/9.3/bin/pg_ctl -D /data/chaindb/ -l logfile start
+    /usr/lib/postgresql/9.3/bin/pg_ctl -D /ssd/chaindb/ -l logfile start
 or 
     /etc/init.d/postgresql start
     /etc/init.d/postgresql stop

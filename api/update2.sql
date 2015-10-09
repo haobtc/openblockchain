@@ -8,3 +8,14 @@ CREATE FUNCTION delete_height(blkheight integer) RETURNS void
     perform delete_blk(blkhash);                                                                                                  
     END                                                                                                                       
 $$;
+
+CREATE FUNCTION delete_all_utx() RETURNS void                                                                                 
+    LANGUAGE plpgsql                                                                                                          
+    AS $$                                                                                                                     
+    DECLARE txid integer;                                                                                                     
+BEGIN                                                                                                                         
+     FOR txid IN select id from utx LOOP                                                                                      
+         perform delete_tx(txid);                                                                                             
+     END LOOP;                                                                                                                
+END;                                                                                                                          
+$$; 
