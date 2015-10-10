@@ -10,3 +10,4 @@ tests/coverage_html/
 tests/.coverage
 build/
 *.sw*
+api/config.py
