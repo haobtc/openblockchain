@@ -35,6 +35,8 @@ CREATE FUNCTION delete_height_from(blkheight integer) RETURNS void
                 blkhash = (select hash from blk where height=curheight);                                                                                                                                                                                                                                                                                       
                 perform delete_blk(blkhash); 
                 max_height = max_height - 1;
+            ELSE
+                return;
             END IF;   
         END LOOP;                                                                                                     
     END;                                                                                                                  
