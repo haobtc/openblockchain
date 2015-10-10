@@ -148,7 +148,7 @@ class AddrTx(SQLBase):
         return to_dict(self, self.__class__)
 
 class AddrTxUC(SQLBase):
-    __tablename__ = 'addr_tx_unconfirm'
+    __tablename__ = 'addr_tx_unconfirmed'
     addr_id = Column(INTEGER, ForeignKey("addr.id"))
     tx_id = Column(INTEGER)
     __table_args__ = (PrimaryKeyConstraint(addr_id, tx_id), )
@@ -157,7 +157,7 @@ class AddrTxUC(SQLBase):
         return to_dict(self, self.__class__)
 
 class AddrTxC(SQLBase):
-    __tablename__ = 'addr_tx_confirm'
+    __tablename__ = 'addr_tx_confirmed'
     addr_id = Column(INTEGER, ForeignKey("addr.id"))
     tx_id = Column(INTEGER)
     __table_args__ = (PrimaryKeyConstraint(addr_id, tx_id), )
@@ -202,3 +202,12 @@ class UTX(SQLBase):
     @property
     def todict(self):
         return to_dict(self, self.__class__)
+
+class POOL(SQLBase):
+    __tablename__ = 'pool'
+    id = Column(INTEGER, primary_key=True)
+    name = Column(TEXT)
+
+    def todict(self):
+        return to_dict(self, self.__class__)
+ 

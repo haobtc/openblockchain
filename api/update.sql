@@ -114,6 +114,6 @@ DROP MATERIALIZED VIEW addr_recv;
 DROP MATERIALIZED VIEW addr_spent;
 DROP MATERIALIZED VIEW vvout;
 
-create view addr_tx_unconfirm as select a.tx_id,a.addr_id from addr_tx a join blk_tx b on (b.tx_id=a.tx_id);
-create view addr_tx_confirm as select a.tx_id,a.addr_id from addr_tx a join utx b on (b.id=a.tx_id);
+create view addr_tx_confirmed as select a.tx_id,a.addr_id from addr_tx a join blk_tx b on (b.tx_id=a.tx_id);
+create view addr_tx_unconfirmed as select a.tx_id,a.addr_id from addr_tx a join utx b on (b.id=a.tx_id);
  
