@@ -45,11 +45,10 @@ psql -U postgres dbname < schema.sql
 vi ~/.bitcoin/bitcoin.conf
 
 server=1
-rpcallowip=0.0.0.0/0
 rpcuser=bitcoinrpc
-rpcpassword=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-txindex=1
+rpcpassword=xxxx
 daemon=1
+txindex=1
 
 
 # build bitcoind
