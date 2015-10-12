@@ -19,3 +19,25 @@ BEGIN
      END LOOP;                                                                                                                
 END;                                                                                                                          
 $$; 
+
+DROP FUNCTION delete_height_from(blkheight integer);
+CREATE FUNCTION delete_height_from(blkheight integer) RETURNS void
+    LANGUAGE plpgsql
+    AS $$                                                                                                                     
+    DECLARE blkhash bytea;
+    DECLARE max_height integer;     
+    DECLARE curheight integer;                                                                                              
+    BEGIN
+        max_height = (select max(height) from blk);   
+        LOOP                                                                          
+            IF blkheight <= max_height THEN
+                curheight=max_height;
+                blkhash = (select hash from blk where height=curheight);                                                                                                                                                                                                                                                                                       
+                perform delete_blk(blkhash); 
+                max_height = max_height - 1;
+            ELSE
+                return;
+            END IF;   
+        END LOOP;                                                                                                     
+    END;                                                                                                                  
+$$;
