@@ -41,3 +41,29 @@ CREATE FUNCTION delete_height_from(blkheight integer) RETURNS void
         END LOOP;                                                                                                     
     END;                                                                                                                  
 $$;
+
+-- select count(id) from tx where id not in (select tx_id from blk_tx);
+
+-- select id from utx order by id limit 5;
+-- select id from tx where NOT EXISTS (select tx_id from blk_tx where blk_tx.tx_id = tx.id) limit 5;
+-- select id from tx where NOT EXISTS (select tx_id from blk_tx where blk_tx.tx_id = tx.id) and EXISTS (select id from utx where utx.id = tx.id) order by id limit 5;
+-- select * from tx where NOT EXISTS (select tx_id from blk_tx where blk_tx.tx_id = tx.id) and not EXISTS (select id from utx where utx.id = tx.id) order by id limit 5;
+
+
+-- select count(id) from utx;
+-- select count(id) from tx where NOT EXISTS (select tx_id from blk_tx where blk_tx.tx_id = tx.id);
+-- select count(id) from tx where NOT EXISTS (select tx_id from blk_tx where blk_tx.tx_id = tx.id) and not EXISTS (select id from utx where utx.id = tx.id);
+-- select count(id) from tx where NOT EXISTS (select tx_id from blk_tx where blk_tx.tx_id = tx.id) and EXISTS (select id from utx where utx.id = tx.id);
+-- explain analyze select id from tx where NOT EXISTS (select tx_id from blk_tx where blk_tx.tx_id = tx.id);
+
+drop FUNCTION fix_utx();
+CREATE FUNCTION fix_utx() RETURNS void
+AS $$
+    DECLARE txid integer;        
+    BEGIN
+        FOR txid IN select id from tx where NOT EXISTS (select tx_id from blk_tx where blk_tx.tx_id = tx.id) and not EXISTS (select id from utx where utx.id = tx.id)  LOOP
+            perform delete_tx(txid);
+        END LOOP;
+    END;
+$$
+LANGUAGE plpgsql;
