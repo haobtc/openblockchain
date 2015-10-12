@@ -80,7 +80,7 @@ def render_404(render_type='html'):
 
 def lastest_data(render_type='html'):
     blks=[]
-    res = Block.query.order_by(Block.id.desc()).limit(6).all()
+    res = Block.query.order_by(Block.height.desc()).limit(6).all()
     for blk in res:
         blk=blk.todict() 
         blk['pool'] = get_pool(blk['id'])
