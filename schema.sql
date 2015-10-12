@@ -150,7 +150,7 @@ ALTER FUNCTION public.delete_height_from(blkheight integer) OWNER TO postgres;
 --
 -- Name: delete_tx(integer); Type: FUNCTION; Schema: public; Owner: dbuser
 --
-
+drop FUNCTION delete_tx(txid integer);
 CREATE FUNCTION delete_tx(txid integer) RETURNS void
     LANGUAGE plpgsql
     AS $_$                                                                                                                     
@@ -164,7 +164,7 @@ BEGIN
      delete from txin where tx_id=$1;                                                                                         
      delete from txout where tx_id=$1;                                                                                        
      delete from tx where id=$1;                                                                                              
-     delete from utx where id=$1;                                                                                             
+     delete from utx where id in ($1);                                                                                             
 END;                                                                                                                          
 $_$;
 
