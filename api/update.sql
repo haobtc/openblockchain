@@ -90,7 +90,7 @@ ALTER TABLE addr DROP COLUMN recv_value ;
 ALTER TABLE addr DROP COLUMN recv_count ;
 ALTER TABLE addr DROP COLUMN spent_value;
 ALTER TABLE addr DROP COLUMN spent_count;
- 
+
 ALTER TABLE addr ADD COLUMN recv_value bigint    default 0;
 ALTER TABLE addr ADD COLUMN recv_count integer   default 0;
 ALTER TABLE addr ADD COLUMN spent_value bigint   default 0;
@@ -116,4 +116,25 @@ DROP MATERIALIZED VIEW vvout;
 
 create view addr_tx_confirmed as select a.tx_id,a.addr_id from addr_tx a join blk_tx b on (b.tx_id=a.tx_id);
 create view addr_tx_unconfirmed as select a.tx_id,a.addr_id from addr_tx a join utx b on (b.id=a.tx_id);
- 
+
+CREATE RULE "utx_on_duplicate_ignore" AS ON INSERT TO "utx"  WHERE EXISTS(SELECT 1 FROM utx WHERE (id)=(NEW.id))  DO INSTEAD NOTHING;
+
+CREATE RULE "addr_txout_on_duplicate_ignore" AS ON INSERT TO "addr_txout"  WHERE EXISTS(SELECT 1 FROM addr_txout WHERE (addr_id,txout_id)=(NEW.addr_id, NEW.txout_id))  DO INSTEAD NOTHING;
+
+DROP FUNCTION delete_tx(txid integer);
+CREATE FUNCTION delete_tx(txid integer) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE ntx RECORD;
+BEGIN
+     FOR ntx IN select txin_tx_id from vout where txout_tx_id=$1 LOOP
+         perform delete_tx(ntx.txin_tx_id);
+     END LOOP;
+     perform  rollback_addr_balance($1);
+     delete from addr_txout where txout_id in (select id from txout where tx_id=$1);
+     delete from txin where tx_id=$1;
+     delete from txout where tx_id=$1;
+     delete from tx where id=$1;
+     delete from utx where id in ($1);
+END;
+$$;
