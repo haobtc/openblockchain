@@ -138,3 +138,5 @@ BEGIN
      delete from utx where id in ($1);
 END;
 $$;
+
+update tx set recv_time=recv_time/1000000 where recv_time>1444784647 and recv_time is not NULL;
