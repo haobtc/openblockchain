@@ -66,3 +66,4 @@ AS $$
         END LOOP;
     END;
 $$
+LANGUAGE plpgsql;
