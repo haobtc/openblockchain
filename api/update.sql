@@ -36,10 +36,6 @@ CREATE TABLE addr_tx (addr_id integer NOT NULL, tx_id integer NOT NULL, constrai
 
 CREATE RULE "addr_tx_on_duplicate_ignore" AS ON INSERT TO "addr_tx"  WHERE EXISTS(SELECT 1 FROM addr_tx  WHERE (addr_id, tx_id)=(NEW.addr_id, NEW.tx_id))  DO INSTEAD NOTHING;
 
-create view addr_tx_confirmed as select a.tx_id,a.addr_id from addr_tx a join blk_tx b on (b.tx_id=a.tx_id);
-create view addr_tx_unconfirmed as select a.tx_id,a.addr_id from addr_tx a join utx b on (b.id=a.tx_id);
-
-
 DROP FUNCTION update_addr_balance(txid integer);
 CREATE FUNCTION update_addr_balance(txid integer) RETURNS void
     LANGUAGE plpgsql
@@ -126,6 +122,7 @@ DROP MATERIALIZED VIEW vvout;
 
 create view addr_tx_confirmed as select a.tx_id,a.addr_id from addr_tx a join blk_tx b on (b.tx_id=a.tx_id);
 create view addr_tx_unconfirmed as select a.tx_id,a.addr_id from addr_tx a join utx b on (b.id=a.tx_id);
+
 
 CREATE RULE "utx_on_duplicate_ignore" AS ON INSERT TO "utx"  WHERE EXISTS(SELECT 1 FROM utx WHERE (id)=(NEW.id))  DO INSTEAD NOTHING;
 
