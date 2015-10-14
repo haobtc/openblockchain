@@ -26,9 +26,18 @@ ALTER TABLE tx ADD COLUMN ip text;
 
 create view vtx as select a.*,b.idx,c.height,c.time from tx a left join blk_tx b on(b.tx_id=a.id) left join blk c on (c.id=b.blk_id);
 
+
+drop view addr_tx_confirmed;
+drop view addr_tx_unconfirmed;
+drop table addr_tx;
+
+
 CREATE TABLE addr_tx (addr_id integer NOT NULL, tx_id integer NOT NULL, constraint u_constrainte unique (addr_id, tx_id));
 
 CREATE RULE "addr_tx_on_duplicate_ignore" AS ON INSERT TO "addr_tx"  WHERE EXISTS(SELECT 1 FROM addr_tx  WHERE (addr_id, tx_id)=(NEW.addr_id, NEW.tx_id))  DO INSTEAD NOTHING;
+
+create view addr_tx_confirmed as select a.tx_id,a.addr_id from addr_tx a join blk_tx b on (b.tx_id=a.tx_id);
+create view addr_tx_unconfirmed as select a.tx_id,a.addr_id from addr_tx a join utx b on (b.id=a.tx_id);
 
 
 DROP FUNCTION update_addr_balance(txid integer);
@@ -109,11 +118,11 @@ CREATE INDEX addr_spent_address on addr_spent USING btree (addr_id);
 
 update addr set recv_value=a.recv_value, recv_count=a.txout_count from addr_recv a where addr.id=a.addr_id;
 update addr set spent_value=a.spent_value, spent_count=a.spent_txin_count from addr_spent a where addr.id=a.addr_id;
-
+update addr set balance=recv_value-spent_value;
+  
 DROP MATERIALIZED VIEW addr_recv;
 DROP MATERIALIZED VIEW addr_spent;
 DROP MATERIALIZED VIEW vvout;
 
-create view addr_tx_confirmed as select a.tx_id,a.addr_id from addr_tx a join blk_tx b on (b.tx_id=a.tx_id);
-create view addr_tx_unconfirmed as select a.tx_id,a.addr_id from addr_tx a join utx b on (b.id=a.tx_id);
+
  
