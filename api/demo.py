@@ -25,6 +25,27 @@ def getmininginfo():
   return json.loads(access.getmininginfo())
 
 pool_info=json.loads(open('pools.json','r').read())
+def save_pool():
+    for addr in pool_info['payout_addresses'].keys():
+      try:
+        p=POOL()
+        p.name=pool_info['payout_addresses'][addr]['name']
+        db_session.add(p)
+        db_session.flush()
+        db_session.refresh(p)
+      except:
+        pass
+
+    for tag in pool_info['coinbase_tags'].keys():
+      try:
+        p=POOL()
+        p.name=pool_info['coinbase_tags'][tag]['name']
+        db_session.add(p)
+        db_session.flush()
+        db_session.refresh(p)
+      except:
+        pass
+ 
 def get_pool(blk_id):
     coinbase_txout_id = db_session.execute('select a.id from txout a join tx b on(b.id=a.tx_id) join blk_tx c on (c.tx_id=b.id and c.idx=0) where c.blk_id=%d' % blk_id).first()[0];
     if coinbase_txout_id==None:

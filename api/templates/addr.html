@@ -15,6 +15,24 @@
     <h3> total tx count : {{ addr.tx_count }} </small> </h3>
     <h2> 交易列表: </h2>
 
+    <div style="float:right;">
+        <div class="btn-group" style="display:inline-block">
+            <a class="btn" href="#"><i class="icon-filter"></i> 筛选</a>
+            <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
+   <button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown">Dropdown Example
+  <span class="caret"></span></button>
+            <ul class="dropdown-menu">
+                <li><a href="#" data-value="6"><i class="icon-ok-circle"></i> 无法动用（默认）</a></li>
+                <li><a href="#" data-value="0"><i class="icon-resize-horizontal"></i> 所有交易</a></li>
+                <li><a href="#" data-value="1"><i class="icon-arrow-right"></i> 支付</a></li>
+                <li><a href="#" data-value="2"><i class="icon-arrow-left"></i> 收款</a></li>
+                <li><a href="#" data-value="5"><i class="icon-check"></i> 仅确认</a></li>
+                <li><a href="#" data-value="7"><i class="icon-exclamation-sign"></i> 只显示未确认的</a></li>
+            </ul>
+        </div>
+    </div>
+
+
     {% for tx in addr.txs %}
 
     <div class="transaction_section"> 
