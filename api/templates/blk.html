@@ -80,9 +80,9 @@
             <div class="span10">
                 <ul class="pager">
                     {% if page > 1 %}
-                    <li><a href=/blk/{{blk.hash}}/?page={{ page - 1 }}>Prev page</a></li>
+                    <li><a href=/blk/{{blk.hash}}?page={{ page - 1 }}>Prev page</a></li>
                     {% endif %}
-                  <li><a href=/blk/{{blk.hash}}/?page={{ page + 1 }}>Next page</a></li>
+                  <li><a href=/blk/{{blk.hash}}?page={{ page + 1 }}>Next page</a></li>
                 </ul>  
             </div>
         </div>
