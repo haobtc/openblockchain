@@ -63,18 +63,135 @@ $_$;
 ALTER FUNCTION public.add_tx_statics(txid integer, inc integer, outc integer, inv bigint, outv bigint) OWNER TO dbuser;
 
 --
+-- Name: check_blk(); Type: FUNCTION; Schema: public; Owner: dbuser
+--
+
+CREATE FUNCTION check_blk() RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE blk_height bigint;        
+    DECLARE blk_count bigint;   
+    DECLARE blk_id_count bigint;   
+
+    BEGIN
+        blk_height = (select max(height) from blk);
+        blk_count = (select count(1) from blk);
+        blk_id_count = (select count(distinct(blk_id)) from blk_tx);
+        IF blk_count != blk_id_count THEN
+            RAISE LOG 'blk_count != blk_id_count ';
+            return FALSE;
+        END IF;
+
+        IF blk_count != blk_height + 1
+        THEN
+            RAISE LOG 'blk_count != blk_height + 1';
+            return FALSE;
+        END IF;
+
+        RAISE LOG 'pass blk check';
+        return TRUE;
+    END;
+$$;
+
+
+ALTER FUNCTION public.check_blk() OWNER TO dbuser;
+
+--
+-- Name: check_db(); Type: FUNCTION; Schema: public; Owner: dbuser
+--
+
+CREATE FUNCTION check_db() RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE blk_ok BOOL; 
+    DECLARE tx_ok BOOL; 
+    BEGIN
+        blk_ok = (select check_blk());
+        IF NOT blk_ok THEN
+            return FALSE;
+        END IF;
+
+        tx_ok = (select check_tx());
+        IF NOT tx_ok THEN
+            return FALSE;
+        END IF;
+
+        return TRUE;
+    END;
+$$;
+
+
+ALTER FUNCTION public.check_db() OWNER TO dbuser;
+
+--
+-- Name: check_special_tx(); Type: FUNCTION; Schema: public; Owner: dbuser
+--
+
+CREATE FUNCTION check_special_tx() RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE blk_id integer;         
+
+    BEGIN
+        FOR blk_id IN select sum(blk.tx_count) as xx from blk where NOT EXISTS(select count(distinct(tx_id)) from blk_tx where blk_tx.blk_id = blk.id)
+        LOOP
+            RAISE LOG 'blk_id(%)', blk_id;
+        END LOOP;
+    END;
+$$;
+
+
+ALTER FUNCTION public.check_special_tx() OWNER TO dbuser;
+
+--
+-- Name: check_tx(); Type: FUNCTION; Schema: public; Owner: dbuser
+--
+
+CREATE FUNCTION check_tx() RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE tx_count bigint;        
+    DECLARE utx_count bigint;   
+    DECLARE blk_tx_count bigint;   
+    DECLARE blk_tx_id_count bigint;   
+
+    BEGIN
+        blk_tx_count = (select sum(blk.tx_count) from blk);
+        blk_tx_id_count = (select count(distinct(tx_id)) from blk_tx);
+        IF blk_tx_count != blk_tx_id_count+2 THEN
+            RAISE LOG 'blk_tx_count(%) != blk_tx_id_count(%) ', blk_tx_count, blk_tx_id_count;
+            return FALSE;
+        END IF;
+
+        tx_count = (select count(1) from tx);
+        utx_count = (select count(1) from utx);
+        IF tx_count + 2 != utx_count + blk_tx_count
+        THEN
+            RAISE LOG 'tx_count(%) + 2 != utx_count(%) + blk_tx_count(%)', tx_count, utx_count, blk_tx_count;
+            return FALSE;
+        END IF;
+
+        RAISE LOG 'pass tx check % % %', blk_tx_count, tx_count, utx_count;
+        return TRUE;
+    END;
+$$;
+
+
+ALTER FUNCTION public.check_tx() OWNER TO dbuser;
+
+--
 -- Name: delete_all_utx(); Type: FUNCTION; Schema: public; Owner: dbuser
 --
 
 CREATE FUNCTION delete_all_utx() RETURNS void
     LANGUAGE plpgsql
-    AS $$                                                                                                                     
-    DECLARE txid integer;                                                                                                     
-BEGIN                                                                                                                         
-     FOR txid IN select id from utx LOOP                                                                                      
-         perform delete_tx(txid);                                                                                             
-     END LOOP;                                                                                                                
-END;                                                                                                                          
+    AS $$
+    DECLARE txid integer;
+BEGIN
+     FOR txid IN select id from utx LOOP
+         perform delete_tx(txid);
+     END LOOP;
+END;
 $$;
 
 
@@ -108,34 +225,34 @@ ALTER FUNCTION public.delete_blk(blkhash bytea) OWNER TO dbuser;
 
 CREATE FUNCTION delete_height(blkheight integer) RETURNS void
     LANGUAGE plpgsql
-    AS $$                                                                                                                     
-    declare blkhash bytea;                                                                                                
+    AS $$
+    declare blkhash bytea;
     BEGIN
-    blkhash = (select hash from blk where height=blkheight);                                                                                                                                                                                                                                                                                       
-    perform delete_blk(blkhash);                                                                                                  
-    END                                                                                                                       
+    blkhash = (select hash from blk where height=blkheight);
+    perform delete_blk(blkhash);
+    END
 $$;
 
 
 ALTER FUNCTION public.delete_height(blkheight integer) OWNER TO dbuser;
 
 --
--- Name: delete_height_from(integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: delete_height_from(integer); Type: FUNCTION; Schema: public; Owner: dbuser
 --
 
 CREATE FUNCTION delete_height_from(blkheight integer) RETURNS void
     LANGUAGE plpgsql
-    AS $$                                                                                                                     
+    AS $$
     DECLARE blkhash bytea;
-    DECLARE max_height integer;     
-    DECLARE curheight integer;                                                                                              
+    DECLARE max_height integer;
+    DECLARE curheight integer;
     BEGIN
-        max_height = (select max(height) from blk);   
-        LOOP                                                                          
+        max_height = (select max(height) from blk);
+        LOOP
             IF blkheight <= max_height THEN
                 curheight=max_height;
-                blkhash = (select hash from blk where height=curheight);                                                                                                                                                                                                                                                                                       
-                perform delete_blk(blkhash); 
+                blkhash = (select hash from blk where height=curheight);
+                perform delete_blk(blkhash);
                 max_height = max_height - 1;
             ELSE
                 return;
@@ -145,7 +262,7 @@ CREATE FUNCTION delete_height_from(blkheight integer) RETURNS void
 $$;
 
 
-ALTER FUNCTION public.delete_height_from(blkheight integer) OWNER TO postgres;
+ALTER FUNCTION public.delete_height_from(blkheight integer) OWNER TO dbuser;
 
 --
 -- Name: delete_tx(integer); Type: FUNCTION; Schema: public; Owner: dbuser
@@ -153,41 +270,23 @@ ALTER FUNCTION public.delete_height_from(blkheight integer) OWNER TO postgres;
 
 CREATE FUNCTION delete_tx(txid integer) RETURNS void
     LANGUAGE plpgsql
-    AS $_$                                                                                                                     
-    DECLARE ntx RECORD;                                                                                                       
-BEGIN                                                                                                                         
-     FOR ntx IN select txin_tx_id from vout where txout_tx_id=$1 LOOP                                                         
-         perform delete_tx(ntx.txin_tx_id);                                                                                   
-     END LOOP;                                                                                                                
-     perform  rollback_addr_balance($1);                                                                                      
-     delete from addr_txout where txout_id in (select id from txout where tx_id=$1);                                          
-     delete from txin where tx_id=$1;                                                                                         
-     delete from txout where tx_id=$1;                                                                                        
-     delete from tx where id=$1;                                                                                              
-     delete from utx where id in ($1);                                                                                             
-END;                                                                                                                          
+    AS $_$
+    DECLARE ntx RECORD;
+BEGIN
+     FOR ntx IN select txin_tx_id from vout where txout_tx_id=$1 LOOP
+         perform delete_tx(ntx.txin_tx_id);
+     END LOOP;
+     perform  rollback_addr_balance($1);
+     delete from addr_txout where txout_id in (select id from txout where tx_id=$1);
+     delete from txin where tx_id=$1;
+     delete from txout where tx_id=$1;
+     delete from tx where id=$1;
+     delete from utx where id in ($1);
+END;
 $_$;
 
 
 ALTER FUNCTION public.delete_tx(txid integer) OWNER TO dbuser;
-
---
--- Name: fix_utx(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION fix_utx() RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-    DECLARE txid integer;        
-    BEGIN
-        FOR txid IN select id from tx where NOT EXISTS (select tx_id from blk_tx where blk_tx.tx_id = tx.id) and not EXISTS (select id from utx where utx.id = tx.id)  LOOP
-            perform delete_tx(txid);
-        END LOOP;
-    END;
-$$;
-
-
-ALTER FUNCTION public.fix_utx() OWNER TO postgres;
 
 --
 -- Name: get_confirm(integer); Type: FUNCTION; Schema: public; Owner: dbuser
@@ -199,7 +298,7 @@ CREATE FUNCTION get_confirm(txid integer) RETURNS integer
     DECLARE tx_height integer;                                                                                                
     DECLARE max_height integer;                                                                                               
 BEGIN                                                                                                                         
-    tx_height=(select c.height from tx a join blk_tx b on(b.tx_id=a.id) join blk c on (c.id=b.blk_id) where a.id=$1);         
+    tx_height=(select c.height from tx a join blk_tx b on(b.tx_id=a.id) join blk c on (c.id=b.blk_id) where a.id=$1 order by c.height asc limit 1);         
     max_height=(select max(height) from blk);                                                                                 
     return (max_height-tx_height+1);                                                                                            
 END;                                                                                                                          
@@ -242,12 +341,9 @@ BEGIN
     END LOOP;
 
     FOR o IN select addr_id, value from vout where txout_tx_id=txid and addr_id is not NULL LOOP
-       update addr set balance=(balance - o.value), recv_value=(recv_value-o.value)  where id=o.addr_id;
-    END LOOP;
+       update addr set balance=(balance - o.value), recv_value=(recv_value-o.value)  where id=o.addr_id;    END LOOP;
 
-
-    FOR o IN select distinct addr_id from vout where txin_tx_id=txid and addr_id is not NULL LOOP
-       update addr set spent_count=(spent_count-1) where id=o.addr_id;
+    FOR o IN select distinct addr_id from vout where txin_tx_id=txid and addr_id is not NULL LOOP       update addr set spent_count=(spent_count-1) where id=o.addr_id;
        delete from addr_tx where addr_id=o.addr_id and tx_id=txid;
     END LOOP;
 
@@ -286,29 +382,29 @@ ALTER FUNCTION public.tru_utx() OWNER TO dbuser;
 
 CREATE FUNCTION update_addr_balance(txid integer) RETURNS void
     LANGUAGE plpgsql
-    AS $$
-    DECLARE o RECORD;
-BEGIN
-
-    FOR o IN select addr_id, value from vout where txin_tx_id=txid and addr_id is not NULL LOOP
-       update addr set balance=(balance - o.value), spent_value=(spent_value+o.value) where id=o.addr_id;
-    END LOOP;
-
-    FOR o IN select addr_id, value from vout where txout_tx_id=txid and addr_id is not NULL LOOP
-       update addr set balance=(balance + o.value), recv_value=(recv_value+o.value)  where id=o.addr_id;
-    END LOOP;
-
-
-    FOR o IN select distinct addr_id from vout where txin_tx_id=txid and addr_id is not NULL LOOP
-       update addr set spent_count=(spent_count+1) where id=o.addr_id;
-       insert into addr_tx (addr_id,tx_id) values(o.addr_id, txid);
-    END LOOP;
-
-    FOR o IN select distinct addr_id from vout where txout_tx_id=txid and addr_id is not NULL LOOP
-       update addr set recv_count=(recv_count+1) where id=o.addr_id;
-       insert into addr_tx (addr_id,tx_id) values(o.addr_id, txid);
-    END LOOP;
-END;
+    AS $$                                                                                                                     
+    DECLARE o RECORD;                                                                                                         
+BEGIN                                                                                                                         
+                                                                                                                              
+    FOR o IN select addr_id, value from vout where txin_tx_id=txid and addr_id is not NULL LOOP                               
+       update addr set balance=(balance - o.value), spent_value=(spent_value+o.value) where id=o.addr_id;                     
+    END LOOP;                                                                                                                 
+                                                                                                                              
+    FOR o IN select addr_id, value from vout where txout_tx_id=txid and addr_id is not NULL LOOP                              
+       update addr set balance=(balance + o.value), recv_value=(recv_value+o.value)  where id=o.addr_id;                      
+    END LOOP;                                                                                                                 
+                                                                                                                              
+                                                                                                                              
+    FOR o IN select distinct addr_id from vout where txin_tx_id=txid and addr_id is not NULL LOOP                             
+       update addr set spent_count=(spent_count+1) where id=o.addr_id;                                                        
+       insert into addr_tx (addr_id,tx_id) values(o.addr_id, txid);                                                           
+    END LOOP;                                                                                                                 
+                                                                                                                              
+    FOR o IN select distinct addr_id from vout where txout_tx_id=txid and addr_id is not NULL LOOP                            
+       update addr set recv_count=(recv_count+1) where id=o.addr_id;                                                          
+       insert into addr_tx (addr_id,tx_id) values(o.addr_id, txid);                                                           
+    END LOOP;                                                                                                                 
+END;                                                                                                                          
 $$;
 
 
@@ -400,7 +496,7 @@ ALTER TABLE addr_tx_confirmed OWNER TO dbuser;
 --
 
 CREATE TABLE utx (
-    id integer
+    id integer NOT NULL
 );
 
 
@@ -546,7 +642,8 @@ CREATE TABLE blk (
     fees bigint,
     total_out_count integer,
     total_out_value bigint,
-    tx_count integer
+    tx_count integer,
+    pool_id integer
 );
 
 
@@ -571,6 +668,39 @@ ALTER TABLE blk_id_seq OWNER TO dbuser;
 --
 
 ALTER SEQUENCE blk_id_seq OWNED BY blk.id;
+
+
+--
+-- Name: pool; Type: TABLE; Schema: public; Owner: dbuser; Tablespace: 
+--
+
+CREATE TABLE pool (
+    id integer NOT NULL,
+    name text NOT NULL
+);
+
+
+ALTER TABLE pool OWNER TO dbuser;
+
+--
+-- Name: pool_id_seq; Type: SEQUENCE; Schema: public; Owner: dbuser
+--
+
+CREATE SEQUENCE pool_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE pool_id_seq OWNER TO dbuser;
+
+--
+-- Name: pool_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: dbuser
+--
+
+ALTER SEQUENCE pool_id_seq OWNED BY pool.id;
 
 
 --
@@ -712,6 +842,13 @@ ALTER TABLE ONLY blk ALTER COLUMN id SET DEFAULT nextval('blk_id_seq'::regclass)
 -- Name: id; Type: DEFAULT; Schema: public; Owner: dbuser
 --
 
+ALTER TABLE ONLY pool ALTER COLUMN id SET DEFAULT nextval('pool_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: dbuser
+--
+
 ALTER TABLE ONLY tx ALTER COLUMN id SET DEFAULT nextval('tx_id_seq'::regclass);
 
 
@@ -738,11 +875,35 @@ ALTER TABLE ONLY blk
 
 
 --
+-- Name: constraint_name; Type: CONSTRAINT; Schema: public; Owner: dbuser; Tablespace: 
+--
+
+ALTER TABLE ONLY pool
+    ADD CONSTRAINT constraint_name UNIQUE (name);
+
+
+--
+-- Name: id; Type: CONSTRAINT; Schema: public; Owner: dbuser; Tablespace: 
+--
+
+ALTER TABLE ONLY utx
+    ADD CONSTRAINT id UNIQUE (id);
+
+
+--
 -- Name: naddr_pkey; Type: CONSTRAINT; Schema: public; Owner: dbuser; Tablespace: 
 --
 
 ALTER TABLE ONLY addr
     ADD CONSTRAINT naddr_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pool_pkey; Type: CONSTRAINT; Schema: public; Owner: dbuser; Tablespace: 
+--
+
+ALTER TABLE ONLY pool
+    ADD CONSTRAINT pool_pkey PRIMARY KEY (id);
 
 
 --
@@ -851,13 +1012,6 @@ CREATE INDEX inaddr_txout_index ON addr_txout USING btree (txout_id);
 
 
 --
--- Name: tx_hash_index; Type: INDEX; Schema: public; Owner: dbuser; Tablespace: 
---
-
-CREATE INDEX tx_hash_index ON tx USING btree (hash);
-
-
---
 -- Name: txin_prev_out_index; Type: INDEX; Schema: public; Owner: dbuser; Tablespace: 
 --
 
@@ -897,6 +1051,28 @@ CREATE RULE addr_tx_on_duplicate_ignore AS
 
 
 --
+-- Name: addr_txout_on_duplicate_ignore; Type: RULE; Schema: public; Owner: dbuser
+--
+
+CREATE RULE addr_txout_on_duplicate_ignore AS
+    ON INSERT TO addr_txout
+   WHERE (EXISTS ( SELECT 1
+           FROM addr_txout
+          WHERE ((addr_txout.addr_id = new.addr_id) AND (addr_txout.txout_id = new.txout_id)))) DO INSTEAD NOTHING;
+
+
+--
+-- Name: utx_on_duplicate_ignore; Type: RULE; Schema: public; Owner: dbuser
+--
+
+CREATE RULE utx_on_duplicate_ignore AS
+    ON INSERT TO utx
+   WHERE (EXISTS ( SELECT 1
+           FROM utx
+          WHERE (utx.id = new.id))) DO INSTEAD NOTHING;
+
+
+--
 -- Name: public; Type: ACL; Schema: -; Owner: dbuser
 --
 
@@ -904,123 +1080,6 @@ REVOKE ALL ON SCHEMA public FROM PUBLIC;
 REVOKE ALL ON SCHEMA public FROM dbuser;
 GRANT ALL ON SCHEMA public TO dbuser;
 GRANT ALL ON SCHEMA public TO PUBLIC;
-
-
---
--- Name: addr; Type: ACL; Schema: public; Owner: dbuser
---
-
-REVOKE ALL ON TABLE addr FROM PUBLIC;
-REVOKE ALL ON TABLE addr FROM dbuser;
-GRANT ALL ON TABLE addr TO dbuser;
-
-
---
--- Name: addr_tx; Type: ACL; Schema: public; Owner: dbuser
---
-
-REVOKE ALL ON TABLE addr_tx FROM PUBLIC;
-REVOKE ALL ON TABLE addr_tx FROM dbuser;
-GRANT ALL ON TABLE addr_tx TO dbuser;
-
-
---
--- Name: blk_tx; Type: ACL; Schema: public; Owner: dbuser
---
-
-REVOKE ALL ON TABLE blk_tx FROM PUBLIC;
-REVOKE ALL ON TABLE blk_tx FROM dbuser;
-GRANT ALL ON TABLE blk_tx TO dbuser;
-
-
---
--- Name: utx; Type: ACL; Schema: public; Owner: dbuser
---
-
-REVOKE ALL ON TABLE utx FROM PUBLIC;
-REVOKE ALL ON TABLE utx FROM dbuser;
-GRANT ALL ON TABLE utx TO dbuser;
-
-
---
--- Name: addr_txout; Type: ACL; Schema: public; Owner: dbuser
---
-
-REVOKE ALL ON TABLE addr_txout FROM PUBLIC;
-REVOKE ALL ON TABLE addr_txout FROM dbuser;
-GRANT ALL ON TABLE addr_txout TO dbuser;
-
-
---
--- Name: tx; Type: ACL; Schema: public; Owner: dbuser
---
-
-REVOKE ALL ON TABLE tx FROM PUBLIC;
-REVOKE ALL ON TABLE tx FROM dbuser;
-GRANT ALL ON TABLE tx TO dbuser;
-
-
---
--- Name: txin; Type: ACL; Schema: public; Owner: dbuser
---
-
-REVOKE ALL ON TABLE txin FROM PUBLIC;
-REVOKE ALL ON TABLE txin FROM dbuser;
-GRANT ALL ON TABLE txin TO dbuser;
-
-
---
--- Name: txout; Type: ACL; Schema: public; Owner: dbuser
---
-
-REVOKE ALL ON TABLE txout FROM PUBLIC;
-REVOKE ALL ON TABLE txout FROM dbuser;
-GRANT ALL ON TABLE txout TO dbuser;
-
-
---
--- Name: vout; Type: ACL; Schema: public; Owner: dbuser
---
-
-REVOKE ALL ON TABLE vout FROM PUBLIC;
-REVOKE ALL ON TABLE vout FROM dbuser;
-GRANT ALL ON TABLE vout TO dbuser;
-
-
---
--- Name: balance; Type: ACL; Schema: public; Owner: dbuser
---
-
-REVOKE ALL ON TABLE balance FROM PUBLIC;
-REVOKE ALL ON TABLE balance FROM dbuser;
-GRANT ALL ON TABLE balance TO dbuser;
-
-
---
--- Name: blk; Type: ACL; Schema: public; Owner: dbuser
---
-
-REVOKE ALL ON TABLE blk FROM PUBLIC;
-REVOKE ALL ON TABLE blk FROM dbuser;
-GRANT ALL ON TABLE blk TO dbuser;
-
-
---
--- Name: utxo; Type: ACL; Schema: public; Owner: dbuser
---
-
-REVOKE ALL ON TABLE utxo FROM PUBLIC;
-REVOKE ALL ON TABLE utxo FROM dbuser;
-GRANT ALL ON TABLE utxo TO dbuser;
-
-
---
--- Name: vtx; Type: ACL; Schema: public; Owner: dbuser
---
-
-REVOKE ALL ON TABLE vtx FROM PUBLIC;
-REVOKE ALL ON TABLE vtx FROM dbuser;
-GRANT ALL ON TABLE vtx TO dbuser;
 
 
 --
