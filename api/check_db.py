@@ -168,6 +168,8 @@ def verifyBlk(blkhash):
 
     logging.debug('verifyBlk end...... %s', blkhash)
 
+    return blkhash
+
 def get_addr_info(address):
     for x in xrange(1,4):
         try:
@@ -285,12 +287,6 @@ def check_db():
            msg = msg + ("check blk count success\n")
            fail = True
 
-        if not check_addr_balance():
-           msg = msg + ("check address fail\n")
-        else:
-           msg = msg + ("check address success\n")
-           fail = True
-
         if not check_last_block():
            msg = msg + ("check last blk fail\n")
         else:
@@ -302,6 +298,13 @@ def check_db():
         else:
            msg = msg + ("check last tx success\n")
            fail = True
+        
+        if not check_addr_balance():
+           msg = msg + ("check address fail\n")
+        else:
+           msg = msg + ("check address success\n")
+           fail = True
+
     except Exception, e:
         msg = msg + ("check db fail:\n %s" % e)
 
