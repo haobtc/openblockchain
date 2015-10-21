@@ -221,10 +221,10 @@ def check_last_block():
         res = Block.query.with_entities(Block.hash).order_by(Block.height.desc()).limit(10).all()
         for blk in res:
             if not verifyBlk(blk.hash.encode('hex')):
-                print "check blk fail %s" % blk.hash.encode('hex')
+                logging.debug("check blk fail %s" % blk.hash.encode('hex'))
                 return False
     except:
-        print "check blk exception %s" % blk.hash.encode('hex')
+        logging.debug("check blk exception %s" % blk.hash.encode('hex'))
         return False
     return True
 
@@ -234,42 +234,13 @@ def check_last_tx():
         res = Tx.query.with_entities(Tx.hash).order_by(Tx.id.desc()).limit(10).all()
         for tx in res:
             if not verifyTx(tx.hash.encode('hex'), coinbase=False):
-                print "check tx fail %s" % tx.hash.encode('hex')
+                logging.debug("check tx fail %s" % tx.hash.encode('hex'))
                 return False
     except:
-        print "check tx exception %s" % tx.hash.encode('hex')
+        logging.debug("check tx exception %s" % tx.hash.encode('hex'))
         return False
     return True
 
-#if alert admin with mail and sms
-def sendmail(msg):
-    import smtplib
-    
-    mailhost = 'mail.haobtc.com'
-    sender = 'checkdb@haobtc.com'
-    receivers = ['support@haobtc.com']
-    
-    message = "From: From pq <checkdb@haobtc.com> \
-    To: To Person <support@haobtc.com>            \
-    Subject: postgres db check fail!              \
-                                                  \
-    %s" % msg
-    
-    try:
-        smtpObj = smtplib.SMTP(mailhost)
-        smtpObj.sendmail(sender, receivers, message)         
-    except:
-        print "send mail Fail"
-
-
-#TODO
-def sendsms(msg):
-    print msg
-    pass
-
-def alter_admin(msg):
-    sendsms(msg)
-    #sendmail(msg)
 
 def check_db(level=0):
     msg = time.ctime() + '\n'
@@ -311,7 +282,6 @@ def check_db(level=0):
         msg = msg + ("check db fail:\n %s" % e)
 
     if fail:
-        alter_admin(msg)
         return {'failed': msg}
     else:
         return {'success': msg}
