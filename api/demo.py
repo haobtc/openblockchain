@@ -141,9 +141,16 @@ def news():
     render_type=request.args.get('type') or 'html'
     return lastest_data(render_type)
 
-@app.route('/checkdb/<level>', methods=['GET', 'POST'])
-def checkdb_handle(address):
-    return check_db(level)
+@app.route('/checkdb')
+def checkdb():
+    file = open(DB_WARNING_FILE)
+ 
+    for line in file:
+        return line
+        pass # do something
+
+    # level= request.args.get('level') or 3
+    # return check_db(level)
 
 def render_tx(tx=None, render_type='html'):
     tx= tx.todict()
