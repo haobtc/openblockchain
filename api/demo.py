@@ -11,6 +11,7 @@ from datetime import datetime
 from util     import calculate_target, calculate_difficulty,work_to_difficulty
 import re
 import config
+from check_db import check_db
 
 app = Flask(__name__)
 app = Flask(__name__, static_url_path='/static')
@@ -139,6 +140,10 @@ def home():
 def news():
     render_type=request.args.get('type') or 'html'
     return lastest_data(render_type)
+
+@app.route('/checkdb/<level>', methods=['GET', 'POST'])
+def checkdb_handle(address):
+    return check_db(level)
 
 def render_tx(tx=None, render_type='html'):
     tx= tx.todict()
@@ -321,7 +326,6 @@ def address_handle(address):
     filter= request.args.get('filter') or 0
 
     return render_addr(address, page, render_type, int(filter))
-   
 
 @app.route('/search', methods=['GET', 'POST'])
 def search(sid=0):

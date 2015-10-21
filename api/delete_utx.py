@@ -12,8 +12,6 @@ import config
 
 
 engine = create_engine(config.SQLALCHEMY_DATABASE_URI, echo=False)
-                                         autoflush=False,
-                                         bind=engine))
 Session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 
 session=Session()
