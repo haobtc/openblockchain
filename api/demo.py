@@ -62,7 +62,7 @@ def get_pool(blk_id):
         for tag in pool_info['coinbase_tags'].keys():
             if re.search(tag, coinbase_str)!=None:
                return  pool_info['coinbase_tags'][tag]['name']
-        return 'p2p or others'
+        return 'Unknown'
 
 
 @app.template_filter('datetime')
@@ -143,7 +143,7 @@ def news():
 
 @app.route('/checkdb')
 def checkdb():
-    file = open(DB_WARNING_FILE)
+    file = open(config.DB_WARNING_FILE)
  
     for line in file:
         return line
