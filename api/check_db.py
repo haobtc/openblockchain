@@ -271,47 +271,51 @@ def alter_admin(msg):
     sendsms(msg)
     #sendmail(msg)
 
-def check_db():
+def check_db(level=0):
     msg = time.ctime() + '\n'
     fail = False
     try:
-        if not check_tx_count():
-           msg = msg + ("check tx count fail\n")
-        else:
-           msg = msg + ("check tx count success\n")
-           fail = True
+        if level >= 0:
+            if not check_tx_count():
+               msg = msg + ("check tx count fail\n")
+            else:
+               msg = msg + ("check tx count success\n")
+               fail = True
 
-        if not check_blk_count():
-           msg = msg + ("check blk count fail\n")
-        else:
-           msg = msg + ("check blk count success\n")
-           fail = True
+            if not check_blk_count():
+               msg = msg + ("check blk count fail\n")
+            else:
+               msg = msg + ("check blk count success\n")
+               fail = True
+        if level >= 1:
+            if not check_addr_balance():
+               msg = msg + ("check address fail\n")
+            else:
+               msg = msg + ("check address success\n")
+               fail = True
 
-        if not check_last_block():
-           msg = msg + ("check last blk fail\n")
-        else:
-           msg = msg + ("check last blk success\n")
-           fail = True
+        if level >= 2:
+            if not check_last_block():
+               msg = msg + ("check last blk fail\n")
+            else:
+               msg = msg + ("check last blk success\n")
+               fail = True
 
-        if not check_last_tx():
-           msg = msg + ("check last tx fail\n")
-        else:
-           msg = msg + ("check last tx success\n")
-           fail = True
-        
-        if not check_addr_balance():
-           msg = msg + ("check address fail\n")
-        else:
-           msg = msg + ("check address success\n")
-           fail = True
+            if not check_last_tx():
+               msg = msg + ("check last tx fail\n")
+            else:
+               msg = msg + ("check last tx success\n")
+               fail = True
 
     except Exception, e:
         msg = msg + ("check db fail:\n %s" % e)
 
     if fail:
         alter_admin(msg)
+        return {'failed': msg}
     else:
-        print msg
+        return {'success': msg}
 
-check_db()
+if __name__ == '__main__':
+    print check_db()
      
