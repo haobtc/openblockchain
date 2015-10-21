@@ -160,3 +160,35 @@ BEGIN
     return (max_height-tx_height+1);
 END;
 $_$;
+
+DROP FUNCTION check_tx_count();
+CREATE FUNCTION check_tx_count() RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE tx_count1 integer;
+    DECLARE tx_count2 integer;
+    DECLARE tx_count3 integer;
+BEGIN
+    tx_count1 = (select sum(tx_count) from blk);
+    tx_count2 = (select count(1) from tx) -  (select count(1) from utx) + 2;
+    tx_count3 = (select count(tx_id) from blk_tx);
+    if tx_count1 != tx_count2 then return false; end if;
+    if tx_count3 != tx_count2 then return false; end if;
+    return true;
+END;
+$$;
+
+
+DROP FUNCTION check_blk_count()
+CREATE FUNCTION check_blk_count() RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE blk_count1 integer;
+    DECLARE blk_count2 integer;
+BEGIN
+    blk_count1 = (select count(1) from blk);
+    blk_count2 = (select max(height)+1 from blk);
+    if blk_count1 != blk_count2 then return false; end if;
+    return true;
+END;
+$$;
