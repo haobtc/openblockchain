@@ -19,4 +19,4 @@ EMAIL_HOST_USER = 'notify@haobtc.com'
 EMAIL_HOST_PASSWORD = 'xxx'
 EMAIL_USE_TLS = True
 
-EMAIL_RECEIVER = ['']
+EMAIL_RECEIVER = ['xxx@xxx.com']

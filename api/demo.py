@@ -158,7 +158,7 @@ def render_tx(tx=None, render_type='html'):
 
     txins = TxIn.query.filter(TxIn.tx_id==tx['id']).order_by(TxIn.tx_id.desc()).all()
     tx['vin'] = [txin.todict() for txin in txins ]
-    txouts = TxOut.query.filter(TxOut.tx_id==tx['id']).order_by(TxIn.tx_id.desc()).all()
+    txouts = TxOut.query.filter(TxOut.tx_id==tx['id']).order_by(TxOut.tx_id.desc()).all()
     tx['vout'] = [txout.todict() for txout in txouts]
 
     tx['in_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txin_tx_id==tx['id']).order_by(VOUT.in_idx).all()
