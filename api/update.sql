@@ -179,7 +179,7 @@ END;
 $$;
 
 
-DROP FUNCTION check_blk_count();
+DROP FUNCTION check_blk_count()
 CREATE FUNCTION check_blk_count() RETURNS boolean
     LANGUAGE plpgsql
     AS $$

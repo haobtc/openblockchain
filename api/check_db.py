@@ -15,7 +15,7 @@ import requests
 from database import *
 from sqlalchemy import and_
 import logging
-logging.basicConfig(format='%(asctime)s %(message)s', filename='check_db.log',level=logging.INFO)
+logging.basicConfig(format='%(asctime)s %(message)s', filename='exc.log',level=logging.DEBUG)
 console = logging.StreamHandler()  
 console.setLevel(logging.DEBUG)  
 formatter = logging.Formatter('%(asctime)-12s: %(message)s')  
@@ -221,10 +221,10 @@ def check_last_block():
         res = Block.query.with_entities(Block.hash).order_by(Block.height.desc()).limit(10).all()
         for blk in res:
             if not verifyBlk(blk.hash.encode('hex')):
-                logging.error("check blk fail %s" % blk.hash.encode('hex'))
+                logging.debug("check blk fail %s" % blk.hash.encode('hex'))
                 return False
     except:
-        logging.error("check blk exception %s" % blk.hash.encode('hex'))
+        logging.debug("check blk exception %s" % blk.hash.encode('hex'))
         return False
     return True
 
@@ -234,85 +234,58 @@ def check_last_tx():
         res = Tx.query.with_entities(Tx.hash).order_by(Tx.id.desc()).limit(10).all()
         for tx in res:
             if not verifyTx(tx.hash.encode('hex'), coinbase=False):
-                logging.error("check tx fail %s" % tx.hash.encode('hex'))
+                logging.debug("check tx fail %s" % tx.hash.encode('hex'))
                 return False
     except:
-        logging.error("check tx exception %s" % tx.hash.encode('hex'))
+        logging.debug("check tx exception %s" % tx.hash.encode('hex'))
         return False
     return True
 
-#if alert admin with mail and sms
-def sendmail(msg):
-    import smtplib
-
-    message = "From: %s\r\nTo: %s\r\nSubject: postgres db check fail!\r\n\r\n%s\r\n" % (config.EMAIL_HOST_USER, ", ".join(config.EMAIL_RECEIVER), msg)
-    try:
-        smtpserver = smtplib.SMTP(config.EMAIL_HOST)
-        smtpserver.set_debuglevel(1)
-        smtpserver.ehlo()
-        smtpserver.starttls()
-        smtpserver.ehlo
-        smtpserver.login(config.EMAIL_HOST_USER, config.EMAIL_HOST_PASSWORD)
-        smtpserver.sendmail(config.EMAIL_HOST_USER, config.EMAIL_RECEIVER, message)
-        smtpserver.quit()  
-        smtpserver.close()       
-    except:
-        logging.error("send mail Fail")
-
-
-#TODO
-def sendsms(msg):
-    print msg
-    pass
-
-def alter_admin(msg):
-    # sendsms(msg)
-    sendmail(msg)
 
 def check_db(level=0):
     msg = time.ctime() + '\n'
-    success = False
+    fail = False
     try:
         if level >= 0:
             if not check_tx_count():
                msg = msg + ("check tx count fail\n")
             else:
                msg = msg + ("check tx count success\n")
-               success = True
+               fail = True
 
             if not check_blk_count():
                msg = msg + ("check blk count fail\n")
             else:
                msg = msg + ("check blk count success\n")
-               success = True
+               fail = True
         if level >= 1:
             if not check_addr_balance():
                msg = msg + ("check address fail\n")
             else:
                msg = msg + ("check address success\n")
-               success = True
+               fail = True
 
         if level >= 2:
             if not check_last_block():
                msg = msg + ("check last blk fail\n")
             else:
                msg = msg + ("check last blk success\n")
-               success = True
+               fail = True
 
             if not check_last_tx():
                msg = msg + ("check last tx fail\n")
             else:
                msg = msg + ("check last tx success\n")
-               success = True
+               fail = True
 
     except Exception, e:
         msg = msg + ("check db fail:\n %s" % e)
 
-    if success:
-        return {'success': msg}
+    if fail:
+        return {'failed': msg}
     else:
-        alter_admin(msg)
-        return {'fail': msg}
+        return {'success': msg}
 
 if __name__ == '__main__':
-    print check_db(3)
+    print check_db()
+     
