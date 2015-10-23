@@ -15,7 +15,10 @@ import requests
 from database import *
 from sqlalchemy import and_
 import logging
-logging.basicConfig(format='%(asctime)s %(message)s', filename='check_db.log',level=logging.INFO)
+
+from config import *
+
+logging.basicConfig(format='%(asctime)s %(message)s', filename=config.CHECK_LOG_FILE,level=logging.INFO)
 console = logging.StreamHandler()  
 console.setLevel(logging.DEBUG)  
 formatter = logging.Formatter('%(asctime)-12s: %(message)s')  
@@ -24,7 +27,7 @@ logging.getLogger('').addHandler(console)
 
 from bitcoinrpc.authproxy import AuthServiceProxy
 
-from config import *
+
 access = AuthServiceProxy(RPC_URL)
 
 vout_type ={'nonstandard':0, 'pubkey':1, 'pubkeyhash':2, 'scripthash':3, 'multisig':4, 'nulldata':5}
@@ -271,44 +274,46 @@ def alter_admin(msg):
 
 def check_db(level=0):
     msg = time.ctime() + '\n'
-    success = False
+    fail = False
     try:
         if level >= 0:
             if not check_tx_count():
                msg = msg + ("check tx count fail\n")
+               fail = True
             else:
                msg = msg + ("check tx count success\n")
-               success = True
-
+               
             if not check_blk_count():
                msg = msg + ("check blk count fail\n")
+               fail = True
             else:
                msg = msg + ("check blk count success\n")
-               success = True
+
         if level >= 1:
             if not check_addr_balance():
                msg = msg + ("check address fail\n")
+               fail = True
             else:
                msg = msg + ("check address success\n")
-               success = True
 
         if level >= 2:
             if not check_last_block():
                msg = msg + ("check last blk fail\n")
+               fail = True
             else:
                msg = msg + ("check last blk success\n")
-               success = True
 
             if not check_last_tx():
                msg = msg + ("check last tx fail\n")
+               fail = True
             else:
                msg = msg + ("check last tx success\n")
-               success = True
 
     except Exception, e:
         msg = msg + ("check db fail:\n %s" % e)
+        fail = True
 
-    if success:
+    if not fail:
         return {'success': msg}
     else:
         alter_admin(msg)

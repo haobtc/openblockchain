@@ -12,7 +12,8 @@ PORT=5000
 
 SQLALCHEMY_DATABASE_URI = 'postgresql://user:pass@@127.0.0.1:5432/dbname'
 RPC_URL = "http://bitcoinrpc:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX@127.0.0.1:8332"
-DB_WARNING_FILE = "~/check_db.txt"
+DB_WARNING_FILE = "/home/phil/check_db.txt"
+CHECK_LOG_FILE ='/home/phil/check_db.log'
 
 EMAIL_HOST = 'p.haobtc.com'
 EMAIL_HOST_USER = 'notify@haobtc.com'
