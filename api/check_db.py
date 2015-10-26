@@ -15,7 +15,10 @@ import requests
 from database import *
 from sqlalchemy import and_
 import logging
-logging.basicConfig(format='%(asctime)s %(message)s', filename='exc.log',level=logging.DEBUG)
+
+from config import *
+
+logging.basicConfig(format='%(asctime)s %(message)s', filename=config.CHECK_LOG_FILE,level=logging.INFO)
 console = logging.StreamHandler()  
 console.setLevel(logging.DEBUG)  
 formatter = logging.Formatter('%(asctime)-12s: %(message)s')  
@@ -24,7 +27,6 @@ logging.getLogger('').addHandler(console)
 
 from bitcoinrpc.authproxy import AuthServiceProxy
 
-from config import *
 access = AuthServiceProxy(RPC_URL)
 
 vout_type ={'nonstandard':0, 'pubkey':1, 'pubkeyhash':2, 'scripthash':3, 'multisig':4, 'nulldata':5}
@@ -168,6 +170,8 @@ def verifyBlk(blkhash):
 
     logging.debug('verifyBlk end...... %s', blkhash)
 
+    return blkhash
+
 def get_addr_info(address):
     for x in xrange(1,4):
         try:
@@ -219,10 +223,10 @@ def check_last_block():
         res = Block.query.with_entities(Block.hash).order_by(Block.height.desc()).limit(10).all()
         for blk in res:
             if not verifyBlk(blk.hash.encode('hex')):
-                print "check blk fail %s" % blk.hash.encode('hex')
+                logging.error("check blk fail %s" % blk.hash.encode('hex'))
                 return False
     except:
-        print "check blk exception %s" % blk.hash.encode('hex')
+        logging.error("check blk exception %s" % blk.hash.encode('hex'))
         return False
     return True
 
@@ -232,32 +236,29 @@ def check_last_tx():
         res = Tx.query.with_entities(Tx.hash).order_by(Tx.id.desc()).limit(10).all()
         for tx in res:
             if not verifyTx(tx.hash.encode('hex'), coinbase=False):
-                print "check tx fail %s" % tx.hash.encode('hex')
+                logging.error("check tx fail %s" % tx.hash.encode('hex'))
                 return False
     except:
-        print "check tx exception %s" % tx.hash.encode('hex')
+        logging.error("check tx exception %s" % tx.hash.encode('hex'))
         return False
     return True
 
 #if alert admin with mail and sms
 def sendmail(msg):
     import smtplib
-    
-    mailhost = 'mail.haobtc.com'
-    sender = 'checkdb@haobtc.com'
-    receivers = ['support@haobtc.com']
-    
-    message = "From: From pq <checkdb@haobtc.com> \
-    To: To Person <support@haobtc.com>            \
-    Subject: postgres db check fail!              \
-                                                  \
-    %s" % msg
-    
+    message = "From: %s\r\nTo: %s\r\nSubject: postgres db check fail!\r\n\r\n%s\r\n" % (config.EMAIL_HOST_USER, ", ".join(config.EMAIL_RECEIVER), msg)
     try:
-        smtpObj = smtplib.SMTP(mailhost)
-        smtpObj.sendmail(sender, receivers, message)         
+        smtpserver = smtplib.SMTP(config.EMAIL_HOST)
+        smtpserver.set_debuglevel(1)
+        smtpserver.ehlo()
+        smtpserver.starttls()
+        smtpserver.ehlo
+        smtpserver.login(config.EMAIL_HOST_USER, config.EMAIL_HOST_PASSWORD)
+        smtpserver.sendmail(config.EMAIL_HOST_USER, config.EMAIL_RECEIVER, message)
+        smtpserver.quit()  
+        smtpserver.close()       
     except:
-        print "send mail Fail"
+        logging.error("send mail Fail")
 
 
 #TODO
@@ -266,49 +267,55 @@ def sendsms(msg):
     pass
 
 def alter_admin(msg):
-    sendsms(msg)
-    #sendmail(msg)
+    # sendsms(msg)
+    sendmail(msg)
 
-def check_db():
+def check_db(level=0):
     msg = time.ctime() + '\n'
     fail = False
     try:
-        if not check_tx_count():
-           msg = msg + ("check tx count fail\n")
-        else:
-           msg = msg + ("check tx count success\n")
-           fail = True
+        if level >= 0:
+            if not check_tx_count():
+               msg = msg + ("check tx count fail\n")
+               fail = True
+            else:
+               msg = msg + ("check tx count success\n")
+               
+            if not check_blk_count():
+               msg = msg + ("check blk count fail\n")
+               fail = True
+            else:
+               msg = msg + ("check blk count success\n")
 
-        if not check_blk_count():
-           msg = msg + ("check blk count fail\n")
-        else:
-           msg = msg + ("check blk count success\n")
-           fail = True
+        if level >= 1:
+            if not check_addr_balance():
+               msg = msg + ("check address fail\n")
+               fail = True
+            else:
+               msg = msg + ("check address success\n")
 
-        if not check_addr_balance():
-           msg = msg + ("check address fail\n")
-        else:
-           msg = msg + ("check address success\n")
-           fail = True
+        if level >= 2:
+            if not check_last_block():
+               msg = msg + ("check last blk fail\n")
+               fail = True
+            else:
+               msg = msg + ("check last blk success\n")
 
-        if not check_last_block():
-           msg = msg + ("check last blk fail\n")
-        else:
-           msg = msg + ("check last blk success\n")
-           fail = True
+            if not check_last_tx():
+               msg = msg + ("check last tx fail\n")
+               fail = True
+            else:
+               msg = msg + ("check last tx success\n")
 
-        if not check_last_tx():
-           msg = msg + ("check last tx fail\n")
-        else:
-           msg = msg + ("check last tx success\n")
-           fail = True
     except Exception, e:
         msg = msg + ("check db fail:\n %s" % e)
+        fail = True
 
-    if fail:
-        alter_admin(msg)
+    if not fail:
+        return {'success': msg}
     else:
-        print msg
+        alter_admin(msg)
+        return {'fail': msg}
 
-check_db()
-     
+if __name__ == '__main__':
+    print check_db(3)

@@ -11,6 +11,7 @@ from datetime import datetime
 from util     import calculate_target, calculate_difficulty,work_to_difficulty
 import re
 import config
+from check_db import check_db
 
 app = Flask(__name__)
 app = Flask(__name__, static_url_path='/static')
@@ -61,7 +62,7 @@ def get_pool(blk_id):
         for tag in pool_info['coinbase_tags'].keys():
             if re.search(tag, coinbase_str)!=None:
                return  pool_info['coinbase_tags'][tag]['name']
-        return 'p2p or others'
+        return 'Unknown'
 
 
 @app.template_filter('datetime')
@@ -140,12 +141,24 @@ def news():
     render_type=request.args.get('type') or 'html'
     return lastest_data(render_type)
 
+@app.route('/checkdb')
+def checkdb():
+    file = open(config.DB_WARNING_FILE)
+ 
+    for line in file:
+        return line
+        pass # do something
+    return "checking"
+
+    # level= request.args.get('level') or 3
+    # return check_db(level)
+
 def render_tx(tx=None, render_type='html'):
     tx= tx.todict()
 
-    txins = TxIn.query.filter(TxIn.tx_id==tx['id']).all()
+    txins = TxIn.query.filter(TxIn.tx_id==tx['id']).order_by(TxIn.tx_idx.asc()).all()
     tx['vin'] = [txin.todict() for txin in txins ]
-    txouts = TxOut.query.filter(TxOut.tx_id==tx['id']).all()
+    txouts = TxOut.query.filter(TxOut.tx_id==tx['id']).order_by(TxOut.tx_idx.asc()).all()
     tx['vout'] = [txout.todict() for txout in txouts]
 
     tx['in_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txin_tx_id==tx['id']).order_by(VOUT.in_idx).all()
@@ -321,7 +334,6 @@ def address_handle(address):
     filter= request.args.get('filter') or 0
 
     return render_addr(address, page, render_type, int(filter))
-   
 
 @app.route('/search', methods=['GET', 'POST'])
 def search(sid=0):
