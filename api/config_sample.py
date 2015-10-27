@@ -21,3 +21,5 @@ EMAIL_HOST_PASSWORD = 'xxx'
 EMAIL_USE_TLS = True
 
 EMAIL_RECEIVER = ['xxx@xxx.com']
+
+UTX_EXPIRE_TIME = 24 * 60 * 60 #24 hour
