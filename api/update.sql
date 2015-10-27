@@ -168,12 +168,15 @@ CREATE FUNCTION check_tx_count() RETURNS boolean
     DECLARE tx_count1 integer;
     DECLARE tx_count2 integer;
     DECLARE tx_count3 integer;
+    DECLARE max_id record;
 BEGIN
-    tx_count1 = (select sum(tx_count) from blk);
-    tx_count2 = (select count(1) from tx) -  (select count(1) from utx) + 2;
-    tx_count3 = (select count(tx_id) from blk_tx);
+    for max_id in (select blk_id,tx_id from blk_tx order by tx_id desc limit 1) loop
+    tx_count1 = (select sum(tx_count) from blk where id<=max_id.blk_id);
+    tx_count2 = (select count(1) from tx where id<=max_id.tx_id) -  (select count(1) from utx where id<=max_id.tx_id) + 2;
+    tx_count3 = (select count(tx_id) from blk_tx  where blk_id<=max_id.blk_id);
     if tx_count1 != tx_count2 then return false; end if;
     if tx_count3 != tx_count2 then return false; end if;
+    end loop;
     return true;
 END;
 $$;
