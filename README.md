@@ -16,31 +16,32 @@ git submodule update --init --recursive
 
 # create db
 
-sudo apt-get install postgresql-client
-sudo apt-get install postgresql
 
-root#mkdir /usr/local/pgsql/data
-root#chown postgres /usr/local/pgsql/data
+sudo apt-get install postgresql-9.4
+
+root#mkdir /chain/pg/
+root#chown postgres /chain/pg/
 root#su postgres
-postgres$/usr/lib/postgresql/9.4/bin/initdb -D /ssd/chaindb/
+postgres$/usr/lib/postgresql/9.4/bin/initdb -D /chain/pg/
 
 You can now start the database server using:
 
-    /usr/lib/postgresql/9.4/bin/postgres -D /ssd/chaindb/
+    /usr/lib/postgresql/9.4/bin/postgres -D /chain/pg/
 or
-    /usr/lib/postgresql/9.3/bin/pg_ctl -D /ssd/chaindb/ -l logfile start
+    /usr/lib/postgresql/9.3/bin/pg_ctl -D /chain/pg/ -l logfile start
 or 
     /etc/init.d/postgresql start
     /etc/init.d/postgresql stop
     /etc/init.d/postgresql restart
     /etc/init.d/postgresql status
 
+sudo adduser dbuser
+in postgres command:
+CREATE USER dbuser WITH PASSWORD 'xxxxx';
+CREATE DATABASE btcdb OWNER dbuser;
+GRANT ALL PRIVILEGES ON DATABASE btcdb to dbuser;
 
-psql -U postgres -c "create database dbname"
-or
-createdb -U postgres dbname
-
-psql -U postgres dbname < schema.sql
+pg_restore -j 3 -d btcdb btcdb.file
 
 vi ~/.bitcoin/bitcoin.conf
 
