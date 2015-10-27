@@ -68,13 +68,8 @@ AS $$
 $$
 LANGUAGE plpgsql;
 
-<<<<<<< HEAD
-drop FUNCTION check_tx();
-CREATE FUNCTION check_tx() RETURNS BOOL
-=======
 drop FUNCTION check_tx_count();
 CREATE FUNCTION check_tx_count() RETURNS BOOL
->>>>>>> 5177f001d06c3e6421eef4a7a518f1082386c680
 AS $$
     DECLARE tx_count bigint;        
     DECLARE utx_count bigint;   
@@ -105,13 +100,8 @@ LANGUAGE plpgsql;
 
 
 
-<<<<<<< HEAD
-drop FUNCTION check_blk();
-CREATE FUNCTION check_blk() RETURNS BOOL
-=======
 drop FUNCTION check_blk_count();
 CREATE FUNCTION check_blk_count() RETURNS BOOL
->>>>>>> 5177f001d06c3e6421eef4a7a518f1082386c680
 AS $$
     DECLARE blk_height bigint;        
     DECLARE blk_count bigint;   
@@ -158,4 +148,3 @@ AS $$
     END;
 $$
 LANGUAGE plpgsql;
-

@@ -246,6 +246,7 @@ def check_last_tx():
 #if alert admin with mail and sms
 def sendmail(msg):
     import smtplib
+
     message = "From: %s\r\nTo: %s\r\nSubject: postgres db check fail!\r\n\r\n%s\r\n" % (config.EMAIL_HOST_USER, ", ".join(config.EMAIL_RECEIVER), msg)
     try:
         smtpserver = smtplib.SMTP(config.EMAIL_HOST)
