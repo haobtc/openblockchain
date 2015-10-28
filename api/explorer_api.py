@@ -98,7 +98,7 @@ def render_404(render_type='html'):
     if render_type=='html':
         return render_template('404.html'), 404
     elif render_type=='json':
-        return jsonify({"error":"Not found"})
+        return jsonify({"error":"Not found"}), 404
 
 def lastest_data(render_type='html'):
     blks=[]

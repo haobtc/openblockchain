@@ -93,7 +93,7 @@ class Tx(SQLBase):
 class BlockTx(SQLBase):
     __tablename__ = 'blk_tx'
     blk_id = Column(INTEGER, ForeignKey("blk.id"))
-    tx_id = Column(INTEGER, ForeignKey("tx.id"))
+    tx_id = Column(INTEGER, ForeignKey("vtx.id"))
     idx = Column(INTEGER)
     __table_args__ = (PrimaryKeyConstraint(blk_id, tx_id, idx), )
 
@@ -101,7 +101,7 @@ class BlockTx(SQLBase):
 class TxIn(SQLBase):
     __tablename__ = 'txin'
     id = Column(INTEGER, primary_key=True)
-    tx_id = Column(INTEGER, ForeignKey("tx.id"))
+    tx_id = Column(INTEGER, ForeignKey("vtx.id"))
     tx_idx = Column(INTEGER)
     prev_out_index = Column(BIGINT)
     sequence = Column(BIGINT)
@@ -115,7 +115,7 @@ class TxIn(SQLBase):
 class TxOut(SQLBase):
     __tablename__ = 'txout'
     id = Column(INTEGER, primary_key=True)
-    tx_id = Column(INTEGER, ForeignKey("tx.id"))
+    tx_id = Column(INTEGER, ForeignKey("vtx.id"))
     tx_idx = Column(INTEGER)
     pk_script = Column(BYTEA)
     value = Column(BIGINT)
