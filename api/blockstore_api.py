@@ -15,6 +15,8 @@ from util     import calculate_target, calculate_difficulty,work_to_difficulty
 import re
 import config
 from check_db import check_db
+from deserialize import extract_public_key
+from db2t import db2t_tx, db2t_block
 
 app = Flask(__name__)
 
@@ -83,16 +85,27 @@ def getRelatedTxIdList():
     return jsonify(resp_data)
 
 
-@app.route('/queryapi/v1/tx/details/', methods=['GET'])
+@app.route('/queryapi/v1/tx/details', methods=['GET'])
 def getTxDetails():
-    txhash = request.args.get('bitcoin')
-    print "txhash:",txhash
-    tx = Tx.query.filter(Tx.hash == txhash.decode('hex')).first()
-    print tx
-    if tx:
-        t_tx = db2t_tx(tx)
-        print t_tx
-        return jsonify(t_tx)
+    txhash_params = request.args.get('bitcoin')
+    print "txhash_params:",txhash_params
+    
+    txhashList = txhash_params.split(',')
+    print txhashList, len(txhashList)
+    if len(txhashList) <= 0:
+        return jsonify({"error":"not found"}), 404
+
+    t_txs = []
+    for txhash in txhashList:
+        tx = Tx.query.filter(Tx.hash == txhash.decode('hex')).first()
+        if tx:
+            t_tx = db2t_tx(tx)
+            t_txs.append(t_tx)
+        
+    if t_txs:
+        print t_txs
+        # return jsonify(t_txs)
+        return Response(json.dumps(t_txs),  mimetype='application/json')
     else:
         return jsonify({"error":"not found"}), 404
 
@@ -114,33 +127,6 @@ def sendTx(tx):
         raise ttypes.AppException(
             code="tx_exist",
             message="tx already exists in the blockchain")
-
-def db2t_tx(tx):
-    t = {}
-
-    t["txid"] = hexlify(tx.hash)
-
-    return t
-
-def db2t_block(block):
-    b = {}
-
-    b["hash"] = hexlify(block.hash)
-    b["version"] = block.version
-    b["timestamp"] = block.time
-    b["merkle_root"] = hexlify(block.mrkl_root)
-    b["height"] = block.height
-    b["prev_hash"] = hexlify(block.prev_hash)
-    b["tx_cnt"] = block.tx_count
-    
-    
-    b["confirmations"] = 1
-    b["bits"] = block.bits
-
-    block_next = Block.query.filter(Block.prev_hash == block.hash).limit(1).first()
-    if block_next:
-        b["nextHash"] = hexlify(block_next.hash)
-    return b
 
 if __name__ == '__main__':
     app.run(host=config.HOST, port=config.PORT, debug=config.DEBUG)

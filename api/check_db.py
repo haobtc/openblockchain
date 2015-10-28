@@ -273,8 +273,6 @@ def alter_admin(msg):
 
 def check_db(level=0):
     msg = time.ctime() + '\n' + get_ip_address('eth1') +'\n'
-    print msg
-    return
     fail = False
     try:
         if level >= 0:
