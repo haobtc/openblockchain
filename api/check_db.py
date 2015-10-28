@@ -8,7 +8,7 @@ import simplejson as json
 import binascii
 from BCDataStream import *
 from deserialize import *
-from util import double_sha256
+from util import double_sha256, get_ip_address
 import time
 
 import requests
@@ -272,7 +272,9 @@ def alter_admin(msg):
     sendmail(msg)
 
 def check_db(level=0):
-    msg = time.ctime() + '\n'
+    msg = time.ctime() + '\n' + get_ip_address('eth1') +'\n'
+    print msg
+    return
     fail = False
     try:
         if level >= 0:

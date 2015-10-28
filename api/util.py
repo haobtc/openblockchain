@@ -22,6 +22,9 @@
 import re
 import base58
 import Crypto.Hash.SHA256 as SHA256
+import socket
+import fcntl
+import struct
 
 try:
     import Crypto.Hash.RIPEMD160 as RIPEMD160
@@ -160,6 +163,14 @@ def str_to_ds(s):
     ds = BCDataStream.BCDataStream()
     ds.write(s)
     return ds
+  
+def get_ip_address(ifname):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    return socket.inet_ntoa(fcntl.ioctl(
+        s.fileno(),
+        0x8915,  # SIOCGIFADDR
+        struct.pack('256s', ifname[:15])
+    )[20:24])
 
 class CmdLine(object):
     def __init__(self, argv, conf=None):
