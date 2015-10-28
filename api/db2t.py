@@ -61,15 +61,17 @@ def db2t_tx(dtx):
                     TxOut.tx_id == prev_tx.id,
                     TxOut.tx_idx == vin.prev_out_index).first()
                 if prev_txout:
-                    inp['address'] = ',' + extract_public_key(prev_txout.pk_script)
+                    inp['address'] = extract_public_key(prev_txout.pk_script)
                     inp['amountSatoshi'] = str(prev_txout.value)
+                    inp['amount'] = str(prev_txout.value*0.00000001)
         t['inputs'].append(inp)
 
     txoutlist = TxOut.query.filter(TxOut.tx_id == dtx.id).all()
     for vout in txoutlist:
         outp = {}
-        outp['address'] = ',' + extract_public_key(vout.pk_script)
+        outp['address'] = extract_public_key(vout.pk_script)
         outp['amountSatoshi'] = str(vout.value)
+        outp['amount'] = str(vout.value*0.00000001)
         outp['script'] = hexlify(vout.pk_script)
         t['outputs'].append(outp)
 
