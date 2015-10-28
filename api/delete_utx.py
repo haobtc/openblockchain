@@ -37,14 +37,16 @@ if tx is None:
     exit(-1)
 
 logging.info('delete utx id: %d', tx.id)
-res = UTX.query.filter(UTX.id == tx.id).fetchall()
+res = UTX.query.filter(UTX.id == tx.id).first()
+if res is None:
+    logging.info('delete utx hash failed, not utx: %s', txhash)
+    exit(-1)
 
-for tx in res:
-    session.execute('select delete_tx(%d)' % tx.id)
-    try:
-        session.commit()
-    except:
-        session.rollback()
-        logging.exception('delete fail: %s', txhash)
+session.execute('select delete_tx(%d)' % res.id)
+try:
+    session.commit()
+except:
+    session.rollback()
+    logging.exception('delete fail: %s', txhash)
 session.close()
 
