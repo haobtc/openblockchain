@@ -61,14 +61,20 @@ def db2t_tx(dtx):
                     TxOut.tx_id == prev_tx.id,
                     TxOut.tx_idx == vin.prev_out_index).first()
                 if prev_txout:
-                    inp['address'] = ',' + extract_public_key(prev_txout.pk_script)
+                    inp['address'] = ''
+                    address = VOUT.query.with_entities(VOUT.address).filter(and_(VOUT.txout_tx_id==prev_tx.id, VOUT.out_idx==prev_txout.tx_idx)).all()
+                    for addr in  address: 
+                        inp['address'] = inp['address'] + addr[0] + ',' 
                     inp['amountSatoshi'] = str(prev_txout.value)
         t['inputs'].append(inp)
 
     txoutlist = TxOut.query.filter(TxOut.tx_id == dtx.id).all()
     for vout in txoutlist:
         outp = {}
-        outp['address'] = ',' + extract_public_key(vout.pk_script)
+        outp['address'] = ''
+        address = VOUT.query.with_entities(VOUT.address).filter(and_(VOUT.txout_tx_id==dtx.id, VOUT.out_idx==vout.tx_idx)).all()
+        for addr in  address: 
+            outp['address'] = outp['address'] + addr[0] + ',' 
         outp['amountSatoshi'] = str(vout.value)
         outp['script'] = hexlify(vout.pk_script)
         t['outputs'].append(outp)
