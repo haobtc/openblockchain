@@ -27,20 +27,89 @@ from bitcoinrpc.authproxy import AuthServiceProxy
 
 access = AuthServiceProxy(config.RPC_URL)
 
+@app.route("/")
+def hello():
+    return "Hello World!"
+
 # /queryapi/v2/tx/list
-# /queryapi/v1/watch/bitcoin/%s/addresses/
+# /queryapi/v1/watch/bitcoin/<group>/addresses/
 # /queryapi/v1/tx/details
-# /queryapi/v1/watch/bitcoin/%s/tx/list/
+# /queryapi/v1/watch/bitcoin/<group>/tx/list/
 # /queryapi/v1/block/bitcoin/tip
 # /queryapi/v1/sendtx/bitcoin
 
 @app.route('/queryapi/v1/watch/bitcoin/<group>/addresses/', methods=['GET', 'POST'])
 def watchAddresses(group):
-    pass
+    if group is None or len(group) <= 0:
+        return jsonify({"error":"not found"}), 404
+
+    if request.method == 'POST':
+        addresses_params = request.form['addresses']
+
+        addressList = addresses_params.split(',')
+        print addressList, len(addressList)
+        if len(addressList) <= 0:
+            return jsonify({"error":"not found"}), 404
+
+        for address in addressList:
+            missing = AddrGroup.query.filter_by(address=address, groupname=group).first()
+            if missing is None:
+                newRecord = AddrGroup()
+                newRecord.address = address
+                newRecord.groupname = group
+                db_session.add(newRecord)
+                db_session.flush()
+                db_session.refresh(newRecord)
+                print newRecord
+
+        return jsonify({"result": "ok"})
+    else:
+        cursor = request.args.get('cursor') or 0
+        cursor = int(cursor)
+
+        count = request.args.get('count') or None
+        if count is None or count <=0 or count > 500:
+            count = 500
+
+        # getWatchingAddressList(group)
+        address_groups = AddrGroup.query.filter_by(groupname=group).offset(cursor).limit(count)
+
+        resp_data = {}
+        resp_data['bitcoin.cursor'] = cursor+count
+        resp_data['bitcoin'] = [address_group.address for address_group in address_groups]
+
+        print resp_data
+        return jsonify(resp_data)
+
 
 @app.route('/queryapi/v1/watch/bitcoin/<group>/tx/list/', methods=['GET'])
 def getWatchingTxList(group):
-    pass
+    if group is None or len(group) <= 0:
+        return jsonify({"error":"not found"}), 404
+
+    cursor = request.args.get('cursor') or 0
+    cursor = int(cursor)
+
+    count = request.args.get('count') or 0
+    count = int(count)
+    if count <=0 or count > 2000:
+        count = 2000
+
+    address_groups = AddrGroup.query.filter_by(groupname=group).offset(cursor).limit(count)
+    for address_group in address_groups:
+        address = address_group.address
+        addr = Addr.query.filter(Addr.address == address).first()
+        if addr == None:
+            continue
+
+        txidlist = AddrTx.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id==int(addr.id)).order_by(AddrTx.tx_id.desc()).offset(cursor).limit(count)
+
+    resp_data = {}
+    resp_data['bitcoin.cursor'] = cursor+count
+    resp_data['bitcoin'] = [txid.tx_id for txid in txidlist]
+
+    print resp_data
+    return jsonify(resp_data)
 
 @app.route('/queryapi/v2/tx/list/', methods=['GET'])
 def getRelatedTxIdList():

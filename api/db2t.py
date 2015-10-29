@@ -66,6 +66,7 @@ def db2t_tx(dtx):
                     for addr in  address: 
                         inp['address'] = inp['address'] + addr[0] + ',' 
                     inp['amountSatoshi'] = str(prev_txout.value)
+                    inp['amount'] = str(prev_txout.value*0.00000001)
         t['inputs'].append(inp)
 
     txoutlist = TxOut.query.filter(TxOut.tx_id == dtx.id).all()
@@ -76,6 +77,7 @@ def db2t_tx(dtx):
         for addr in  address: 
             outp['address'] = outp['address'] + addr[0] + ',' 
         outp['amountSatoshi'] = str(vout.value)
+        outp['amount'] = str(vout.value*0.00000001)
         outp['script'] = hexlify(vout.pk_script)
         t['outputs'].append(outp)
 

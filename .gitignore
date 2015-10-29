@@ -11,3 +11,4 @@ tests/.coverage
 build/
 *.sw*
 api/config.py
+debug*.log

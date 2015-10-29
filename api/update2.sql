@@ -148,3 +148,14 @@ AS $$
     END;
 $$
 LANGUAGE plpgsql;
+
+DROP TABLE addr_group;
+CREATE TABLE addr_group (
+    id  SERIAL,
+    address text NOT NULL,
+    groupname text NOT NULL,
+    UNIQUE(address, groupname)
+);
+
+
+ALTER TABLE addr_group OWNER TO dbuser;
