@@ -22,7 +22,7 @@ app = Flask(__name__)
 
 page_size=10
 
-from bitcoinrpc.authproxy import AuthServiceProxy
+from bitcoinrpc.authproxy import AuthServiceProxy,JSONRPCException
 
 
 access = AuthServiceProxy(config.RPC_URL)
@@ -252,12 +252,37 @@ def getTipBlock():
     else:
         return jsonify({"error":"not found"}), 404
 
-@app.route('/queryapi/v1/sendtx/bitcoin/<tx>', methods=['GET', 'POST'])
-def sendTx(tx):
-    if Tx.query.filter(Tx.hash == stx.hash).limit(1).first():
-        raise ttypes.AppException(
-            code="tx_exist",
-            message="tx already exists in the blockchain")
+from bitcoinrpc.authproxy import AuthServiceProxy
+access = AuthServiceProxy(config.RPC_URL)
+
+def sendrawtransaction(rawtx, allowhighfees = False):
+    return json.loads(access.sendrawtransaction(rawtx,allowhighfees))
+def decoderawtransaction(rawtx):
+    return json.loads(access.decoderawtransaction(rawtx))
+
+@app.route('/queryapi/v1/sendtx/bitcoin', methods=['GET', 'POST'])
+def sendTx():
+    if request.method == 'POST':
+        rawtx = request.form['rawtx']
+        print "rawtx:",rawtx
+        try:
+            r = decoderawtransaction(rawtx)
+            txhash = r['txid']
+            print txhash
+            tx = Tx.query.filter(Tx.hash == txhash.decode('hex')).first()
+            if tx:
+                return jsonify({"code":"tx_exist", "message": "tx already exists in the blockchain"}), 400     
+            else:
+                r = sendrawtransaction(rawtx, False)
+        except JSONRPCException,e:
+            print "JSONRPCException:",e.error
+            return jsonify({"error": e.error}), 400   
+        except Exception, e:
+            print "Exception:",e
+            return jsonify({"error":"send Failed"}), 400      
+
+        print r['txid']
+        return jsonify(r)
 
 if __name__ == '__main__':
     app.run(host=config.HOST, port=config.PORT, debug=config.DEBUG)
