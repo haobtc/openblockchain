@@ -138,8 +138,8 @@ class Addr(SQLBase):
     def todict(self):
         return to_dict(self, self.__class__)
 
-class AddrGroup(SQLBase):
-    __tablename__ = 'addr_group'
+class WatchedAddrGroup(SQLBase):
+    __tablename__ = 'watched_addr_group'
     id = Column(INTEGER, primary_key=True)
     address = Column(TEXT)
     groupname = Column(TEXT)
@@ -149,6 +149,30 @@ class AddrGroup(SQLBase):
 
     def __repr__(self):
         return "<('%s %s %s')>" % (self.id, self.address, self.groupname)
+
+class WatchedAddrTx(SQLBase):
+    __tablename__ = 'watched_addr_tx'
+    id = Column(INTEGER, primary_key=True)
+    address = Column(TEXT)
+    tx = Column(TEXT)
+
+    def todict(self):
+        return to_dict(self, self.__class__)
+
+    def __repr__(self):
+        return "<('%s %s %s')>" % (self.id, self.address, self.tx)
+
+class SystemCursor(SQLBase):
+    __tablename__ = 'system_cursor'
+    id = Column(INTEGER, primary_key=True)
+    cursor_name = Column(INTEGER)
+    cursor_id = Column(TEXT)
+
+    def todict(self):
+        return to_dict(self, self.__class__)
+
+    def __repr__(self):
+        return "<('%s %s %s')>" % (self.id, self.cursor_name, self.cursor_id)
 
 class AddrTx(SQLBase):
     __tablename__ = 'addr_tx'

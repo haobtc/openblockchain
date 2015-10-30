@@ -52,27 +52,28 @@ def watchAddresses(group):
             return jsonify({"error":"not found"}), 404
 
         for address in addressList:
-            missing = AddrGroup.query.filter_by(address=address, groupname=group).first()
+            missing = WatchedAddrGroup.query.filter_by(address=address, groupname=group).first()
             if missing is None:
-                newRecord = AddrGroup()
+                newRecord = WatchedAddrGroup()
                 newRecord.address = address
                 newRecord.groupname = group
                 db_session.add(newRecord)
                 db_session.flush()
                 db_session.refresh(newRecord)
                 print newRecord
-
+                watch_addrtx(address, 0)   
         return jsonify({"result": "ok"})
     else:
         cursor = request.args.get('cursor') or 0
         cursor = int(cursor)
 
-        count = request.args.get('count') or None
-        if count is None or count <=0 or count > 500:
+        count = request.args.get('count') or 0
+        count = int(count)
+        if count <=0 or count > 500:
             count = 500
 
         # getWatchingAddressList(group)
-        address_groups = AddrGroup.query.filter_by(groupname=group).offset(cursor).limit(count)
+        address_groups = WatchedAddrGroup.query.filter_by(groupname=group).offset(cursor).limit(count)
 
         resp_data = {}
         resp_data['bitcoin.cursor'] = cursor+count
@@ -80,6 +81,66 @@ def watchAddresses(group):
 
         print resp_data
         return jsonify(resp_data)
+
+
+def watch_addrtxs():
+    system_cursor = SystemCursor.query.filter_by(cursor_name = 'watch_addrtx_cursor').first()
+    if system_cursor is None:
+        cursor_id = 0
+    else:
+        cursor_id = system_cursor.cursor_id
+
+    new_cursors = []
+    address_groups = WatchedAddrGroup.query.all()
+    for address_group in address_groups:
+        new_cursor = watch_addrtx(address_group.address, cursor_id)
+        if new_cursor is not None:
+            new_cursors.append(new_cursor)
+
+    if len(new_cursors) == 0:
+        return
+
+    next_cursor =  min(new_cursors)
+    print 'next_cursor:',next_cursor
+    if system_cursor is None:
+        system_cursor = SystemCursor()
+        system_cursor.cursor_name = 'watch_addrtx_cursor'
+        system_cursor.cursor_id = next_cursor
+        db_session.add(system_cursor)
+        db_session.flush()
+        db_session.refresh(system_cursor)
+    else:
+        system_cursor.cursor_id = next_cursor
+        db_session.flush()
+        db_session.refresh(system_cursor)
+
+def watch_addrtx(address, cursor_id):
+    sqlcommand = "SELECT DISTINCT txout_tx_id from vout where address='%s' and txout_tx_id > %d" % (address, cursor_id)
+
+    print "sqlcommand:",sqlcommand
+    txidlist = engine.execute(text(sqlcommand)).fetchall()
+    if txidlist == None or len(txidlist) == 0:
+        return None
+
+    print "txidlist:", len(txidlist), txidlist
+
+
+    txHashList = [(Tx.query.with_entities(Tx.hash).filter(Tx.id==txid[0]).first()) for txid in txidlist]
+
+    txHashList = [hexlify(txHash[0]) for txHash in txHashList]
+    print "txHashList:", txHashList
+    for txHash in txHashList:
+        missing = WatchedAddrTx.query.filter_by(address=address, tx=txHash).first()
+        if missing is None:
+            newRecord = WatchedAddrTx()
+            newRecord.address = address
+            newRecord.tx = txHash
+            db_session.add(newRecord)
+            db_session.flush()
+            db_session.refresh(newRecord)
+
+    max_txid =  max(txid[0] for txid in txidlist)
+    return max_txid
 
 
 @app.route('/queryapi/v1/watch/bitcoin/<group>/tx/list/', methods=['GET'])
@@ -92,24 +153,25 @@ def getWatchingTxList(group):
 
     count = request.args.get('count') or 0
     count = int(count)
-    if count <=0 or count > 2000:
-        count = 2000
+    if count <=0 or count > 500:
+        count = 500
 
-    address_groups = AddrGroup.query.filter_by(groupname=group).offset(cursor).limit(count)
-    for address_group in address_groups:
-        address = address_group.address
-        addr = Addr.query.filter(Addr.address == address).first()
-        if addr == None:
-            continue
+    txHashlist = []
 
-        txidlist = AddrTx.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id==int(addr.id)).order_by(AddrTx.tx_id.desc()).offset(cursor).limit(count)
+    watchedAddrTxs = WatchedAddrTx.query.order_by(WatchedAddrTx.id.desc()).offset(cursor).limit(count)
+    for watchedAddrTx in watchedAddrTxs:
+        address_group = WatchedAddrGroup.query.filter_by(groupname=group, address=watchedAddrTx.address).first()
+        if address_group is not None:
+            if watchedAddrTx.tx not in txHashlist:
+                txHashlist.append(watchedAddrTx.tx)
 
     resp_data = {}
     resp_data['bitcoin.cursor'] = cursor+count
-    resp_data['bitcoin'] = [txid.tx_id for txid in txidlist]
+    resp_data['bitcoin'] = txHashlist
 
     print resp_data
     return jsonify(resp_data)
+
 
 @app.route('/queryapi/v2/tx/list/', methods=['GET'])
 def getRelatedTxIdList():

@@ -149,8 +149,8 @@ AS $$
 $$
 LANGUAGE plpgsql;
 
-DROP TABLE addr_group;
-CREATE TABLE addr_group (
+DROP TABLE watched_addr_group;
+CREATE TABLE watched_addr_group (
     id  SERIAL,
     address text NOT NULL,
     groupname text NOT NULL,
@@ -158,4 +158,26 @@ CREATE TABLE addr_group (
 );
 
 
-ALTER TABLE addr_group OWNER TO dbuser;
+ALTER TABLE watched_addr_group OWNER TO dbuser;
+
+DROP TABLE watched_addr_tx;
+CREATE TABLE watched_addr_tx (
+    id  SERIAL,
+    address text NOT NULL,
+    tx text NOT NULL,
+    UNIQUE(address, tx)
+);
+
+
+ALTER TABLE watched_addr_tx OWNER TO dbuser;
+
+DROP TABLE system_cursor;
+CREATE TABLE system_cursor (
+    id  SERIAL,
+    cursor_name text NOT NULL,
+    cursor_id integer NOT NULL,
+    UNIQUE(cursor_name, cursor_id)
+);
+
+
+ALTER TABLE system_cursor OWNER TO dbuser;
