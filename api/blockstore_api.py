@@ -76,7 +76,7 @@ def watchAddresses(group):
         address_groups = WatchedAddrGroup.query.filter_by(groupname=group).offset(cursor).limit(count)
 
         resp_data = {}
-        resp_data['bitcoin.cursor'] = cursor+count
+        resp_data['bitcoin.cursor'] = cursor+len(address_groups)
         resp_data['bitcoin'] = [address_group.address for address_group in address_groups]
 
         print resp_data
@@ -159,14 +159,17 @@ def getWatchingTxList(group):
     txHashlist = []
 
     watchedAddrTxs = WatchedAddrTx.query.order_by(WatchedAddrTx.id.desc()).offset(cursor).limit(count)
+    
+    resp_data = {}
+    resp_data['bitcoin.cursor'] = cursor+len(watchedAddrTxs)
     for watchedAddrTx in watchedAddrTxs:
         address_group = WatchedAddrGroup.query.filter_by(groupname=group, address=watchedAddrTx.address).first()
         if address_group is not None:
             if watchedAddrTx.tx not in txHashlist:
                 txHashlist.append(watchedAddrTx.tx)
 
-    resp_data = {}
-    resp_data['bitcoin.cursor'] = cursor+count
+    
+    
     resp_data['bitcoin'] = txHashlist
 
     print resp_data
@@ -205,14 +208,16 @@ def getRelatedTxIdList():
         return jsonify({"error":"not found"}), 404
     print txidlist
 
+    resp_data={}
+    resp_data['bitcoin.cursor'] = cursor+len(txidlist)
+
     txHashList = [(Tx.query.with_entities(Tx.hash).filter(Tx.id==txid[0]).first()) for txid in txidlist]
     txHashList = [hexlify(txHash[0]) for txHash in txHashList]
     print "txHashList:", txHashList
 
-
-    resp_data={}
     resp_data['bitcoin'] = txHashList
-    resp_data['bitcoin.cursor'] = cursor+count
+
+
     return jsonify(resp_data)
 
 
