@@ -91,7 +91,7 @@ def _jinja2_filter_target(value):
     return calculate_target(value)
 
 @app.template_filter('difficulty')
-def _jinja2_filter_target(value):
+def _jinja2_filter_difficulty(value):
     return calculate_difficulty(value)
 
 def render_404(render_type='html'):
