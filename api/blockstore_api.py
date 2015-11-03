@@ -17,7 +17,14 @@ import config
 from check_db import check_db
 from deserialize import extract_public_key
 from db2t import db2t_tx, db2t_block
+import logging
 
+logging.basicConfig(format='%(asctime)s %(message)s', filename=config.BLOCKSTORE_LOG_FILE,level=logging.INFO)
+console = logging.StreamHandler()  
+console.setLevel(logging.DEBUG)  
+formatter = logging.Formatter('%(asctime)-12s: %(message)s')  
+console.setFormatter(formatter)  
+logging.getLogger('').addHandler(console) 
 app = Flask(__name__)
 
 page_size=10
@@ -269,19 +276,18 @@ def sendTx():
             print txhash
             tx = Tx.query.filter(Tx.hash == txhash.decode('hex')).first()
             if tx:
-                print "tx already exists in the blockchain"
+                logging.INFO("tx already exists in the blockchain")
                 return jsonify({"code":"tx_exist", "error": "tx already exists in the blockchain"}), 400     
             else:
-                r = sendrawtransaction(rawtx, False)
+                txid = sendrawtransaction(rawtx, False)
+                logging.INFO("txid:%s" % txid)
+                return jsonify({"txid":txid})
         except JSONRPCException,e:
             print "JSONRPCException:",e.error
             return jsonify({"error": e.error}), 400   
         except Exception, e:
             print "Exception:",e
             return jsonify({"error":"send Failed"}), 400      
-
-        print r['txid']
-        return jsonify(r)
 
 if __name__ == '__main__':
     app.run(host=config.BLOCKSTORE_HOST, port=config.BLOCKSTORE_PORT, debug=config.DEBUG)
