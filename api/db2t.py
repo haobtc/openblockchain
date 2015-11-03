@@ -64,7 +64,8 @@ def db2t_tx(dtx):
                     inp['address'] = ''
                     address = VOUT.query.with_entities(VOUT.address).filter(and_(VOUT.txout_tx_id==prev_tx.id, VOUT.out_idx==prev_txout.tx_idx)).all()
                     for addr in  address: 
-                        inp['address'] = inp['address'] + addr[0] + ',' 
+                        inp['address'] = inp['address'] + addr[0] + ','
+                    inp['address'] =inp['address'][0:-1]
                     inp['amountSatoshi'] = str(prev_txout.value)
                     inp['amount'] = str(prev_txout.value*0.00000001)
         t['inputs'].append(inp)
@@ -74,8 +75,11 @@ def db2t_tx(dtx):
         outp = {}
         outp['address'] = ''
         address = VOUT.query.with_entities(VOUT.address).filter(and_(VOUT.txout_tx_id==dtx.id, VOUT.out_idx==vout.tx_idx)).all()
-        for addr in  address: 
-            outp['address'] = outp['address'] + addr[0] + ',' 
+        for addr in address:
+            if addr[0] is not None:# http://qukuai.com/tx/d9bdd00b373a92fd64b595263e3ac47841ca3b90ae7f5efdd423865ee3833eda
+                outp['address'] = outp['address'] + addr[0] + ',' 
+        outp['address'] =outp['address'][0:-1]
+        
         outp['amountSatoshi'] = str(vout.value)
         outp['amount'] = str(vout.value*0.00000001)
         outp['script'] = hexlify(vout.pk_script)

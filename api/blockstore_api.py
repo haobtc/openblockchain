@@ -29,7 +29,7 @@ access = AuthServiceProxy(config.RPC_URL)
 
 @app.route("/")
 def hello():
-    return "Hello World!"
+    return "Hello Blockstore!"
 
 # /queryapi/v2/tx/list
 # /queryapi/v1/watch/bitcoin/<group>/addresses/
@@ -76,7 +76,7 @@ def watchAddresses(group):
         address_groups = WatchedAddrGroup.query.filter_by(groupname=group).offset(cursor).limit(count)
 
         resp_data = {}
-        resp_data['bitcoin.cursor'] = str(cursor+len(address_groups))
+        resp_data['bitcoin.cursor'] = str(cursor+address_groups.count())
         resp_data['bitcoin'] = [address_group.address for address_group in address_groups]
 
         print resp_data
@@ -115,15 +115,16 @@ def watch_addrtxs():
         db_session.refresh(system_cursor)
 
 def watch_addrtx(address, cursor_id):
-    sqlcommand = "SELECT DISTINCT txout_tx_id from vout where address='%s' and txout_tx_id > %d" % (address, cursor_id)
+    addr_id = Addr.query.with_entities(Addr.id).filter(Addr.address == address).first()
+    if addr_id == None:
+        return None
+    print addr_id
 
-    print "sqlcommand:",sqlcommand
-    txidlist = engine.execute(text(sqlcommand)).fetchall()
+    txidlist=AddrTx.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id == addr_id).filter(AddrTx.addr_id > cursor_id).all()
     if txidlist == None or len(txidlist) == 0:
         return None
 
     print "txidlist:", len(txidlist), txidlist
-
 
     txHashList = [(Tx.query.with_entities(Tx.hash).filter(Tx.id==txid[0]).first()) for txid in txidlist]
 
@@ -161,14 +162,12 @@ def getWatchingTxList(group):
     watchedAddrTxs = WatchedAddrTx.query.order_by(WatchedAddrTx.id.desc()).offset(cursor).limit(count)
     
     resp_data = {}
-    resp_data['bitcoin.cursor'] = str(cursor+len(watchedAddrTxs))
+    resp_data['bitcoin.cursor'] = str(cursor+watchedAddrTxs.count())
     for watchedAddrTx in watchedAddrTxs:
         address_group = WatchedAddrGroup.query.filter_by(groupname=group, address=watchedAddrTx.address).first()
         if address_group is not None:
             if watchedAddrTx.tx not in txHashlist:
                 txHashlist.append(watchedAddrTx.tx)
-
-    
     
     resp_data['bitcoin'] = txHashlist
 
@@ -189,27 +188,22 @@ def getRelatedTxIdList():
     print addresses_params
 
     addressList = addresses_params.split(',')
-    print addressList, len(addressList)
+    print len(addressList), addressList
     if len(addressList) <= 0:
         return jsonify({"error":"not found"}), 404
 
-    params = ''
-    for address in addressList:
-        params = params + "'" + address + "',"
-    params = params[:-1]   
+    print "count, cursor", count,cursor
 
-    print "params, count, cursor", params, count,cursor
+    addridlist = Addr.query.with_entities(Addr.id).filter(Addr.address.in_(addressList)).all()
+    if addridlist == None:
+        resp_data={}
+        return jsonify(resp_data)
+    print addridlist
 
-    sqlcommand = "SELECT txout_tx_id from vout where address in (%s) ORDER BY txout_tx_id DESC LIMIT %d OFFSET %d" % (params,count,cursor)
-
-    print "sqlcommand:",sqlcommand
-    txidlist = engine.execute(text(sqlcommand)).fetchall()
-    if txidlist == None:
-        return jsonify({"error":"not found"}), 404
-    print txidlist
+    txidlist=AddrTx.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id.in_(addridlist)).order_by(AddrTx.tx_id.desc()).offset(cursor).limit(count)
 
     resp_data={}
-    resp_data['bitcoin.cursor'] = str(cursor+len(txidlist))
+    resp_data['bitcoin.cursor'] = str(cursor+txidlist.count())
 
     txHashList = [(Tx.query.with_entities(Tx.hash).filter(Tx.id==txid[0]).first()) for txid in txidlist]
     txHashList = [hexlify(txHash[0]) for txHash in txHashList]
@@ -217,17 +211,16 @@ def getRelatedTxIdList():
 
     resp_data['bitcoin'] = txHashList
 
-
+    print resp_data
     return jsonify(resp_data)
 
 
 @app.route('/queryapi/v1/tx/details', methods=['GET'])
 def getTxDetails():
     txhash_params = request.args.get('bitcoin')
-    print "txhash_params:",txhash_params
     
     txhashList = txhash_params.split(',')
-    print txhashList, len(txhashList)
+    print len(txhashList),txhashList
     if len(txhashList) <= 0:
         return jsonify({"error":"not found"}), 404
 
@@ -276,7 +269,8 @@ def sendTx():
             print txhash
             tx = Tx.query.filter(Tx.hash == txhash.decode('hex')).first()
             if tx:
-                return jsonify({"code":"tx_exist", "message": "tx already exists in the blockchain"}), 400     
+                print "tx already exists in the blockchain"
+                return jsonify({"code":"tx_exist", "error": "tx already exists in the blockchain"}), 400     
             else:
                 r = sendrawtransaction(rawtx, False)
         except JSONRPCException,e:
