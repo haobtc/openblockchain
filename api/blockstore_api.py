@@ -273,14 +273,14 @@ def sendTx():
         try:
             r = decoderawtransaction(rawtx)
             txhash = r['txid']
-            print txhash
+            logging.INFO("txhash:%s", txhash) 
             tx = Tx.query.filter(Tx.hash == txhash.decode('hex')).first()
             if tx:
                 logging.INFO("tx already exists in the blockchain")
                 return jsonify({"code":"tx_exist", "error": "tx already exists in the blockchain"}), 400     
             else:
                 txid = sendrawtransaction(rawtx, False)
-                logging.INFO("txid:%s" % txid)
+                logging.INFO("txid:%s", txid)
                 return jsonify({"txid":txid})
         except JSONRPCException,e:
             print "JSONRPCException:",e.error
