@@ -101,7 +101,7 @@ def watch_addrtxs():
     address_groups = WatchedAddrGroup.query.all()
     for address_group in address_groups:
         new_cursor = watch_addrtx(address_group.address, cursor_id)
-        if new_cursor is not None:
+        if new_cursor is not None::
             new_cursors.append(new_cursor)
 
     if len(new_cursors) == 0:
@@ -127,7 +127,7 @@ def watch_addrtx(address, cursor_id):
         return None
     print addr_id
 
-    txidlist=AddrTx.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id == addr_id).filter(AddrTx.addr_id > cursor_id).all()
+    txidlist=AddrTx.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id == addr_id).filter(AddrTx.tx_id > cursor_id).all()
     if txidlist == None or len(txidlist) == 0:
         return None
 
