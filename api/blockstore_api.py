@@ -80,7 +80,7 @@ def watchAddresses(group):
             count = 500
 
         # getWatchingAddressList(group)
-        address_groups = WatchedAddrGroup.query.filter_by(groupname=group).offset(cursor).limit(count)
+        address_groups = WatchedAddrGroup.query.order_by(WatchedAddrGroup.id).filter_by(groupname=group).offset(cursor).limit(count)
 
         resp_data = {}
         resp_data['bitcoin.cursor'] = str(cursor+address_groups.count())
@@ -166,7 +166,7 @@ def getWatchingTxList(group):
 
     txHashlist = []
 
-    watchedAddrTxs = WatchedAddrTx.query.order_by(WatchedAddrTx.id.desc()).offset(cursor).limit(count)
+    watchedAddrTxs = WatchedAddrTx.query.order_by(WatchedAddrTx.id).offset(cursor).limit(count)
     
     resp_data = {}
     resp_data['bitcoin.cursor'] = str(cursor+watchedAddrTxs.count())
@@ -207,7 +207,7 @@ def getRelatedTxIdList():
         return jsonify(resp_data)
     print addridlist
 
-    txidlist=AddrTx.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id.in_(addridlist)).order_by(AddrTx.tx_id.desc()).offset(cursor).limit(count)
+    txidlist=AddrTx.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id.in_(addridlist)).order_by(AddrTx.tx_id).offset(cursor).limit(count)
 
     resp_data={}
     resp_data['bitcoin.cursor'] = str(cursor+txidlist.count())
