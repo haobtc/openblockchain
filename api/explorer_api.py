@@ -94,6 +94,10 @@ def _jinja2_filter_target(value):
 def _jinja2_filter_difficulty(value):
     return calculate_difficulty(value)
 
+@app.template_filter('bytea')
+def _jinja2_filter_bytea(value):
+    return binascii.hexlify(value)
+
 def render_404(render_type='html'):
     if render_type=='html':
         return render_template('404.html'), 404
@@ -161,8 +165,9 @@ def render_tx(tx=None, render_type='html'):
     txouts = TxOut.query.filter(TxOut.tx_id==tx['id']).order_by(TxOut.tx_idx.asc()).all()
     tx['vout'] = [txout.todict() for txout in txouts]
 
-    tx['in_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txin_tx_id==tx['id']).order_by(VOUT.in_idx).all()
+    tx['in_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txout_tx_hash).filter(VOUT.txin_tx_id==tx['id']).order_by(VOUT.in_idx).all()
     tx['out_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txout_tx_id==tx['id']).order_by(VOUT.out_idx).all()
+    tx['out_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txin_tx_hash).filter(VOUT.txout_tx_id==tx['id']).order_by(VOUT.out_idx).all()
     confirm = db_session.execute('select get_confirm(%d)' % tx['id']).first()[0];
     if confirm ==None:
         tx['confirm'] = 0
@@ -206,9 +211,9 @@ def render_blk(blk=None, page=1, render_type='html'):
         for txid in res:
            res = Tx.query.filter(Tx.id==txid).first()
            tx= res.todict()
-           txins = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txin_tx_id==txid).order_by(VOUT.in_idx).all()
+           txins = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txout_tx_hash).filter(VOUT.txin_tx_id==txid).order_by(VOUT.in_idx).all()
            tx['in_addresses'] = txins
-           txouts = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txout_tx_id==txid).order_by(VOUT.out_idx).all()
+           txouts = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txin_tx_hash).filter(VOUT.txout_tx_id==txid).order_by(VOUT.out_idx).all()
            tx['out_addresses'] = txouts
            txs.append(tx)
     blk['tx']=txs
@@ -299,14 +304,14 @@ def render_addr(address=None, page=1, render_type='html', filter=0):
         res = Tx.query.filter(Tx.id==txid).first()
         tx= res.todict()
 
-        txins = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txin_tx_id==txid).order_by(VOUT.in_idx).all()
+        txins = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txout_tx_hash).filter(VOUT.txin_tx_id==txid).order_by(VOUT.in_idx).all()
         tx['vin'] = txins
         for vin in txins:
             if vin.address==address:
                 tx_in_value = tx_in_value - vin.value
                 in_value = in_value - vin.value
 
-        txouts = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txout_tx_id==txid).order_by(VOUT.out_idx).all()
+        txouts = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txin_tx_hash).filter(VOUT.txout_tx_id==txid).order_by(VOUT.out_idx).all()
         tx['vout'] = txouts
         for vout in txouts:
             if vout.address==address:

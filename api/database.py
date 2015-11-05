@@ -212,6 +212,8 @@ class VOUT(SQLBase):
     value = Column(BIGINT)
     in_idx = Column(INTEGER)
     out_idx = Column(INTEGER)
+    txin_tx_hash = Column(BYTEA)
+    txout_tx_hash = Column(BYTEA)
 
     @property
     def todict(self):

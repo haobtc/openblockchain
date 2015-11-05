@@ -21,10 +21,10 @@
                 <span> 新块奖励 </span>
             </span>
             {% else %}
-            {% for addr in tx.in_addresses%}
-            <a href="/addr/{{ addr.address }}"> {{ addr.address }}</a>
+            {% for txin in tx.in_addresses%}
+            <a href="/addr/{{ txin.address }}"> {{ txin.address }}</a>
             <span class="pull-right">
-                <span> ({{addr.value|btc}}  BTC)</span>
+                <span class="pull-right"> <span> <a href=/tx/{{txin.txout_tx_hash | bytea}} > {{txin.value| btc}}  BTC </a></span></span> 
             </span>
             {% endfor %}
             </br>
@@ -38,12 +38,15 @@
         </div>
  
         <div class="tx_output">
-            {% for addr in tx.out_addresses%}
-            <a href="/addr/{{ addr.address }}"> {{ addr.address }}</a>
-            <span class="pull-right">
-                <span> ({{addr.value|btc}}  BTC)</span>
-                <span class="pull-right"> <span>  {% if addr.txin_tx_id!=None %} 已花费 {% else %}未花费{% endif %} </span></span> 
-            </span>
+            {% for txout in tx.out_addresses%}
+            <a href="/addr/{{ txout.address }}"> {{ txout.address }}</a>
+                {% if txout.txin_tx_id!=None %}
+                    <span class="pull-right"> <span> <a href=/tx/{{txout.txin_tx_hash | bytea}} >{{txout.value| btc}} BTC </span></span> 
+                    <span class="pull-right"> <span>   已花费 </span></span> 
+                {% else %}
+                    <span class="pull-right"> <span>  {{txout.value| btc}}  BTC </span></span> 
+                    <span class="pull-right"> <span>   未花费 </span></span> 
+                {% endif %}
             </br>
             {% endfor %}
         </div>
