@@ -195,3 +195,45 @@ BEGIN
     return true;
 END;
 $$;
+
+
+CREATE or REPLACE FUNCTION check_tx_count() RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE tx_count1 integer;
+    DECLARE tx_count2 integer;
+    DECLARE tx_count3 integer;
+    DECLARE max_blk_id integer;
+    DECLARE max_id record;
+BEGIN
+    max_blk_id = (select max(id) from blk);
+    for max_id in (select blk_id,tx_id from blk_tx where blk_id<(max_blk_id-6) order by tx_id desc limit 1) loop
+    tx_count1 = (select sum(tx_count) from blk where id<=max_id.blk_id);
+    tx_count2 = (select count(1) from tx a join blk_tx b on (b.tx_id=a.id) left join utx c on(c.id=a.id) where c.id is NULL and a.id<=max_id.tx_id and b.blk_id<=max_id.blk_id);
+    tx_count3 = (select count(tx_id) from blk_tx  where blk_id<=max_id.blk_id);
+    if tx_count1 != tx_count2 then return false; end if;
+    if tx_count3 != tx_count2 then return false; end if;
+    end loop;
+    return true;
+END;
+$$;
+
+create or replace view vout as
+SELECT g.address,
+    g.id AS addr_id,
+    a.id AS txout_id,
+    c.id AS txin_id,
+    e.id AS txin_tx_id,
+    b.id AS txout_tx_id,
+    a.value,
+    a.tx_idx as out_idx,
+    c.tx_idx as in_idx,
+    e.hash AS txin_tx_hash,
+    b.hash AS txout_tx_hash
+    FROM txout a
+     LEFT JOIN tx b ON b.id = a.tx_id
+     LEFT JOIN txin c ON c.prev_out = b.hash AND c.prev_out_index = a.tx_idx
+     LEFT JOIN tx e ON e.id = c.tx_id
+     LEFT JOIN addr_txout f ON f.txout_id = a.id
+     LEFT JOIN addr g ON g.id = f.addr_id;
+ 
