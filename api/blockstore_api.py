@@ -17,7 +17,14 @@ import config
 from check_db import check_db
 from deserialize import extract_public_key
 from db2t import db2t_tx, db2t_block
+import logging
 
+logging.basicConfig(format='%(asctime)s %(message)s', filename=config.BLOCKSTORE_LOG_FILE,level=logging.INFO)
+console = logging.StreamHandler()  
+console.setLevel(logging.DEBUG)  
+formatter = logging.Formatter('%(asctime)-12s: %(message)s')  
+console.setFormatter(formatter)  
+logging.getLogger('').addHandler(console) 
 app = Flask(__name__)
 
 page_size=10
@@ -29,7 +36,7 @@ access = AuthServiceProxy(config.RPC_URL)
 
 @app.route("/")
 def hello():
-    return "Hello World!"
+    return "Hello Blockstore!"
 
 # /queryapi/v2/tx/list
 # /queryapi/v1/watch/bitcoin/<group>/addresses/
@@ -73,10 +80,10 @@ def watchAddresses(group):
             count = 500
 
         # getWatchingAddressList(group)
-        address_groups = WatchedAddrGroup.query.filter_by(groupname=group).offset(cursor).limit(count)
+        address_groups = WatchedAddrGroup.query.order_by(WatchedAddrGroup.id).filter_by(groupname=group).offset(cursor).limit(count)
 
         resp_data = {}
-        resp_data['bitcoin.cursor'] = cursor+count
+        resp_data['bitcoin.cursor'] = str(cursor+address_groups.count())
         resp_data['bitcoin'] = [address_group.address for address_group in address_groups]
 
         print resp_data
@@ -115,15 +122,16 @@ def watch_addrtxs():
         db_session.refresh(system_cursor)
 
 def watch_addrtx(address, cursor_id):
-    sqlcommand = "SELECT DISTINCT txout_tx_id from vout where address='%s' and txout_tx_id > %d" % (address, cursor_id)
+    addr_id = Addr.query.with_entities(Addr.id).filter(Addr.address == address).first()
+    if addr_id == None:
+        return None
+    print addr_id
 
-    print "sqlcommand:",sqlcommand
-    txidlist = engine.execute(text(sqlcommand)).fetchall()
+    txidlist=AddrTx.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id == addr_id).filter(AddrTx.tx_id > cursor_id).all()
     if txidlist == None or len(txidlist) == 0:
         return None
 
     print "txidlist:", len(txidlist), txidlist
-
 
     txHashList = [(Tx.query.with_entities(Tx.hash).filter(Tx.id==txid[0]).first()) for txid in txidlist]
 
@@ -158,15 +166,16 @@ def getWatchingTxList(group):
 
     txHashlist = []
 
-    watchedAddrTxs = WatchedAddrTx.query.order_by(WatchedAddrTx.id.desc()).offset(cursor).limit(count)
+    watchedAddrTxs = WatchedAddrTx.query.order_by(WatchedAddrTx.id).offset(cursor).limit(count)
+    
+    resp_data = {}
+    resp_data['bitcoin.cursor'] = str(cursor+watchedAddrTxs.count())
     for watchedAddrTx in watchedAddrTxs:
         address_group = WatchedAddrGroup.query.filter_by(groupname=group, address=watchedAddrTx.address).first()
         if address_group is not None:
             if watchedAddrTx.tx not in txHashlist:
                 txHashlist.append(watchedAddrTx.tx)
-
-    resp_data = {}
-    resp_data['bitcoin.cursor'] = cursor+count
+    
     resp_data['bitcoin'] = txHashlist
 
     print resp_data
@@ -186,43 +195,39 @@ def getRelatedTxIdList():
     print addresses_params
 
     addressList = addresses_params.split(',')
-    print addressList, len(addressList)
+    print len(addressList), addressList
     if len(addressList) <= 0:
         return jsonify({"error":"not found"}), 404
 
-    params = ''
-    for address in addressList:
-        params = params + "'" + address + "',"
-    params = params[:-1]   
+    print "count, cursor", count,cursor
 
-    print "params, count, cursor", params, count,cursor
+    addridlist = Addr.query.with_entities(Addr.id).filter(Addr.address.in_(addressList)).all()
+    if addridlist == None:
+        resp_data={}
+        return jsonify(resp_data)
+    print addridlist
 
-    sqlcommand = "SELECT txout_tx_id from vout where address in (%s) ORDER BY txout_tx_id DESC LIMIT %d OFFSET %d" % (params,count,cursor)
+    txidlist=AddrTx.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id.in_(addridlist)).order_by(AddrTx.tx_id).offset(cursor).limit(count)
 
-    print "sqlcommand:",sqlcommand
-    txidlist = engine.execute(text(sqlcommand)).fetchall()
-    if txidlist == None:
-        return jsonify({"error":"not found"}), 404
-    print txidlist
+    resp_data={}
+    resp_data['bitcoin.cursor'] = str(cursor+txidlist.count())
 
     txHashList = [(Tx.query.with_entities(Tx.hash).filter(Tx.id==txid[0]).first()) for txid in txidlist]
     txHashList = [hexlify(txHash[0]) for txHash in txHashList]
     print "txHashList:", txHashList
 
-
-    resp_data={}
     resp_data['bitcoin'] = txHashList
-    resp_data['bitcoin.cursor'] = cursor+count
+
+    print resp_data
     return jsonify(resp_data)
 
 
 @app.route('/queryapi/v1/tx/details', methods=['GET'])
 def getTxDetails():
     txhash_params = request.args.get('bitcoin')
-    print "txhash_params:",txhash_params
     
     txhashList = txhash_params.split(',')
-    print txhashList, len(txhashList)
+    print len(txhashList),txhashList
     if len(txhashList) <= 0:
         return jsonify({"error":"not found"}), 404
 
@@ -268,21 +273,21 @@ def sendTx():
         try:
             r = decoderawtransaction(rawtx)
             txhash = r['txid']
-            print txhash
+            logging.INFO("txhash:%s", txhash) 
             tx = Tx.query.filter(Tx.hash == txhash.decode('hex')).first()
             if tx:
-                return jsonify({"code":"tx_exist", "message": "tx already exists in the blockchain"}), 400     
+                logging.INFO("tx already exists in the blockchain")
+                return jsonify({"code":"tx_exist", "error": "tx already exists in the blockchain"}), 400     
             else:
-                r = sendrawtransaction(rawtx, False)
+                txid = sendrawtransaction(rawtx, False)
+                logging.INFO("txid:%s", txid)
+                return jsonify({"txid":txid})
         except JSONRPCException,e:
             print "JSONRPCException:",e.error
             return jsonify({"error": e.error}), 400   
         except Exception, e:
             print "Exception:",e
             return jsonify({"error":"send Failed"}), 400      
-
-        print r['txid']
-        return jsonify(r)
 
 if __name__ == '__main__':
     app.run(host=config.BLOCKSTORE_HOST, port=config.BLOCKSTORE_PORT, debug=config.DEBUG)
