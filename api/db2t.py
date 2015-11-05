@@ -15,6 +15,7 @@ from util     import calculate_target, calculate_difficulty,work_to_difficulty
 import re
 import config
 from deserialize import extract_public_key
+from bitcoin.core import COIN, str_money_value
 
 def db2t_tx(dtx):
     t = {}
@@ -67,7 +68,7 @@ def db2t_tx(dtx):
                         inp['address'] = inp['address'] + addr[0] + ','
                     inp['address'] =inp['address'][0:-1]
                     inp['amountSatoshi'] = str(prev_txout.value)
-                    inp['amount'] = str(prev_txout.value*0.00000001)
+                    inp['amount'] = str_money_value(prev_txout.value)
         t['inputs'].append(inp)
 
     txoutlist = TxOut.query.filter(TxOut.tx_id == dtx.id).order_by(TxOut.tx_idx.asc()).all()
@@ -81,7 +82,7 @@ def db2t_tx(dtx):
         outp['address'] =outp['address'][0:-1]
         
         outp['amountSatoshi'] = str(vout.value)
-        outp['amount'] = str(vout.value*0.00000001)
+        outp['amount'] = str_money_value(vout.value)
         outp['script'] = hexlify(vout.pk_script)
         t['outputs'].append(outp)
 
