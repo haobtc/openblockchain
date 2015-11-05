@@ -238,12 +238,9 @@ def getTxDetails():
             t_tx = db2t_tx(tx)
             t_txs.append(t_tx)
         
-    if t_txs:
-        print t_txs
-        # return jsonify(t_txs)
-        return Response(json.dumps(t_txs),  mimetype='application/json')
-    else:
-        return jsonify({"error":"not found"}), 404
+    print t_txs
+    # return jsonify(t_txs)
+    return Response(json.dumps(t_txs),  mimetype='application/json')
 
 @app.route('/queryapi/v1/block/bitcoin/tip', methods=['GET'])
 def getTipBlock():
