@@ -4,6 +4,7 @@ import binascii
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, Table, Column, Integer, String, Text, MetaData
 from sqlalchemy.dialects.postgresql import BIGINT, BIT, BOOLEAN, BYTEA, INTEGER, BOOLEAN, TEXT
+from sqlalchemy.types import TypeDecorator
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import ForeignKey, PrimaryKeyConstraint
 from sqlalchemy.orm import relationship, backref
@@ -20,6 +21,14 @@ db_session = scoped_session(sessionmaker(autocommit=True,
                                          bind=engine))
 SQLBase = declarative_base()
 SQLBase.query = db_session.query_property()
+
+class SBYTEA(TypeDecorator):
+    impl = BYTEA 
+    def process_result_value(self, value, dialect):
+        if value!=None:
+	    return binascii.hexlify(value)
+        else:
+	    return value
 
 def to_dict(inst, cls):
     """
@@ -39,16 +48,16 @@ def to_dict(inst, cls):
 class Block(SQLBase):
     __tablename__ = 'blk'
     id = Column(INTEGER, primary_key=True)
-    hash = Column(BYTEA)
+    hash = Column(SBYTEA)
     height = Column(INTEGER)
     version = Column(BIGINT)
-    prev_hash = Column(BYTEA)
-    mrkl_root = Column(BYTEA)
+    prev_hash = Column(SBYTEA)
+    mrkl_root = Column(SBYTEA)
     time = Column(BIGINT)
     bits = Column(BIGINT)
     nonce = Column(BIGINT)
     blk_size = Column(INTEGER)
-    work = Column(BYTEA)
+    work = Column(SBYTEA)
     total_in_count  = Column(INTEGER)
     total_in_value  = Column(BIGINT)
     fees            = Column(BIGINT)
@@ -67,7 +76,7 @@ class Block(SQLBase):
 class Tx(SQLBase):
     __tablename__ = 'vtx'
     id = Column(INTEGER, primary_key=True)
-    hash = Column(BYTEA)
+    hash = Column(SBYTEA)
     version = Column(BIGINT)
     lock_time = Column(BIGINT)
     coinbase = Column(BOOLEAN)
@@ -105,8 +114,8 @@ class TxIn(SQLBase):
     tx_idx = Column(INTEGER)
     prev_out_index = Column(BIGINT)
     sequence = Column(BIGINT)
-    script_sig = Column(BYTEA)
-    prev_out = Column(BYTEA)
+    script_sig = Column(SBYTEA)
+    prev_out = Column(SBYTEA)
 
     def todict(self):
         return to_dict(self, self.__class__)
@@ -117,7 +126,7 @@ class TxOut(SQLBase):
     id = Column(INTEGER, primary_key=True)
     tx_id = Column(INTEGER, ForeignKey("vtx.id"))
     tx_idx = Column(INTEGER)
-    pk_script = Column(BYTEA)
+    pk_script = Column(SBYTEA)
     value = Column(BIGINT)
     type = Column(INTEGER)
 
@@ -212,8 +221,11 @@ class VOUT(SQLBase):
     value = Column(BIGINT)
     in_idx = Column(INTEGER)
     out_idx = Column(INTEGER)
-    txin_tx_hash = Column(BYTEA)
-    txout_tx_hash = Column(BYTEA)
+    txin_tx_hash = Column(SBYTEA)
+    txout_tx_hash = Column(SBYTEA)
+    def __init__(self):
+        self.txin_tx_hash = binascii.hexlify(self.txin_tx_hash)
+        self.txout_tx_hash = binascii.hexlify(self.txout_tx_hash)
 
     @property
     def todict(self):

@@ -13,7 +13,6 @@ import re
 import config
 from check_db import check_db
 
-app = Flask(__name__)
 app = Flask(__name__, static_url_path='/static')
 
 page_size=10
@@ -164,8 +163,8 @@ def render_tx(tx=None, render_type='html'):
     tx['vin'] = [txin.todict() for txin in txins ]
     txouts = TxOut.query.filter(TxOut.tx_id==tx['id']).order_by(TxOut.tx_idx.asc()).all()
     tx['vout'] = [txout.todict() for txout in txouts]
-
     tx['in_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txout_tx_hash).filter(VOUT.txin_tx_id==tx['id']).order_by(VOUT.in_idx).all()
+
     tx['out_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txin_tx_hash).filter(VOUT.txout_tx_id==tx['id']).order_by(VOUT.out_idx).all()
     confirm = db_session.execute('select get_confirm(%d)' % tx['id']).first()[0];
     if confirm ==None:
@@ -219,7 +218,7 @@ def render_blk(blk=None, page=1, render_type='html'):
 
     res = Block.query.with_entities(Block.hash).filter(Block.height == (int(blk['height'])+1)).first()
     if res!= None:
-        blk['nextblockhash']=binascii.hexlify(res[0])
+        blk['nextblockhash']=res[0]
 
     if render_type == 'json':
         return jsonify(blk)
@@ -254,7 +253,19 @@ def confirm(txs):
 def render_addr(address=None, page=1, render_type='html', filter=0):
     addr = Addr.query.filter(Addr.address == address).first()
     if addr == None:
-        return render_404(render_type)
+        addr = {}
+        addr['txs']=[]
+        addr['txs_len']= 0
+        addr['page_size'] = 0
+        addr['address']=address
+        addr['total_page'] = 0
+        addr['tx_count']=0
+        addr['page'] = 0
+        if render_type == 'json':
+            return jsonify(addr)
+
+        return render_template("addr.html", addr=addr,page=page)
+ 
 
     addr=addr.todict()
     addr['tx_count']=AddrTx.query.filter(AddrTx.addr_id==int(addr["id"])).count();
@@ -304,18 +315,18 @@ def render_addr(address=None, page=1, render_type='html', filter=0):
         tx= res.todict()
 
         txins = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txout_tx_hash).filter(VOUT.txin_tx_id==txid).order_by(VOUT.in_idx).all()
-        tx['vin'] = txins
         for vin in txins:
             if vin.address==address:
                 tx_in_value = tx_in_value - vin.value
                 in_value = in_value - vin.value
+        tx['vin'] = txins
 
         txouts = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txin_tx_hash).filter(VOUT.txout_tx_id==txid).order_by(VOUT.out_idx).all()
-        tx['vout'] = txouts
         for vout in txouts:
             if vout.address==address:
                 tx_out_value = tx_out_value + vout.value
                 out_value = out_value + vout.value
+        tx['vout'] = txouts
 
         tx['confirm'] = db_session.execute('select get_confirm(%d)' % tx['id']).first()[0];
         tx['spent']= tx_in_value + tx_out_value
