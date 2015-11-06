@@ -254,7 +254,19 @@ def confirm(txs):
 def render_addr(address=None, page=1, render_type='html', filter=0):
     addr = Addr.query.filter(Addr.address == address).first()
     if addr == None:
-        return render_404(render_type)
+        addr = {}
+        addr['txs']=None
+        addr['txs_len']= 0
+        addr['page_size'] = 0
+        addr['address']=address
+        addr['total_page'] = 0
+        addr['tx_count']=0
+        addr['page'] = 0
+        if render_type == 'json':
+            return jsonify(addr)
+
+        return render_template("addr.html", addr=addr,page=page)
+ 
 
     addr=addr.todict()
     addr['tx_count']=AddrTx.query.filter(AddrTx.addr_id==int(addr["id"])).count();
