@@ -15,6 +15,7 @@ from util     import calculate_target, calculate_difficulty,work_to_difficulty
 import re
 import config
 from deserialize import extract_public_key
+from bitcoin.core import COIN, str_money_value
 
 def db2t_tx(dtx):
     t = {}
@@ -44,7 +45,7 @@ def db2t_tx(dtx):
     else:
          t['time'] = dtx.recv_time
 
-    txinlist = TxIn.query.filter(TxIn.tx_id == dtx.id).all()
+    txinlist = TxIn.query.filter(TxIn.tx_id == dtx.id).order_by(TxIn.tx_idx.asc()).all()
     for vin in txinlist:
         inp = {}
         if dtx.coinbase:
@@ -62,26 +63,26 @@ def db2t_tx(dtx):
                     TxOut.tx_idx == vin.prev_out_index).first()
                 if prev_txout:
                     inp['address'] = ''
-                    address = VOUT.query.with_entities(VOUT.address).filter(and_(VOUT.txout_tx_id==prev_tx.id, VOUT.out_idx==prev_txout.tx_idx)).all()
+                    address = VOUT.query.with_entities(VOUT.address).filter(and_(VOUT.txout_tx_id==prev_tx.id, VOUT.out_idx==prev_txout.tx_idx)).order_by(VOUT.in_idx).all()
                     for addr in  address: 
                         inp['address'] = inp['address'] + addr[0] + ','
                     inp['address'] =inp['address'][0:-1]
                     inp['amountSatoshi'] = str(prev_txout.value)
-                    inp['amount'] = str(prev_txout.value*0.00000001)
+                    inp['amount'] = str_money_value(prev_txout.value)
         t['inputs'].append(inp)
 
-    txoutlist = TxOut.query.filter(TxOut.tx_id == dtx.id).all()
+    txoutlist = TxOut.query.filter(TxOut.tx_id == dtx.id).order_by(TxOut.tx_idx.asc()).all()
     for vout in txoutlist:
         outp = {}
         outp['address'] = ''
-        address = VOUT.query.with_entities(VOUT.address).filter(and_(VOUT.txout_tx_id==dtx.id, VOUT.out_idx==vout.tx_idx)).all()
+        address = VOUT.query.with_entities(VOUT.address).filter(and_(VOUT.txout_tx_id==dtx.id, VOUT.out_idx==vout.tx_idx)).order_by(VOUT.out_idx).all()
         for addr in address:
             if addr[0] is not None:# http://qukuai.com/tx/d9bdd00b373a92fd64b595263e3ac47841ca3b90ae7f5efdd423865ee3833eda
                 outp['address'] = outp['address'] + addr[0] + ',' 
         outp['address'] =outp['address'][0:-1]
         
         outp['amountSatoshi'] = str(vout.value)
-        outp['amount'] = str(vout.value*0.00000001)
+        outp['amount'] = str_money_value(vout.value)
         outp['script'] = hexlify(vout.pk_script)
         t['outputs'].append(outp)
 

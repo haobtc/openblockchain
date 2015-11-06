@@ -238,12 +238,9 @@ def getTxDetails():
             t_tx = db2t_tx(tx)
             t_txs.append(t_tx)
         
-    if t_txs:
-        print t_txs
-        # return jsonify(t_txs)
-        return Response(json.dumps(t_txs),  mimetype='application/json')
-    else:
-        return jsonify({"error":"not found"}), 404
+    print t_txs
+    # return jsonify(t_txs)
+    return Response(json.dumps(t_txs),  mimetype='application/json')
 
 @app.route('/queryapi/v1/block/bitcoin/tip', methods=['GET'])
 def getTipBlock():
@@ -273,21 +270,22 @@ def sendTx():
         try:
             r = decoderawtransaction(rawtx)
             txhash = r['txid']
-            logging.INFO("txhash:%s", txhash) 
+            print 'txhash:',txhash
+            logging.info("txhash:%s", txhash) 
             tx = Tx.query.filter(Tx.hash == txhash.decode('hex')).first()
             if tx:
-                logging.INFO("tx already exists in the blockchain")
+                logging.info("tx already exists in the blockchain")
                 return jsonify({"code":"tx_exist", "error": "tx already exists in the blockchain"}), 400     
             else:
                 txid = sendrawtransaction(rawtx, False)
-                logging.INFO("txid:%s", txid)
+                logging.info("txid:%s", txid)
                 return jsonify({"txid":txid})
         except JSONRPCException,e:
             print "JSONRPCException:",e.error
             return jsonify({"error": e.error}), 400   
-        except Exception, e:
-            print "Exception:",e
-            return jsonify({"error":"send Failed"}), 400      
+        except:
+            logging.info("exception send raw tx:", exc_info=True)
+        return jsonify({"error":"send Failed"}), 400      
 
 if __name__ == '__main__':
     app.run(host=config.BLOCKSTORE_HOST, port=config.BLOCKSTORE_PORT, debug=config.DEBUG)
