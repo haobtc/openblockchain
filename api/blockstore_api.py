@@ -20,11 +20,11 @@ from db2t import db2t_tx, db2t_block
 import logging
 
 logging.basicConfig(format='%(asctime)s %(message)s', filename=config.BLOCKSTORE_LOG_FILE,level=logging.INFO)
-console = logging.StreamHandler()  
-console.setLevel(logging.DEBUG)  
-formatter = logging.Formatter('%(asctime)-12s: %(message)s')  
-console.setFormatter(formatter)  
-logging.getLogger('').addHandler(console) 
+# console = logging.StreamHandler()  
+# console.setLevel(logging.DEBUG)  
+# formatter = logging.Formatter('%(asctime)-12s: %(message)s')  
+# console.setFormatter(formatter)  
+# logging.getLogger('').addHandler(console) 
 app = Flask(__name__)
 
 page_size=10
@@ -54,7 +54,7 @@ def watchAddresses(group):
         addresses_params = request.form['addresses']
 
         addressList = addresses_params.split(',')
-        print addressList, len(addressList)
+        logging.info("watchAddresses length:%s %s", len(addressList),addressList)
         if len(addressList) <= 0:
             return jsonify({"error":"not found"}), 404
 
@@ -67,7 +67,7 @@ def watchAddresses(group):
                 db_session.add(newRecord)
                 db_session.flush()
                 db_session.refresh(newRecord)
-                print newRecord
+                logging.info("watchAddresses newRecord: %s %s", address, group)
                 watch_addrtx(address, 0)   
         return jsonify({"result": "ok"})
     else:
@@ -78,7 +78,7 @@ def watchAddresses(group):
         count = int(count)
         if count <=0 or count > 500:
             count = 500
-
+ 
         # getWatchingAddressList(group)
         address_groups = WatchedAddrGroup.query.order_by(WatchedAddrGroup.id).filter_by(groupname=group).offset(cursor).limit(count)
 
@@ -86,7 +86,7 @@ def watchAddresses(group):
         resp_data['bitcoin.cursor'] = str(cursor+address_groups.count())
         resp_data['bitcoin'] = [address_group.address for address_group in address_groups]
 
-        print resp_data
+        logging.info("watchAddresses resp_data: %s", resp_data)
         return jsonify(resp_data)
 
 
@@ -96,6 +96,8 @@ def watch_addrtxs():
         cursor_id = 0
     else:
         cursor_id = system_cursor.cursor_id
+
+    logging.info("watch_addrtx_cursor:%s", cursor_id)
 
     new_cursors = []
     address_groups = WatchedAddrGroup.query.all()
@@ -108,7 +110,7 @@ def watch_addrtxs():
         return
 
     next_cursor =  min(new_cursors)
-    print 'next_cursor:',next_cursor
+    logging.info("watch_addrtx_cursor next_cursor:%s %s %s", next_cursor,len(new_cursors),new_cursors)
     if system_cursor is None:
         system_cursor = SystemCursor()
         system_cursor.cursor_name = 'watch_addrtx_cursor'
@@ -125,18 +127,19 @@ def watch_addrtx(address, cursor_id):
     addr_id = Addr.query.with_entities(Addr.id).filter(Addr.address == address).first()
     if addr_id == None:
         return None
-    print addr_id
+
+    logging.info("watch_addrtx addr_id,cursor_id:%s,%s, %s",address, addr_id, cursor_id)
 
     txidlist=AddrTx.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id == addr_id).filter(AddrTx.tx_id > cursor_id).all()
     if txidlist == None or len(txidlist) == 0:
         return None
 
-    print "txidlist:", len(txidlist), txidlist
+    logging.info("watch_addrtx txidlist:%s %s %s", address, len(txidlist), txidlist)
 
     txHashList = [(Tx.query.with_entities(Tx.hash).filter(Tx.id==txid[0]).first()) for txid in txidlist]
 
     txHashList = [hexlify(txHash[0]) for txHash in txHashList]
-    print "txHashList:", txHashList
+    logging.info("watch_addrtx txHashList:%s %s %s", address, len(txHashList), txHashList)
     for txHash in txHashList:
         missing = WatchedAddrTx.query.filter_by(address=address, tx=txHash).first()
         if missing is None:
@@ -148,6 +151,9 @@ def watch_addrtx(address, cursor_id):
             db_session.refresh(newRecord)
 
     max_txid =  max(txid[0] for txid in txidlist)
+
+    logging.info("watch_addrtx max_txid:%s %s", address, max_txid)
+
     return max_txid
 
 
@@ -168,6 +174,9 @@ def getWatchingTxList(group):
 
     watchedAddrTxs = WatchedAddrTx.query.order_by(WatchedAddrTx.id).offset(cursor).limit(count)
     
+    if watchedAddrTxs is None or len(watchedAddrTxs) == 0:
+        return
+
     resp_data = {}
     resp_data['bitcoin.cursor'] = str(cursor+watchedAddrTxs.count())
     for watchedAddrTx in watchedAddrTxs:
@@ -178,7 +187,8 @@ def getWatchingTxList(group):
     
     resp_data['bitcoin'] = txHashlist
 
-    print resp_data
+    logging.info("getWatchingTxList resp_data: %s", resp_data)
+
     return jsonify(resp_data)
 
 
@@ -192,20 +202,19 @@ def getRelatedTxIdList():
         count = 50
 
     addresses_params = request.args.get('addresses')
-    print addresses_params
 
     addressList = addresses_params.split(',')
-    print len(addressList), addressList
+    logging.info("getRelatedTxIdList addressList:%s %s",len(addressList), addressList)
     if len(addressList) <= 0:
         return jsonify({"error":"not found"}), 404
 
-    print "count, cursor", count,cursor
+    logging.info("getRelatedTxIdList tx count, cursor %s %s", count,cursor)
 
     addridlist = Addr.query.with_entities(Addr.id).filter(Addr.address.in_(addressList)).all()
     if addridlist == None:
         resp_data={}
         return jsonify(resp_data)
-    print addridlist
+    logging.info("getRelatedTxIdList addridlist:%s %s",len(addridlist), addridlist)
 
     txidlist=AddrTx.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id.in_(addridlist)).order_by(AddrTx.tx_id).offset(cursor).limit(count)
 
@@ -214,11 +223,8 @@ def getRelatedTxIdList():
 
     txHashList = [(Tx.query.with_entities(Tx.hash).filter(Tx.id==txid[0]).first()) for txid in txidlist]
     txHashList = [hexlify(txHash[0]) for txHash in txHashList]
-    print "txHashList:", txHashList
+    logging.info("getRelatedTxIdList resp_data:", resp_data)
 
-    resp_data['bitcoin'] = txHashList
-
-    print resp_data
     return jsonify(resp_data)
 
 
@@ -227,7 +233,7 @@ def getTxDetails():
     txhash_params = request.args.get('bitcoin')
     
     txhashList = txhash_params.split(',')
-    print len(txhashList),txhashList
+    logging.info("getTxDetails:%s %s") len(txhashList),txhashList
     if len(txhashList) <= 0:
         return jsonify({"error":"not found"}), 404
 
@@ -238,18 +244,17 @@ def getTxDetails():
             t_tx = db2t_tx(tx)
             t_txs.append(t_tx)
         
-    print t_txs
+    logging.info("getTxDetails resp_data: %s", t_txs)
     # return jsonify(t_txs)
     return Response(json.dumps(t_txs),  mimetype='application/json')
 
 @app.route('/queryapi/v1/block/bitcoin/tip', methods=['GET'])
 def getTipBlock():
     block = Block.query.order_by(Block.height.desc()).limit(1).first()
-    # print block.id
     # block = Block.query.order_by("height desc").limit(1).first()
     if block:
         t_block = db2t_block(block)
-        print t_block
+        logging.info("tip: %s", t_block)
         return jsonify(t_block)
     else:
         return jsonify({"error":"not found"}), 404
@@ -266,11 +271,10 @@ def decoderawtransaction(rawtx):
 def sendTx():
     if request.method == 'POST':
         rawtx = request.form['rawtx']
-        print "rawtx:",rawtx
+        logging.info("rawtx:%s", rawtx)
         try:
             r = decoderawtransaction(rawtx)
             txhash = r['txid']
-            print 'txhash:',txhash
             logging.info("txhash:%s", txhash) 
             tx = Tx.query.filter(Tx.hash == txhash.decode('hex')).first()
             if tx:
@@ -281,7 +285,7 @@ def sendTx():
                 logging.info("txid:%s", txid)
                 return jsonify({"txid":txid})
         except JSONRPCException,e:
-            print "JSONRPCException:",e.error
+            logging("JSONRPCException: %s",e.error)
             return jsonify({"error": e.error}), 400   
         except:
             logging.info("exception send raw tx:", exc_info=True)

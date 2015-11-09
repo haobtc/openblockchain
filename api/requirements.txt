@@ -1,6 +1,6 @@
-Flask==0.10.1
-Flask-SQLAlchemy==1.0
-gunicorn==18.0
+Flask
+Flask-SQLAlchemy
+gunicorn
 psycopg2
 ujson
 simplejson

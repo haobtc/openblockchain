@@ -13,6 +13,7 @@ import re
 import config
 from check_db import check_db
 
+
 app = Flask(__name__, static_url_path='/static')
 
 page_size=10
@@ -105,14 +106,14 @@ def render_404(render_type='html'):
 
 def lastest_data(render_type='html'):
     blks=[]
-    res = Block.query.order_by(Block.height.desc()).limit(6).all()
+    res = Block.query.order_by(Block.height.desc()).limit(10).all()
     for blk in res:
         blk=blk.todict() 
         blk['pool'] = get_pool(blk['id'])
         blks.append(blk)
 
     txs=[]
-    res = Tx.query.order_by(Tx.id.desc()).limit(7).all()
+    res = Tx.query.order_by(Tx.id.desc()).limit(5).all()
     for tx in res:
         tx= tx.todict()
         tx['in_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txin_tx_id==tx['id']).order_by(VOUT.in_idx).all()
@@ -166,6 +167,7 @@ def render_tx(tx=None, render_type='html'):
     tx['in_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txout_tx_hash).filter(VOUT.txin_tx_id==tx['id']).order_by(VOUT.in_idx).all()
 
     tx['out_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txin_tx_hash).filter(VOUT.txout_tx_id==tx['id']).order_by(VOUT.out_idx).all()
+    
     confirm = db_session.execute('select get_confirm(%d)' % tx['id']).first()[0];
     if confirm ==None:
         tx['confirm'] = 0
@@ -254,6 +256,7 @@ def render_addr(address=None, page=1, render_type='html', filter=0):
     addr = Addr.query.filter(Addr.address == address).first()
     if addr == None:
         addr = {}
+        addr['hash160'] = ''
         addr['txs']=[]
         addr['txs_len']= 0
         addr['page_size'] = 0
@@ -261,6 +264,10 @@ def render_addr(address=None, page=1, render_type='html', filter=0):
         addr['total_page'] = 0
         addr['tx_count']=0
         addr['page'] = 0
+        addr['recv_value'] = 0
+        addr['spent_value'] = 0
+        addr['balance'] = 0
+
         if render_type == 'json':
             return jsonify(addr)
 

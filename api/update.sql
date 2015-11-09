@@ -207,7 +207,7 @@ CREATE or REPLACE FUNCTION check_tx_count() RETURNS boolean
     DECLARE max_id record;
 BEGIN
     max_blk_id = (select max(id) from blk);
-    for max_id in (select blk_id,tx_id from blk_tx where blk_id<(max_blk_id-6) order by tx_id desc limit 1) loop
+    for max_id in (select blk_id,tx_id from blk_tx where blk_id<(max_blk_id-1) order by tx_id desc limit 1) loop
     tx_count1 = (select sum(tx_count) from blk where id<=max_id.blk_id);
     tx_count2 = (select count(1) from tx a join blk_tx b on (b.tx_id=a.id) left join utx c on(c.id=a.id) where c.id is NULL and a.id<=max_id.tx_id and b.blk_id<=max_id.blk_id);
     tx_count3 = (select count(tx_id) from blk_tx  where blk_id<=max_id.blk_id);
