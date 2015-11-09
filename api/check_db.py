@@ -44,7 +44,7 @@ def verifyTxIn(txin1, txin2, coinbase):
     if not coinbase:
         assert txin1.script_sig     == txin2['scriptSig']['hex']
         assert txin1.prev_out_index == txin2['vout']
-        assert txin1.prev_out       == txin2['txid'].decode('hex')
+        assert txin1.prev_out       == txin2['txid']
 
 def verifyTxOut(txout1,  txout2):  
 
@@ -53,10 +53,11 @@ def verifyTxOut(txout1,  txout2):
     assert txout1.value     == round(txout2['value'] * 100000000)
     assert txout1.type      == vout_type[txout2['scriptPubKey']['type']]
 
-def verifyTx(txhash, coinbase):  
+def verifyTx(txhash, coinbase):
     logging.debug('verifyTx begin... %s', txhash)
     tx1 = Tx.query.filter(Tx.hash == txhash.decode('hex')).first()
     tx2 = read_tx(txhash)
+
     
     assert tx1.hash      == tx2['txid']
     assert tx1.version   == tx2['version'] 
@@ -239,6 +240,8 @@ def check_last_tx():
                 logging.error("check tx fail %s" % tx.hash)
                 return False
     except:
+        logging.error("exception check_last_tx:", exc_info=True)
+
         logging.error("check tx exception %s" % tx.hash)
         return False
     return True
@@ -272,7 +275,10 @@ def alter_admin(msg):
     sendmail(msg)
 
 def check_db(level=0):
-    msg = time.ctime() + '\n' + get_ip_address('eth1') +'\n'
+    ip = "debug"
+    if config.DEBUG is False:
+        ip = get_ip_address(config.NET_PORT)
+    msg = time.ctime() + '\n' +  ip +'\n'
     fail = False
     try:
         if level >= 0:
