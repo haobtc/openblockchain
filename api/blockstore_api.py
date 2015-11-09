@@ -67,7 +67,7 @@ def watchAddresses(group):
                 db_session.flush()
                 db_session.refresh(newRecord)
                 logging.info("watchAddresses newRecord: %s %s", address, group)
-                watch_addrtx(address, 0)   
+                watch_addrtx(address, 0, False)   
         return jsonify({"result": "ok"})
     else:
         cursor = request.args.get('cursor') or 0
@@ -91,23 +91,26 @@ def watchAddresses(group):
         return jsonify(resp_data)
 
 
-def watch_addrtxs():
+def watch_addrtxs(verify):
     system_cursor = SystemCursor.query.filter_by(cursor_name = 'watch_addrtx_cursor').first()
     if system_cursor is None:
         cursor_id = 0
     else:
         cursor_id = system_cursor.cursor_id
 
-    logging.info("watch_addrtx_cursor:%s", cursor_id)
+    logging.info("watch_addrtx_cursor:%s %s", verify, cursor_id)
 
     new_cursors = []
     address_groups = WatchedAddrGroup.query.all()
     for address_group in address_groups:
-        new_cursor = watch_addrtx(address_group.address, cursor_id)
+        new_cursor = watch_addrtx(address_group.address, cursor_id, verify)
         if new_cursor is not None:
             new_cursors.append(new_cursor)
 
     if len(new_cursors) == 0:
+        return
+
+    if verify:
         return
 
     next_cursor =  min(new_cursors)
@@ -124,27 +127,29 @@ def watch_addrtxs():
         db_session.flush()
         db_session.refresh(system_cursor)
 
-def watch_addrtx(address, cursor_id):
+def watch_addrtx(address, cursor_id, verify):
     addr_id = Addr.query.with_entities(Addr.id).filter(Addr.address == address).first()
     if addr_id == None:
         return None
 
-    logging.info("watch_addrtx addr_id,cursor_id:%s,%s, %s",address, addr_id, cursor_id)
-
-    txidlist=AddrTx.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id == addr_id).filter(AddrTx.tx_id > cursor_id).all()
+    logging.info("watch_addrtx addr_id,cursor_id: %s %s,%s, %s", verify, address, addr_id, cursor_id)
+    if verify:
+        txidlist=AddrTx.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id == addr_id).filter(AddrTx.tx_id <= cursor_id).all()
+    else:
+        txidlist=AddrTx.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id == addr_id).filter(AddrTx.tx_id > cursor_id).all()
     if txidlist == None or len(txidlist) == 0:
         return None
 
-    logging.info("watch_addrtx txidlist:%s %s %s", address, len(txidlist), txidlist)
+    logging.info("watch_addrtx txidlist: %s %s %s %s", verify, address, len(txidlist), txidlist)
 
     txHashList = [(Tx.query.with_entities(Tx.hash).filter(Tx.id==txid[0]).first()) for txid in txidlist]
 
     txHashList = [txHash[0] for txHash in txHashList]
-    logging.info("watch_addrtx txHashList:%s %s %s", address, len(txHashList), txHashList)
+    logging.info("watch_addrtx txHashList: %s %s %s %s", verify, address, len(txHashList), txHashList)
     for txHash in txHashList:
         missing = WatchedAddrTx.query.filter_by(address=address, tx=txHash).first()
         if missing is None:
-            logging.info("watch_addrtx new tx:%s %s", address, txHash)
+            logging.info("watch_addrtx new tx: %s %s %s", verify, address, txHash)
 
             newRecord = WatchedAddrTx()
             newRecord.address = address
@@ -155,7 +160,7 @@ def watch_addrtx(address, cursor_id):
 
     max_txid =  max(txid[0] for txid in txidlist)
 
-    logging.info("watch_addrtx max_txid:%s %s", address, max_txid)
+    logging.info("watch_addrtx max_txid: %s %s %s", verify, address, max_txid)
 
     return max_txid
 

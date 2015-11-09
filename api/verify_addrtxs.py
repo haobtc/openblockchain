@@ -28,10 +28,10 @@ logging.getLogger('').addHandler(console)
 
 if __name__ == '__main__':
     start_time = time.time()
-    watch_addrtxs(False)
+    watch_addrtxs(True)
     end_time = time.time()
-    if end_time - start_time < 10:
-        time.sleep(10 - end_time + start_time)
+    if end_time - start_time < 600:
+        time.sleep(600 - end_time + start_time)
 
    
 
