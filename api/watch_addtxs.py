@@ -30,8 +30,8 @@ if __name__ == '__main__':
     start_time = time.time()
     watch_addrtxs()
     end_time = time.time()
-    if end_time - start_time < 5:
-        time.sleep(5 - end_time + start_time)
+    if end_time - start_time < 10:
+        time.sleep(10 - end_time + start_time)
 
    
 

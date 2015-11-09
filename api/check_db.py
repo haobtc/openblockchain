@@ -42,14 +42,14 @@ def verifyTxIn(txin1, txin2, coinbase):
     assert txin1.tx_idx         == txin2['tx_idx']
     assert txin1.sequence       == txin2['sequence']
     if not coinbase:
-        assert txin1.script_sig     == txin2['scriptSig']['hex'].decode('hex')
+        assert txin1.script_sig     == txin2['scriptSig']['hex']
         assert txin1.prev_out_index == txin2['vout']
         assert txin1.prev_out       == txin2['txid'].decode('hex')
 
 def verifyTxOut(txout1,  txout2):  
 
     assert txout1.tx_idx    == txout2['n']
-    assert txout1.pk_script == txout2['scriptPubKey']['hex'].decode('hex')
+    assert txout1.pk_script == txout2['scriptPubKey']['hex']
     assert txout1.value     == round(txout2['value'] * 100000000)
     assert txout1.type      == vout_type[txout2['scriptPubKey']['type']]
 
@@ -58,7 +58,7 @@ def verifyTx(txhash, coinbase):
     tx1 = Tx.query.filter(Tx.hash == txhash.decode('hex')).first()
     tx2 = read_tx(txhash)
     
-    assert tx1.hash      == tx2['txid'].decode('hex')
+    assert tx1.hash      == tx2['txid']
     assert tx1.version   == tx2['version'] 
     assert tx1.lock_time == tx2['locktime'] 
     assert tx1.tx_size   == len(tx2['hex'])/2
@@ -95,7 +95,7 @@ def verifyBlkTx(txhash,blkid, idx,coinbase):
 
     tx2 = read_tx(txhash)
     
-    assert tx1.hash      == tx2['txid'].decode('hex')
+    assert tx1.hash      == tx2['txid']
     assert tx1.version   == tx2['version'] 
     assert tx1.lock_time == tx2['locktime'] 
     assert tx1.tx_size   == len(tx2['hex'])/2
@@ -132,11 +132,11 @@ def verifyBlk(blkhash):
 
     blk2 = read_block(blkhash)
     
-    assert blk1.hash            == blk2['hash'].decode('hex')
+    assert blk1.hash            == blk2['hash']
     assert blk1.height          == blk2['height']
     assert blk1.version         == blk2['version']
-    assert blk1.prev_hash       == blk2['previousblockhash'].decode('hex') 
-    assert blk1.mrkl_root       == blk2['merkleroot'].decode('hex')  
+    assert blk1.prev_hash       == blk2['previousblockhash']
+    assert blk1.mrkl_root       == blk2['merkleroot'] 
     assert blk1.time            == blk2['time']
     assert blk1.bits            == int(blk2['bits'],16)
     assert blk1.nonce           == blk2['nonce']
@@ -160,7 +160,7 @@ def verifyBlk(blkhash):
         total_out_value +=tx1.out_value
         tx_count        +=1
 
-    assert blk1.work            == blk2['chainwork'].decode('hex')
+    assert blk1.work            == blk2['chainwork']
     assert blk1.total_in_count  == total_in_count  
     assert blk1.total_in_value  == total_in_value  
     assert blk1.fees            == fees            
@@ -222,11 +222,11 @@ def check_last_block():
     try:
         res = Block.query.with_entities(Block.hash).order_by(Block.height.desc()).limit(10).all()
         for blk in res:
-            if not verifyBlk(blk.hash.encode('hex')):
-                logging.error("check blk fail %s" % blk.hash.encode('hex'))
+            if not verifyBlk(blk.hash):
+                logging.error("check blk fail %s" % blk.hash)
                 return False
     except:
-        logging.error("check blk exception %s" % blk.hash.encode('hex'))
+        logging.error("check blk exception %s" % blk.hash)
         return False
     return True
 
@@ -235,11 +235,11 @@ def check_last_tx():
     try:
         res = Tx.query.with_entities(Tx.hash).order_by(Tx.id.desc()).limit(10).all()
         for tx in res:
-            if not verifyTx(tx.hash.encode('hex'), coinbase=False):
-                logging.error("check tx fail %s" % tx.hash.encode('hex'))
+            if not verifyTx(tx.hash, coinbase=False):
+                logging.error("check tx fail %s" % tx.hash)
                 return False
     except:
-        logging.error("check tx exception %s" % tx.hash.encode('hex'))
+        logging.error("check tx exception %s" % tx.hash)
         return False
     return True
 

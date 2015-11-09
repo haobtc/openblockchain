@@ -7,7 +7,6 @@ from sqlalchemy.sql import text
 import simplejson as json
 # import json
 import binascii
-from binascii import hexlify
 from database import *
 from sqlalchemy import and_
 from datetime import datetime
@@ -73,13 +72,15 @@ def watchAddresses(group):
     else:
         cursor = request.args.get('cursor') or 0
         cursor = int(cursor)
+        if cursor < 0:
+            cursor = 0
 
         count = request.args.get('count') or 0
         count = int(count)
         if count <=0 or count > 500:
             count = 500
- 
-        # getWatchingAddressList(group)
+    
+        logging.info("watchAddresses cursor, count: %s,%s", cursor, count)
         address_groups = WatchedAddrGroup.query.order_by(WatchedAddrGroup.id).filter_by(groupname=group).offset(cursor).limit(count)
 
         resp_data = {}
@@ -138,11 +139,13 @@ def watch_addrtx(address, cursor_id):
 
     txHashList = [(Tx.query.with_entities(Tx.hash).filter(Tx.id==txid[0]).first()) for txid in txidlist]
 
-    txHashList = [hexlify(txHash[0]) for txHash in txHashList]
+    txHashList = [txHash[0] for txHash in txHashList]
     logging.info("watch_addrtx txHashList:%s %s %s", address, len(txHashList), txHashList)
     for txHash in txHashList:
         missing = WatchedAddrTx.query.filter_by(address=address, tx=txHash).first()
         if missing is None:
+            logging.info("watch_addrtx new tx:%s %s", address, txHash)
+
             newRecord = WatchedAddrTx()
             newRecord.address = address
             newRecord.tx = txHash
@@ -173,9 +176,6 @@ def getWatchingTxList(group):
     txHashlist = []
 
     watchedAddrTxs = WatchedAddrTx.query.order_by(WatchedAddrTx.id).offset(cursor).limit(count)
-    
-    if watchedAddrTxs is None or len(watchedAddrTxs) == 0:
-        return
 
     resp_data = {}
     resp_data['bitcoin.cursor'] = str(cursor+watchedAddrTxs.count())
@@ -222,8 +222,11 @@ def getRelatedTxIdList():
     resp_data['bitcoin.cursor'] = str(cursor+txidlist.count())
 
     txHashList = [(Tx.query.with_entities(Tx.hash).filter(Tx.id==txid[0]).first()) for txid in txidlist]
-    txHashList = [hexlify(txHash[0]) for txHash in txHashList]
-    logging.info("getRelatedTxIdList resp_data:", resp_data)
+    txHashList = [txHash[0] for txHash in txHashList]
+
+    resp_data['bitcoin'] = txHashList
+
+    logging.info("getRelatedTxIdList resp_data: %s", resp_data)
 
     return jsonify(resp_data)
 
@@ -233,7 +236,7 @@ def getTxDetails():
     txhash_params = request.args.get('bitcoin')
     
     txhashList = txhash_params.split(',')
-    logging.info("getTxDetails:%s %s") len(txhashList),txhashList
+    logging.info("getTxDetails:%s %s", len(txhashList),txhashList)
     if len(txhashList) <= 0:
         return jsonify({"error":"not found"}), 404
 

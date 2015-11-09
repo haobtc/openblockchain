@@ -7,7 +7,6 @@ from sqlalchemy.sql import text
 import simplejson as json
 # import json
 import binascii
-from binascii import hexlify
 from database import *
 from sqlalchemy import and_
 from datetime import datetime
@@ -20,9 +19,9 @@ from bitcoin.core import COIN, str_money_value
 def db2t_tx(dtx):
     t = {}
 
-    t["txid"] = hexlify(dtx.hash)
+    t["txid"] = dtx.hash
     t["network"] = 'bitcoin'
-    t['hash'] = hexlify(dtx.hash)
+    t['hash'] = dtx.hash
     confirm = db_session.execute('select get_confirm(%d)' % dtx.id).first()[0];
     if confirm ==None:
         t['confirmations'] = 0
@@ -37,7 +36,7 @@ def db2t_tx(dtx):
         blkid = blktx.blk_id
         blk = Block.query.filter(Block.id == blkid).limit(1).first()
         if blk:
-            t['blockhash'] = hexlify(blk.hash)
+            t['blockhash'] = blk.hash
             t['blockheight'] = blk.height
             t['blocktime'] = blk.time
             t['time'] = blk.time
@@ -49,14 +48,14 @@ def db2t_tx(dtx):
     for vin in txinlist:
         inp = {}
         if dtx.coinbase:
-            inp['script'] = hexlify(vin.script_sig)
+            inp['script'] = vin.script_sig
         else:
-            inp['hash'] = hexlify(vin.prev_out)
+            inp['hash'] = vin.prev_out
             inp['vout'] = vin.prev_out_index
-            inp['script'] = hexlify(vin.script_sig)
+            inp['script'] = vin.script_sig
             inp['q'] = vin.sequence
 
-            prev_tx = Tx.query.filter(Tx.hash == vin.prev_out).first()
+            prev_tx = Tx.query.filter(Tx.hash == vin.prev_out.decode('hex')).first()
             if prev_tx:
                 prev_txout = TxOut.query.filter(
                     TxOut.tx_id == prev_tx.id,
@@ -83,7 +82,7 @@ def db2t_tx(dtx):
         
         outp['amountSatoshi'] = str(vout.value)
         outp['amount'] = str_money_value(vout.value)
-        outp['script'] = hexlify(vout.pk_script)
+        outp['script'] = vout.pk_script
         t['outputs'].append(outp)
 
     return t
@@ -91,19 +90,18 @@ def db2t_tx(dtx):
 def db2t_block(block):
     b = {}
 
-    b["hash"] = hexlify(block.hash)
+    b["hash"] = block.hash
     b["version"] = block.version
     b["timestamp"] = block.time
-    b["merkle_root"] = hexlify(block.mrkl_root)
+    b["merkle_root"] = block.mrkl_root
     b["height"] = block.height
-    b["prev_hash"] = hexlify(block.prev_hash)
+    b["prev_hash"] = block.prev_hash
     b["tx_cnt"] = block.tx_count
-    
     
     b["confirmations"] = 1
     b["bits"] = block.bits
 
-    block_next = Block.query.filter(Block.prev_hash == block.hash).limit(1).first()
+    block_next = Block.query.filter(Block.prev_hash == block.hash.decode('hex')).limit(1).first()
     if block_next:
-        b["nextHash"] = hexlify(block_next.hash)
+        b["nextHash"] = block_next.hash
     return b

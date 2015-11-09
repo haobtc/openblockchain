@@ -26,9 +26,9 @@ class SBYTEA(TypeDecorator):
     impl = BYTEA 
     def process_result_value(self, value, dialect):
         if value!=None:
-	    return binascii.hexlify(value)
+	       return binascii.hexlify(value)
         else:
-	    return value
+	       return value
 
 def to_dict(inst, cls):
     """
