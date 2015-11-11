@@ -11,8 +11,14 @@ from datetime import datetime
 from util     import calculate_target, calculate_difficulty,work_to_difficulty
 import re
 import config
-from check_db import check_db
+import logging
 
+logging.basicConfig(format='%(asctime)s %(message)s', filename=config.EXPLORER_API_LOG_FILE,level=logging.INFO)
+console = logging.StreamHandler()  
+console.setLevel(logging.DEBUG)  
+formatter = logging.Formatter('%(asctime)-12s: %(message)s')  
+console.setFormatter(formatter)  
+logging.getLogger('').addHandler(console) 
 
 app = Flask(__name__, static_url_path='/static')
 
