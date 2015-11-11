@@ -13,7 +13,6 @@ from datetime import datetime
 from util     import calculate_target, calculate_difficulty,work_to_difficulty
 import re
 import config
-from check_db import check_db
 from deserialize import extract_public_key
 from db2t import db2t_tx, db2t_block
 import logging

@@ -19,13 +19,6 @@ import logging
 from config import *
 from blockstore_api import watch_addrtxs
 
-logging.basicConfig(format='%(asctime)s %(message)s', filename=config.CHECK_LOG_FILE,level=logging.INFO)
-console = logging.StreamHandler()  
-console.setLevel(logging.DEBUG)  
-formatter = logging.Formatter('%(asctime)-12s: %(message)s')  
-console.setFormatter(formatter)  
-logging.getLogger('').addHandler(console) 
-
 if __name__ == '__main__':
     start_time = time.time()
     watch_addrtxs(False)
