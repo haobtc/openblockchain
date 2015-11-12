@@ -100,10 +100,6 @@ def _jinja2_filter_target(value):
 def _jinja2_filter_difficulty(value):
     return calculate_difficulty(value)
 
-@app.template_filter('bytea')
-def _jinja2_filter_bytea(value):
-    return binascii.hexlify(value)
-
 def render_404(render_type='html'):
     if render_type=='html':
         return render_template('404.html'), 404
