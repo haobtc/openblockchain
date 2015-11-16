@@ -361,7 +361,7 @@ def address_handle(address):
 
 @app.route('/search', methods=['GET', 'POST'])
 def search(sid=0):
-    sid = request.args.get('sid') or sid
+    sid = strip(request.args.get('sid')) or sid
     render_type=request.args.get('type') or 'html'
 
     slen = len(sid)
