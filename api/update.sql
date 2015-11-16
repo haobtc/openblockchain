@@ -115,7 +115,7 @@ CREATE INDEX addr_spent_address on addr_spent USING btree (addr_id);
 update addr set recv_value=a.recv_value, recv_count=a.txout_count from addr_recv a where addr.id=a.addr_id;
 update addr set spent_value=a.spent_value, spent_count=a.spent_txin_count from addr_spent a where addr.id=a.addr_id;
 update addr set balance=recv_value-spent_value;
-  
+
 DROP MATERIALIZED VIEW addr_recv;
 DROP MATERIALIZED VIEW addr_spent;
 DROP MATERIALIZED VIEW vvout;
@@ -236,4 +236,15 @@ SELECT g.address,
      LEFT JOIN tx e ON e.id = c.tx_id
      LEFT JOIN addr_txout f ON f.txout_id = a.id
      LEFT JOIN addr g ON g.id = f.addr_id;
- 
+
+CREATE or REPLACE FUNCTION delete_some_utx() RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE txid integer;
+BEGIN
+     FOR txid IN select id from utx limit 100 LOOP
+         perform delete_tx(txid);
+     END LOOP;
+END;
+$$;
+
