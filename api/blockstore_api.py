@@ -292,7 +292,7 @@ def sendTx():
                 logging.info("txid:%s", txid)
                 return jsonify({"txid":txid})
         except JSONRPCException,e:
-            logging("JSONRPCException: %s",e.error)
+            logging.info("JSONRPCException: %s",e.error)
             return jsonify({"error": e.error}), 400   
         except:
             logging.info("exception send raw tx:", exc_info=True)
