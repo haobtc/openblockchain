@@ -248,3 +248,4 @@ BEGIN
 END;
 $$;
 
+ALTER TABLE blk ADD COLUMN recv_time BIGINT;
