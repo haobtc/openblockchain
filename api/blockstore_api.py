@@ -131,7 +131,7 @@ def watch_addrtx(address, cursor_id, verify):
     if addr_id == None:
         return None
 
-    logging.info("watch_addrtx addr_id,cursor_id: %s %s,%s, %s", verify, address, addr_id, cursor_id)
+    logging.debug("watch_addrtx addr_id,cursor_id: %s %s,%s, %s", verify, address, addr_id, cursor_id)
     if verify:
         txidlist=AddrTx.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id == addr_id).filter(AddrTx.tx_id <= cursor_id).all()
     else:
@@ -139,12 +139,12 @@ def watch_addrtx(address, cursor_id, verify):
     if txidlist == None or len(txidlist) == 0:
         return None
 
-    logging.info("watch_addrtx txidlist: %s %s %s %s", verify, address, len(txidlist), txidlist)
+    logging.debug("watch_addrtx txidlist: %s %s %s %s", verify, address, len(txidlist), txidlist)
 
     txHashList = [(Tx.query.with_entities(Tx.hash).filter(Tx.id==txid[0]).first()) for txid in txidlist]
 
     txHashList = [txHash[0] for txHash in txHashList]
-    logging.info("watch_addrtx txHashList: %s %s %s %s", verify, address, len(txHashList), txHashList)
+    logging.debug("watch_addrtx txHashList: %s %s %s %s", verify, address, len(txHashList), txHashList)
     for txHash in txHashList:
         missing = WatchedAddrTx.query.filter_by(address=address, tx=txHash).first()
         if missing is None:
