@@ -8,7 +8,7 @@ import binascii
 from database import *
 from sqlalchemy import and_
 from datetime import datetime
-from util     import calculate_target, calculate_difficulty,work_to_difficulty
+from util     import calculate_target, calculate_difficulty, decode_check_address
 import re
 import config
 import logging
@@ -257,18 +257,22 @@ def confirm(txs):
 def render_addr(address=None, page=1, render_type='html', filter=0):
     addr = Addr.query.filter(Addr.address == address).first()
     if addr == None:
-        addr = {}
-        addr['hash160'] = ''
-        addr['txs']=[]
-        addr['txs_len']= 0
-        addr['page_size'] = 0
-        addr['address']=address
-        addr['total_page'] = 0
-        addr['tx_count']=0
-        addr['page'] = 0
-        addr['recv_value'] = 0
-        addr['spent_value'] = 0
-        addr['balance'] = 0
+	ver,hash160=decode_check_address(address)
+        if hash160==None or ver !=1:
+            return render_404(render_type)
+        else:
+            addr = {}
+            addr['hash160'] = ''
+            addr['txs']=[]
+            addr['txs_len']= 0
+            addr['page_size'] = 0
+            addr['address']=address
+            addr['total_page'] = 0
+            addr['tx_count']=0
+            addr['page'] = 0
+            addr['recv_value'] = 0
+            addr['spent_value'] = 0
+            addr['balance'] = 0
 
         if render_type == 'json':
             return jsonify(addr)
