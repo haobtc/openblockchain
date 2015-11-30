@@ -259,7 +259,7 @@ def render_addr(address=None, page=1, render_type='html', filter=0):
     if addr == None:
         ver,hash160=decode_check_address(address)
         print address,ver,hash160
-        if hash160==None or ver !=1:
+        if hash160==None or (ver !='\x00' and ver != '\x05'):
             return render_404(render_type)
         else:
             addr = {}
