@@ -257,7 +257,8 @@ def confirm(txs):
 def render_addr(address=None, page=1, render_type='html', filter=0):
     addr = Addr.query.filter(Addr.address == address).first()
     if addr == None:
-	ver,hash160=decode_check_address(address)
+        ver,hash160=decode_check_address(address)
+        print address,ver,hash160
         if hash160==None or ver !=1:
             return render_404(render_type)
         else:
