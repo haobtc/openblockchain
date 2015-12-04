@@ -16,6 +16,7 @@ git submodule update --init --recursive
 
 # create db
 
+#http://www.postgresql.org/download/linux/ubuntu/
 
 sudo apt-get install postgresql-9.4
 
@@ -78,7 +79,10 @@ cp config_sample.py config.py
 
 modify config.py as server setting
 
-python demo.py
+gunicorn -w 4 -k gevent -b 0.0.0.0:5000 explorer_api:app
+gunicorn -w 4 -k gevent -b 0.0.0.0:9005 blockstore_api:app
+
+
 
 
 
