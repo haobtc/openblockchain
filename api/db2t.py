@@ -22,7 +22,7 @@ def db2t_tx(dtx):
     t["txid"] = dtx.hash
     t["network"] = 'bitcoin'
     t['hash'] = dtx.hash
-    t['lock_time']＝dtx.lock_time
+    t['lock_time'] = dtx.lock_time
     confirm = db_session.execute('select get_confirm(%d)' % dtx.id).first()[0];
     if confirm ==None:
         t['confirmations'] = 0
