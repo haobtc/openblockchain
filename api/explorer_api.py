@@ -159,6 +159,21 @@ def checkdb():
     # level= request.args.get('level') or 3
     # return check_db(level)
 
+def get_tx_addresses (tx=None):
+     in_addresses = []
+     out_addresses = []
+     if tx['out_count']>100 or tx['in_count']>100:
+        in_addresses = M_VOUT.query.with_entities(M_VOUT.address, M_VOUT.value, M_VOUT.txin_tx_id, M_VOUT.txout_tx_hash).filter(M_VOUT.txin_tx_id==tx['id']).order_by(M_VOUT.in_idx).all()
+        out_addresses = M_VOUT.query.with_entities(M_VOUT.address, M_VOUT.value, M_VOUT.txin_tx_id, M_VOUT.txin_tx_hash).filter(M_VOUT.txout_tx_id==tx['id']).order_by(M_VOUT.out_idx).all()
+        if in_addresses==None or out_addresses==None:
+            in_addresses = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txout_tx_hash).filter(VOUT.txin_tx_id==tx['id']).order_by(VOUT.in_idx).all()
+            out_addresses = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txin_tx_hash).filter(VOUT.txout_tx_id==tx['id']).order_by(VOUT.out_idx).all()
+     else:
+        in_addresses = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txout_tx_hash).filter(VOUT.txin_tx_id==tx['id']).order_by(VOUT.in_idx).all()
+        out_addresses = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txin_tx_hash).filter(VOUT.txout_tx_id==tx['id']).order_by(VOUT.out_idx).all()
+     return in_addresses , out_addresses
+ 
+
 def render_tx(tx=None, render_type='html'):
     tx= tx.todict()
 
@@ -166,10 +181,8 @@ def render_tx(tx=None, render_type='html'):
     tx['vin'] = [txin.todict() for txin in txins ]
     txouts = TxOut.query.filter(TxOut.tx_id==tx['id']).order_by(TxOut.tx_idx.asc()).all()
     tx['vout'] = [txout.todict() for txout in txouts]
-    tx['in_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txout_tx_hash).filter(VOUT.txin_tx_id==tx['id']).order_by(VOUT.in_idx).all()
-
-    tx['out_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txin_tx_hash).filter(VOUT.txout_tx_id==tx['id']).order_by(VOUT.out_idx).all()
-    
+    tx['in_addresses'], tx['out_addresses'] = get_tx_addresses(tx)
+   
     confirm = db_session.execute('select get_confirm(%d)' % tx['id']).first()[0];
     if confirm ==None:
         tx['confirm'] = 0
@@ -213,10 +226,7 @@ def render_blk(blk=None, page=1, render_type='html'):
         for txid in res:
            res = Tx.query.filter(Tx.id==txid).first()
            tx= res.todict()
-           txins = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txout_tx_hash).filter(VOUT.txin_tx_id==txid).order_by(VOUT.in_idx).all()
-           tx['in_addresses'] = txins
-           txouts = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txin_tx_hash).filter(VOUT.txout_tx_id==txid).order_by(VOUT.out_idx).all()
-           tx['out_addresses'] = txouts
+           tx['in_addresses'], tx['out_addresses'] = get_tx_addresses(tx)
            txs.append(tx)
     blk['tx']=txs
 
@@ -327,14 +337,13 @@ def render_addr(address=None, page=1, render_type='html', filter=0):
         res = Tx.query.filter(Tx.id==txid).first()
         tx= res.todict()
 
-        txins = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txout_tx_hash).filter(VOUT.txin_tx_id==txid).order_by(VOUT.in_idx).all()
+        txins, txouts = get_tx_addresses(tx)
         for vin in txins:
             if vin.address==address:
                 tx_in_value = tx_in_value - vin.value
                 in_value = in_value - vin.value
         tx['vin'] = txins
 
-        txouts = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txin_tx_hash).filter(VOUT.txout_tx_id==txid).order_by(VOUT.out_idx).all()
         for vout in txouts:
             if vout.address==address:
                 tx_out_value = tx_out_value + vout.value
