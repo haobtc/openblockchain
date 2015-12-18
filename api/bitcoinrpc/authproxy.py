@@ -147,3 +147,6 @@ class AuthServiceProxy(object):
         return json.loads(http_response.read().decode('utf8'),
                            precise_float=True)
                           #parse_float=decimal.Decimal)
+    def __del__(self):
+        self.__conn.close()
+        

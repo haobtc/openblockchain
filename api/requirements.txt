@@ -5,3 +5,5 @@ psycopg2
 ujson
 simplejson
 pycrypto
+python-bitcoinlib
+plyvel

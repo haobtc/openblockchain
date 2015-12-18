@@ -28,8 +28,6 @@ app = Flask(__name__)
 page_size=10
 
 from bitcoinrpc.authproxy import AuthServiceProxy,JSONRPCException
-
-
 access = AuthServiceProxy(config.RPC_URL)
 
 @app.route("/")
@@ -266,8 +264,6 @@ def getTipBlock():
     else:
         return jsonify({"error":"not found"}), 404
 
-from bitcoinrpc.authproxy import AuthServiceProxy
-access = AuthServiceProxy(config.RPC_URL)
 
 def sendrawtransaction(rawtx, allowhighfees = False):
     return json.loads(access.sendrawtransaction(rawtx,allowhighfees))
@@ -296,6 +292,10 @@ def sendTx():
             return jsonify({"error": e.error}), 400   
         except:
             logging.info("exception send raw tx:", exc_info=True)
+            # re-init the connection
+            access = AuthServiceProxy(config.RPC_URL)
+            return jsonify({"error":"rpc send exception"}), 400      
+
         return jsonify({"error":"send Failed"}), 400      
 
 if __name__ == '__main__':

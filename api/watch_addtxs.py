@@ -23,8 +23,8 @@ if __name__ == '__main__':
     start_time = time.time()
     watch_addrtxs(False)
     end_time = time.time()
-    if end_time - start_time < 10:
-        time.sleep(10 - end_time + start_time)
+    if end_time - start_time < 300:
+        time.sleep(300 - end_time + start_time)
 
    
 
