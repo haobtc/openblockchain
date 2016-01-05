@@ -29,7 +29,7 @@ You can now start the database server using:
 
     /usr/lib/postgresql/9.4/bin/postgres -D /chain/pg/
 or
-    /usr/lib/postgresql/9.3/bin/pg_ctl -D /chain/pg/ -l logfile start
+    /usr/lib/postgresql/9.4/bin/pg_ctl -D /chain/pg/ -l logfile start
 or 
     /etc/init.d/postgresql start
     /etc/init.d/postgresql stop

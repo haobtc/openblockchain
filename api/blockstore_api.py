@@ -77,14 +77,14 @@ def watchAddresses(group):
         if count <=0 or count > 500:
             count = 500
     
-        logging.info("watchAddresses cursor, count: %s,%s", cursor, count)
+        logging.debug("watchAddresses cursor, count: %s,%s", cursor, count)
         address_groups = WatchedAddrGroup.query.order_by(WatchedAddrGroup.id).filter_by(groupname=group).offset(cursor).limit(count)
 
         resp_data = {}
         resp_data['bitcoin.cursor'] = str(cursor+address_groups.count())
         resp_data['bitcoin'] = [address_group.address for address_group in address_groups]
 
-        logging.info("watchAddresses resp_data: %s", resp_data)
+        logging.debug("watchAddresses resp_data: %s", resp_data)
         return jsonify(resp_data)
 
 
@@ -189,7 +189,7 @@ def getWatchingTxList(group):
     
     resp_data['bitcoin'] = txHashlist
 
-    logging.info("getWatchingTxList resp_data: %s", resp_data)
+    logging.debug("getWatchingTxList resp_data: %s", resp_data)
 
     return jsonify(resp_data)
 
@@ -238,7 +238,7 @@ def getTxDetails():
     txhash_params = request.args.get('bitcoin')
     
     txhashList = txhash_params.split(',')
-    logging.info("getTxDetails:%s %s", len(txhashList),txhashList)
+    logging.debug("getTxDetails:%s %s", len(txhashList),txhashList)
     if len(txhashList) <= 0:
         return jsonify({"error":"not found"}), 404
 
@@ -249,7 +249,7 @@ def getTxDetails():
             t_tx = db2t_tx(tx)
             t_txs.append(t_tx)
         
-    logging.info("getTxDetails resp_data: %s", t_txs)
+    logging.info("getTxDetails: %s %s ,resp_data: %s %s", len(txhashList),txhashList, len(t_txs), t_txs)
     # return jsonify(t_txs)
     return Response(json.dumps(t_txs),  mimetype='application/json')
 
@@ -259,7 +259,7 @@ def getTipBlock():
     # block = Block.query.order_by("height desc").limit(1).first()
     if block:
         t_block = db2t_block(block)
-        logging.info("tip: %s", t_block)
+        logging.debug("tip: %s", t_block)
         return jsonify(t_block)
     else:
         return jsonify({"error":"not found"}), 404
