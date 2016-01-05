@@ -236,7 +236,7 @@ def check_last_tx():
     try:
         res = Tx.query.with_entities(Tx.hash).order_by(Tx.id.desc()).limit(10).all()
         for tx in res:
-            if not verifyTx(tx.hash, coinbase=False):
+            if not verifyTx(tx.hash, tx.coinbase):
                 logging.error("check tx fail %s" % tx.hash)
                 return False
     except:
