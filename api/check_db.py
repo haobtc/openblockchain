@@ -66,7 +66,8 @@ def verifyTx(txhash, coinbase):
 
     assert tx1.in_count  == len(tx2['vin'])
     assert tx1.out_count == len(tx2['vout'])
-    assert tx1.coinbase  == coinbase
+    assert tx1.coinbase  == (tx2['vin'][0].get("coinbase")!=None)
+    coinbase ＝ tx1.coinbase
 
     invalue = 0
     for i, txin2 in enumerate(tx2['vin']):
@@ -105,6 +106,8 @@ def verifyBlkTx(txhash,blkid, idx,coinbase):
     assert tx1.out_count == len(tx2['vout'])
     assert tx1.coinbase  == (tx2['vin'][0].get("coinbase")!=None)
 
+    coinbase ＝ tx1.coinbase
+    
     invalue = 0
     for i, txin2 in enumerate(tx2['vin']):
         txin1 = TxIn.query.filter(and_(TxIn.tx_id == tx1.id, TxIn.tx_idx==i)).first()
