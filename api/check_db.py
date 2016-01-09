@@ -53,7 +53,7 @@ def verifyTxOut(txout1,  txout2):
     assert txout1.value     == round(txout2['value'] * 100000000)
     assert txout1.type      == vout_type[txout2['scriptPubKey']['type']]
 
-def verifyTx(txhash, coinbase):
+def verifyTx(txhash):
     logging.debug('verifyTx begin... %s', txhash)
     tx1 = Tx.query.filter(Tx.hash == txhash.decode('hex')).first()
     tx2 = read_tx(txhash)
@@ -105,8 +105,6 @@ def verifyBlkTx(txhash,blkid, idx,coinbase):
     assert tx1.in_count  == len(tx2['vin'])
     assert tx1.out_count == len(tx2['vout'])
     assert tx1.coinbase  == (tx2['vin'][0].get("coinbase")!=None)
-
-    coinbase = tx1.coinbase
     
     invalue = 0
     for i, txin2 in enumerate(tx2['vin']):
@@ -239,7 +237,7 @@ def check_last_tx():
     try:
         res = Tx.query.with_entities(Tx.hash).order_by(Tx.id.desc()).limit(10).all()
         for tx in res:
-            if not verifyTx(tx.hash, tx.coinbase):
+            if not verifyTx(tx.hash):
                 logging.error("check tx fail %s" % tx.hash)
                 return False
     except:
