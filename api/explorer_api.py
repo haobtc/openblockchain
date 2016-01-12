@@ -13,12 +13,15 @@ import re
 import config
 import logging
 
-logging.basicConfig(format='%(asctime)s %(message)s', filename=config.EXPLORER_API_LOG_FILE,level=logging.INFO)
-console = logging.StreamHandler()  
-console.setLevel(logging.DEBUG)  
-formatter = logging.Formatter('%(asctime)-12s: %(message)s')  
-console.setFormatter(formatter)  
-logging.getLogger('').addHandler(console) 
+# logging.basicConfig(format='%(asctime)s %(message)s', filename=config.EXPLORER_API_LOG_FILE,level=logging.INFO)
+# console = logging.StreamHandler()  
+# console.setLevel(logging.DEBUG)  
+# formatter = logging.Formatter('%(asctime)-12s: %(message)s')  
+# console.setFormatter(formatter)  
+# logging.getLogger('').addHandler(console) 
+
+logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
+
 
 app = Flask(__name__, static_url_path='/static')
 
