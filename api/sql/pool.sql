@@ -68,4 +68,5 @@ COPY	pool	(id,	name,	link)	FROM	stdin;
 109	bravo	http://www.bravo-mining.com/
 110	trickys	http://pool.wemine.uk/
 111	eSited	http://stratum1.esited.net:8080/
+112	btcmp	http://www.btcmp.com/
 \.
