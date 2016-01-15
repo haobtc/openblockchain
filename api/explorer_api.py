@@ -100,6 +100,13 @@ def _jinja2_filter_target(value):
 def _jinja2_filter_difficulty(value):
     return calculate_difficulty(value)
 
+@app.template_filter('coinbase')
+def _jinja2_filter_coinbase(value):
+    try:
+        return value.decode('hex').decode('ascii','replace')
+    except:
+        value
+ 
 def render_404(render_type='html'):
     if render_type=='html':
         return render_template('404.html'), 404

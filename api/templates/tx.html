@@ -85,7 +85,7 @@
         {% if tx.coinbase %}
             <h4> Coinbase:</h4>
             <table class="table table-striped">
-                <tr> <td> {{tx.vin[0].script_sig}} </td> </tr>
+                <tr> <td> {{tx.vin[0].script_sig|coinbase}} </td> </tr>
                 <tr> <td> {{tx.vin[0].script_sig}} </td> </tr>
             </table>
         {% else %}
