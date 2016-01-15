@@ -5099,6 +5099,7 @@ Opcode.map = {
 
   // expansion
   OP_NOP1  : 176,
+  OP_CHECKLOCKTIMEVERIFY : 177,
   OP_NOP2  : 177,
   OP_NOP3  : 178,
   OP_NOP4  : 179,
@@ -6749,6 +6750,7 @@ ScriptInterpreter.prototype.eval = function eval(script, tx, inIndex, hashType, 
 
           case Opcode.map.OP_NOP:
           case Opcode.map.OP_NOP1:
+          case Opcode.map.OP_CHECKLOCKTIMEVERIFY:
           case Opcode.map.OP_NOP2:
           case Opcode.map.OP_NOP3:
           case Opcode.map.OP_NOP4:
