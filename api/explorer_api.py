@@ -170,9 +170,9 @@ def checkdb():
     # return check_db(level)
 
 def get_tx_addresses (tx=None):
-     in_addresses = []
-     out_addresses = []
-     if tx['out_count']>100 or tx['in_count']>100:
+    in_addresses = []
+    out_addresses = []
+    if tx['out_count']>100 or tx['in_count']>100:
         try:
             in_addresses = M_VOUT.query.with_entities(M_VOUT.address, M_VOUT.value, M_VOUT.txin_tx_id, M_VOUT.txout_tx_hash).filter(M_VOUT.txin_tx_id==tx['id']).order_by(M_VOUT.in_idx).all()
             out_addresses = M_VOUT.query.with_entities(M_VOUT.address, M_VOUT.value, M_VOUT.txin_tx_id, M_VOUT.txin_tx_hash).filter(M_VOUT.txout_tx_id==tx['id']).order_by(M_VOUT.out_idx).all()
@@ -180,7 +180,7 @@ def get_tx_addresses (tx=None):
                 return in_addresses , out_addresses
         except Exception, e:
             pass
-
+            
     in_addresses = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txout_tx_hash).filter(VOUT.txin_tx_id==tx['id']).order_by(VOUT.in_idx).all()
     out_addresses = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txin_tx_hash).filter(VOUT.txout_tx_id==tx['id']).order_by(VOUT.out_idx).all()
     return in_addresses , out_addresses
