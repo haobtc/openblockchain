@@ -255,5 +255,5 @@ CREATE MATERIALIZED VIEW m_vout AS SELECT g.address, g.id AS addr_id, a.id AS tx
 
 
 #cron run
-refresh materialized view m_vout;
+refresh materialized view CONCURRENTLY m_vout;
 

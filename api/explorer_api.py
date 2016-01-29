@@ -180,7 +180,7 @@ def get_tx_addresses (tx=None):
                 return in_addresses , out_addresses
         except Exception, e:
             pass
-            
+
     in_addresses = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txout_tx_hash).filter(VOUT.txin_tx_id==tx['id']).order_by(VOUT.in_idx).all()
     out_addresses = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txin_tx_hash).filter(VOUT.txout_tx_id==tx['id']).order_by(VOUT.out_idx).all()
     return in_addresses , out_addresses
@@ -386,9 +386,10 @@ def address_handle(address):
 
 @app.route('/search', methods=['GET', 'POST'])
 def search(sid=0):
-    sid = strip(request.args.get('sid')) or sid
+    sid = request.args.get('sid') or sid
     render_type=request.args.get('type') or 'html'
 
+    sid.strip()
     slen = len(sid)
     if slen == 64:
         #should be tx hash or blk hash
