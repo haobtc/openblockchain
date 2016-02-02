@@ -312,3 +312,9 @@ BEGIN
 END;
 $$;
  
+CREATE TABLE addr_tag (                                                                                                           
+    id integer,
+    addr text, 
+    name text, 
+    url text); 
+ 
