@@ -313,11 +313,11 @@ END;
 $$;
  
 CREATE TABLE addr_tag (                                                                                                           
-    id integer,
+    id serial primary key,
     addr text, 
     name text, 
-    url text); 
-
+    link text); 
+ 
 CREATE or REPLACE FUNCTION delete_some_utx() RETURNS void
     LANGUAGE plpgsql
     AS $$
@@ -328,4 +328,7 @@ BEGIN
      END LOOP;
 END;
 $$;
- 
+
+ALTER TABLE blk ADD COLUMN recv_time BIGINT;
+ALTER TABLE blk ADD COLUMN pool_id int;
+ALTER TABLE blk ADD COLUMN pool_bip int;
