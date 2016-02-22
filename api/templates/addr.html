@@ -3,7 +3,7 @@
 {% block content %}
 
 <div class="col-lg-12">
-    <h1> 地址: {{ addr.address }}</h1>
+    <h1> 地址: {{ addr.address }}  <a href={{ addr.tag_url}}>{{ addr.tag_name }} </a> </h1>
     <button class="btn btn-success">
         <span> 余额: {{ addr.balance|btc }} </span>
     </button>
