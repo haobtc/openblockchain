@@ -317,3 +317,15 @@ CREATE TABLE addr_tag (
     addr text, 
     name text, 
     url text); 
+
+CREATE or REPLACE FUNCTION delete_some_utx() RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE txid integer;
+BEGIN
+     FOR txid IN select id from utx order by id desc limit 100 LOOP
+         perform delete_tx(txid);
+     END LOOP;
+END;
+$$;
+ 
