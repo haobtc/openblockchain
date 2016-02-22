@@ -304,6 +304,8 @@ def render_addr(address=None, page=1, render_type='html', filter=0):
 
     addr=addr.todict()
     addr['tx_count']=AddrTx.query.filter(AddrTx.addr_id==int(addr["id"])).count();
+    if addr['group_id']!='':
+        addr['tag_name'], addr['tag_url'] = AddrTag.query.with_entities(AddrTag.name,AddrTag.link).filter(AddrTag.id == addr['group_id']).first()
 
     total_page = addr['tx_count']/page_size
     if addr['tx_count']%page_size:
