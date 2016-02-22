@@ -64,6 +64,9 @@ class Block(SQLBase):
     total_out_count = Column(INTEGER)
     total_out_value = Column(BIGINT)
     tx_count        = Column(INTEGER) 
+    pool_id         = Column(INTEGER) 
+    recv_time       = Column(BIGINT) 
+    pool_bip        = Column(INTEGER) 
 
     def todict(self):
         return to_dict(self, self.__class__)
@@ -143,6 +146,7 @@ class Addr(SQLBase):
     recv_count  = Column(INTEGER)  
     spent_value = Column(BIGINT) 
     spent_count = Column(INTEGER)  
+    group_id    = Column(INTEGER)  
 
     def todict(self):
         return to_dict(self, self.__class__)
@@ -279,6 +283,34 @@ class POOL(SQLBase):
     __tablename__ = 'pool'
     id = Column(INTEGER, primary_key=True)
     name = Column(TEXT)
+
+    def todict(self):
+        return to_dict(self, self.__class__)
+ 
+class ADDR_SEND(SQLBase):
+    __tablename__ = 'addr_send'
+    addr_id = Column(INTEGER)
+    tx_id = Column(INTEGER)
+    group_id = Column(INTEGER)
+    __table_args__ = (PrimaryKeyConstraint(addr_id, tx_id), )
+
+    def todict(self):
+        return to_dict(self, self.__class__)
+ 
+
+class ADDR_GROUP(SQLBase):
+    __tablename__ = 'addr_group'
+    addr_id = Column(INTEGER)
+    tx_id = Column(INTEGER)
+    group_id = Column(INTEGER)
+    __table_args__ = (PrimaryKeyConstraint(addr_id, tx_id), )
+
+class AddrTag(SQLBase):
+    __tablename__ = 'addr_tag'
+    id = Column(INTEGER, primary_key=True)
+    addr = Column(TEXT)
+    name = Column(TEXT)
+    link = Column(TEXT)
 
     def todict(self):
         return to_dict(self, self.__class__)
