@@ -272,7 +272,11 @@ def render_addr(address=None, page=1, render_type='html', filter=0):
     addr=addr.todict()
     addr['tx_count']=AddrTx.query.filter(AddrTx.addr_id==int(addr["id"])).count();
     if addr['group_id']!='':
-        addr['tag_name'], addr['tag_url'] = AddrTag.query.with_entities(AddrTag.name,AddrTag.link).filter(AddrTag.id == addr['group_id']).first()
+        res = AddrTag.query.with_entities(AddrTag.name,AddrTag.link).filter(AddrTag.id == addr['group_id']).first()
+        if res !=None:
+            addr['tag_name'], addr['tag_url'] = res.name, res.link
+        else:
+            addr['tag_name'], addr['tag_url'] = '',''
 
     total_page = addr['tx_count']/page_size
     if addr['tx_count']%page_size:
@@ -352,6 +356,32 @@ def address_handle(address):
     filter= request.args.get('filter') or 0
 
     return render_addr(address, page, render_type, int(filter))
+
+def render_wallet(wallet_id=0, page=1, render_type='html'):
+    wallet = {}
+    page =int(page)
+    wallet['wallet_id'] = int(wallet_id)
+    addr_list = Addr.query.filter(Addr.group_id== wallet_id).offset((page-1)*page_size).limit(page_size)
+    if addr_list == None:
+       return render_404(render_type)
+
+    wallet['addresses'] = addr_list 
+    res = AddrTag.query.with_entities(AddrTag.name,AddrTag.link).filter(AddrTag.id == wallet_id).first()
+    if res !=None:
+        wallet['name'], wallet['link'] = res.name, res.link
+    else:
+       return render_404(render_type)
+ 
+    if render_type == 'json':
+        return jsonify(wallet)
+
+    return render_template("wallet.html", wallet=wallet,page=page)
+ 
+@app.route('/wallet/<wallet_id>', methods=['GET', 'POST'])
+def wallet_handle(wallet_id=0):
+    render_type=request.args.get('type') or 'html'
+    page= request.args.get('page') or 1
+    return render_wallet(wallet_id, page, render_type)
 
 @app.route('/search', methods=['GET', 'POST'])
 def search(sid=0):
