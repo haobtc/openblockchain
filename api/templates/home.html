@@ -22,7 +22,7 @@
         <td class="text-center">{{blk.blk_size}}</td>
         <td class="text-center">{{blk.tx_count}}</td>
         <td class="text-right">{{blk|reward}}</td>
-        <td class="text-right">{{blk.pool}}</td>
+        <td class="text-right"><a href="{{blk.pool_link}}">{{blk.pool}}</a></td>
     </tr>
      {% endfor %}
     </tbody>

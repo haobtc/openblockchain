@@ -34,45 +34,12 @@ access = AuthServiceProxy(config.RPC_URL)
 def getmininginfo():
   return json.loads(access.getmininginfo())
 
-pool_info=json.loads(open('pools.json','r').read())
-def save_pool():
-    for addr in pool_info['payout_addresses'].keys():
-      try:
-        p=POOL()
-        p.name=pool_info['payout_addresses'][addr]['name']
-        db_session.add(p)
-        db_session.flush()
-        db_session.refresh(p)
-      except:
-        pass
-
-    for tag in pool_info['coinbase_tags'].keys():
-      try:
-        p=POOL()
-        p.name=pool_info['coinbase_tags'][tag]['name']
-        db_session.add(p)
-        db_session.flush()
-        db_session.refresh(p)
-      except:
-        pass
- 
-def get_pool(blk_id):
-    coinbase_txout_id = db_session.execute('select a.id from txout a join tx b on(b.id=a.tx_id) join blk_tx c on (c.tx_id=b.id and c.idx=0) where c.blk_id=%d' % blk_id).first()[0];
-    if coinbase_txout_id==None:
-        return ''
-    coinbase_addr = VOUT.query.with_entities(VOUT.address).filter(VOUT.txout_id==coinbase_txout_id).first()
-    if coinbase_addr==None:
-        return ''
-    pool= pool_info['payout_addresses'].get(coinbase_addr[0])
-    if pool!=None:
-        return  pool['name']
+def get_pool(pool_id):
+    res = POOL.query.with_entities(POOL.name, POOL.link).filter(POOL.id==pool_id).first()
+    if res != None:
+        return res.name, res.link
     else:
-        coinbase_str = db_session.execute('select a.script_sig from txin a join tx b on(b.id=a.tx_id) join blk_tx c on (c.tx_id=b.id and c.idx=0) where c.blk_id=%d' % blk_id).first()[0];
-        for tag in pool_info['coinbase_tags'].keys():
-            if re.search(tag, coinbase_str)!=None:
-               return  pool_info['coinbase_tags'][tag]['name']
-        return 'Unknown'
-
+        return 'unknown',''
 
 @app.template_filter('datetime')
 def _jinja2_filter_datetime(date):
@@ -121,7 +88,7 @@ def lastest_data(render_type='html'):
     res = Block.query.order_by(Block.height.desc()).limit(10).all()
     for blk in res:
         blk=blk.todict() 
-        blk['pool'] = get_pool(blk['id'])
+        blk['pool'], blk['pool_link'] = get_pool(blk['pool_id'])
         blks.append(blk)
 
     txs=[]
