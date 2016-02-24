@@ -370,7 +370,7 @@ def render_wallet(wallet_id=0, page=1, render_type='html'):
     if res !=None:
         wallet['name'], wallet['link'] = res.name, res.link
     else:
-       return render_404(render_type)
+        wallet['name'], wallet['link'] = wallet_id, wallet_id
  
     if render_type == 'json':
         return jsonify(wallet)
