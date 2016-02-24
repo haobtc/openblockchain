@@ -3,7 +3,13 @@
 {% block content %}
 
 <div class="col-lg-12">
-    <h1> 地址: {{ addr.address }}  <a href=/wallet/{{ addr.group_id}}>{{ addr.tag_name }} </a> </h1>
+
+    <h1> 地址: {{ addr.address }} </h1>
+    {% if addr.tag_name %}
+    <h1> 钱包:  <a href=/wallet/{{ addr.group_id}}>{{ addr.tag_name }} </a> </h1>
+    {% else %}
+    <h1> 钱包:  <a href=/wallet/{{ addr.group_id}}>{{ addr.group_id}} </a> </h1>
+    {% endif %}
     <button class="btn btn-success">
         <span> 余额: {{ addr.balance|btc }} </span>
     </button>
