@@ -283,6 +283,7 @@ class POOL(SQLBase):
     __tablename__ = 'pool'
     id = Column(INTEGER, primary_key=True)
     name = Column(TEXT)
+    link = Column(TEXT)
 
     def todict(self):
         return to_dict(self, self.__class__)
