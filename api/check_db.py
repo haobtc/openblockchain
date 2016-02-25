@@ -283,26 +283,6 @@ def check_db(level=0):
     fail = False
     try:
         if level >= 0:
-            if not check_tx_count():
-               msg = msg + ("check tx count fail\n")
-               fail = True
-            else:
-               msg = msg + ("check tx count success\n")
-               
-            if not check_blk_count():
-               msg = msg + ("check blk count fail\n")
-               fail = True
-            else:
-               msg = msg + ("check blk count success\n")
-
-        if level >= 1:
-            if not check_addr_balance():
-               msg = msg + ("check address fail\n")
-               fail = True
-            else:
-               msg = msg + ("check address success\n")
-
-        if level >= 2:
             if not check_last_block():
                msg = msg + ("check last blk fail\n")
                fail = True
@@ -314,6 +294,29 @@ def check_db(level=0):
                fail = True
             else:
                msg = msg + ("check last tx success\n")
+
+        if level >= 1:
+            if not check_blk_count():
+               msg = msg + ("check blk count fail\n")
+               fail = True
+            else:
+               msg = msg + ("check blk count success\n")
+
+
+            if not check_addr_balance():
+               msg = msg + ("check address fail\n")
+               fail = True
+            else:
+               msg = msg + ("check address success\n")
+
+
+        if level >= 2:
+            if not check_tx_count():
+               msg = msg + ("check tx count fail\n")
+               fail = True
+            else:
+               msg = msg + ("check tx count success\n")
+
 
     except Exception, e:
         msg = msg + ("check db fail:\n %s" % e)
