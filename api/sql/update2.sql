@@ -181,3 +181,33 @@ CREATE TABLE system_cursor (
 
 
 ALTER TABLE system_cursor OWNER TO dbuser;
+
+
+DROP FUNCTION check_lost_from_height(blkheight integer);
+CREATE FUNCTION check_lost_from_height(blkheight integer) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE blkhash bytea;
+    DECLARE max_height integer;
+    DECLARE curheight integer;
+    DECLARE count integer;
+    BEGIN
+        max_height = (select max(height) from blk);
+        LOOP
+            IF blkheight <= max_height THEN
+                curheight=max_height;
+                count = (select count(1) from blk where height=curheight);
+                IF count = 0 THEN
+                    RAISE LOG 'lost height:%s', curheight;
+
+                    return curheight;
+                END IF;
+                
+                max_height = max_height - 1;
+            ELSE
+                return TRUE;
+            END IF;   
+        END LOOP;                                                                                                     
+    END;                                                                                                                  
+$$;
+
