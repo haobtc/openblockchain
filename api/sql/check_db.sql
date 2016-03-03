@@ -24,7 +24,7 @@ CREATE FUNCTION update_stat() RETURNS void
     DECLARE const_stat RECORD;
 BEGIN
     select * into const_stat from blk_stat order by id desc limit 1;
-    newHeight = (select (max(height)-10) from blk);
+    newHeight = (select (max(height)-6) from blk);
     txCount = (select coalesce(sum(tx_count),0) from blk where height<=newHeight and height>const_stat.max_height);
     maxBlkId = (select id from blk where height=newHeight);
     maxTxId = (select max(tx_id) from blk_tx a join blk b on (a.blk_id=b.id) where b.height<=newHeight);
