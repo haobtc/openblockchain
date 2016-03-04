@@ -7,6 +7,7 @@ import simplejson as json
 import binascii
 from database import *
 from sqlalchemy import and_
+from sqlalchemy.sql import  select
 from datetime import datetime
 from util     import calculate_target, calculate_difficulty, decode_check_address
 import re
@@ -151,7 +152,30 @@ def get_tx_addresses (tx=None):
     in_addresses = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txout_tx_hash).filter(VOUT.txin_tx_id==tx['id']).order_by(VOUT.in_idx).all()
     out_addresses = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txin_tx_hash).filter(VOUT.txout_tx_id==tx['id']).order_by(VOUT.out_idx).all()
     return in_addresses , out_addresses
+
+
+def get_tx_addresses_new (tx=None):
+
+    in_addresses = []
+    out_addresses = []
+
+    s1 = select([STXO.address, STXO.value, STXO.txin_tx_id, STXO.txout_tx_hash, STXO.in_idx]).where(STXO.txin_tx_id == int(tx['id']))
+    
+    s2 = select([VTXO.address, VTXO.value, VTXO.txin_tx_id, VTXO.txout_tx_hash, VTXO.in_idx]).where(VTXO.txin_tx_id == int(tx['id']))
+    
+    q = s1.union(s2).alias('in_addresses')
+    
+    in_addresses=db_session.query(q).order_by('in_idx').all()
+
+    s1 = select([STXO.address, STXO.value, STXO.txin_tx_id, STXO.txout_tx_hash, STXO.out_idx]).where(STXO.txout_tx_id == tx['id'])
+    
+    s2 = select([VTXO.address, VTXO.value, VTXO.txin_tx_id, VTXO.txout_tx_hash, VTXO.out_idx]).where(VTXO.txout_tx_id == tx['id'])
+    
+    q = s1.union(s2).alias('out_addresses')
+    
+    out_addresses=db_session.query(q).order_by('out_idx').all()
  
+    return in_addresses , out_addresses
 
 def render_tx(tx=None, render_type='html'):
     tx= tx.todict()
