@@ -274,6 +274,8 @@ CREATE TABLE stxo (
     time          bigint
 );
 
+CREATE INDEX stxo_txout_id_index on stxo USING btree (txout_id);
+
 #spent txout view
 CREATE or REPLACE VIEW v_stxo AS                                                                                                           
  SELECT g.address,                                                                                                            
@@ -311,7 +313,54 @@ BEGIN
     insert into stxo SELECT * from v_stxo where height<=(max_blk_height - 10) and height>max_saved_height;
 END;
 $$;
+
+create or replace view utxo as
+SELECT g.address,
+    g.id AS addr_id,
+    a.id AS txout_id,
+    c.id AS txin_id,
+    e.id AS txin_tx_id,
+    b.id AS txout_tx_id,
+    a.value,
+    a.tx_idx as out_idx,
+    c.tx_idx as in_idx,
+    e.hash AS txin_tx_hash,
+    b.hash AS txout_tx_hash
+    FROM txout a
+     LEFT JOIN tx b ON b.id = a.tx_id
+     LEFT JOIN txin c ON c.prev_out = b.hash AND c.prev_out_index = a.tx_idx
+     LEFT JOIN tx e ON e.id = c.tx_id
+     LEFT JOIN addr_txout f ON f.txout_id = a.id
+     LEFT JOIN addr g ON g.id = f.addr_id;
+  WHERE (c.id IS NULL); 
+
+#these vout not in stxo
+create or replace view vtxo as
+SELECT g.address,
+    g.id AS addr_id,
+    a.id AS txout_id,
+    c.id AS txin_id,
+    e.id AS txin_tx_id,
+    b.id AS txout_tx_id,
+    a.value,
+    a.tx_idx as out_idx,
+    c.tx_idx as in_idx,
+    e.hash AS txin_tx_hash,
+    b.hash AS txout_tx_hash,
+    blk.height,                                                                                                               
+    blk.time
+    FROM txout a
+     LEFT JOIN tx b ON b.id = a.tx_id
+     LEFT JOIN txin c ON c.prev_out = b.hash AND c.prev_out_index = a.tx_idx
+     LEFT JOIN tx e ON e.id = c.tx_id
+     LEFT JOIN addr_txout f ON f.txout_id = a.id
+     LEFT JOIN addr g ON g.id = f.addr_id
+     JOIN blk_tx ON ((blk_tx.tx_id = a.tx_id))                                                                               
+     JOIN blk ON ((blk.id = blk_tx.blk_id))                                                                                  
+     LEFT JOIN stxo h ON h.txout_id=a.id
+  WHERE (h.txout_id IS NULL); 
  
+
 CREATE TABLE addr_tag (                                                                                                           
     id serial primary key,
     addr text, 
@@ -332,3 +381,5 @@ $$;
 ALTER TABLE blk ADD COLUMN recv_time BIGINT;
 ALTER TABLE blk ADD COLUMN pool_id int;
 ALTER TABLE blk ADD COLUMN pool_bip int;
+
+
