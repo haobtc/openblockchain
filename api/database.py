@@ -257,6 +257,55 @@ class M_VOUT(SQLBase):
     def todict(self):
         return to_dict(self, self.__class__)
 
+#spent vout table
+class STXO(SQLBase):
+    __tablename__ = 'stxo'
+    address = Column(TEXT, primary_key=True)
+    addr_id = Column(INTEGER)
+    txout_id = Column(INTEGER)
+    txin_id = Column(INTEGER)
+    txin_tx_id = Column(INTEGER)
+    txout_tx_id = Column(INTEGER)
+    value = Column(BIGINT)
+    in_idx = Column(INTEGER)
+    out_idx = Column(INTEGER)
+    txin_tx_hash = Column(SBYTEA)
+    txout_tx_hash = Column(SBYTEA)
+    height   = Column(INTEGER) 
+    time = Column(BIGINT)
+    def __init__(self):
+        self.txin_tx_hash = binascii.hexlify(self.txin_tx_hash)
+        self.txout_tx_hash = binascii.hexlify(self.txout_tx_hash)
+
+    @property
+    def todict(self):
+        return to_dict(self, self.__class__)
+
+#vout not in stxo table
+class VTXO(SQLBase):
+    __tablename__ = 'vtxo'
+    address = Column(TEXT, primary_key=True)
+    addr_id = Column(INTEGER)
+    txout_id = Column(INTEGER)
+    txin_id = Column(INTEGER)
+    txin_tx_id = Column(INTEGER)
+    txout_tx_id = Column(INTEGER)
+    value = Column(BIGINT)
+    in_idx = Column(INTEGER)
+    out_idx = Column(INTEGER)
+    txin_tx_hash = Column(SBYTEA)
+    txout_tx_hash = Column(SBYTEA)
+    height   = Column(INTEGER) 
+    time = Column(BIGINT)
+    def __init__(self):
+        self.txin_tx_hash = binascii.hexlify(self.txin_tx_hash)
+        self.txout_tx_hash = binascii.hexlify(self.txout_tx_hash)
+
+    @property
+    def todict(self):
+        return to_dict(self, self.__class__)
+ 
+
 class UTXO(SQLBase):
     __tablename__ = 'utxo'
     address = Column(TEXT, primary_key=True)
