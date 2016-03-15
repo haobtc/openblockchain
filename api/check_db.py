@@ -213,6 +213,15 @@ def check_tx_count():
 def check_blk_count():
     return db_session.execute('select check_blk_count()').first()[0]
 
+#check tx count
+def check_all_tx_count():
+    return db_session.execute('select check_all_tx_count()').first()[0]
+
+#check blk count
+def check_all_blk_count():
+    return db_session.execute('select check_all_blk_count()').first()[0]
+
+
 #check addr balance
 def check_addr_balance():
     if db_session.execute('select id from addr where balance<0 limit 1').rowcount >0:
@@ -309,6 +318,11 @@ def check_db(level=0):
             else:
                msg = msg + ("check address success\n")
 
+            if not check_all_blk_count():
+               msg = msg + ("check all blk fail\n")
+               fail = True
+            else:
+               msg = msg + ("check all blk success\n")
 
         if level >= 2:
             if not check_tx_count():
@@ -316,6 +330,12 @@ def check_db(level=0):
                fail = True
             else:
                msg = msg + ("check tx count success\n")
+
+            if not check_all_tx_count():
+               msg = msg + ("check all tx count fail\n")
+               fail = True
+            else:
+               msg = msg + ("check all tx count success\n")
 
 
     except Exception, e:
