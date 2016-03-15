@@ -189,8 +189,15 @@ def render_tx(tx=None, render_type='html'):
     confirm = db_session.execute('select get_confirm(%d)' % tx['id']).first()[0];
     if confirm ==None:
         tx['confirm'] = 0
+        for vin in tx['vin']:
+            if int(vin['sequence']) < 4294967294:
+               continue
+            else:
+               break
+            tx['rbf'] = True
     else:
         tx['confirm'] = confirm
+
  
     if render_type == 'json':
         return jsonify(tx)

@@ -63,6 +63,9 @@
             <tbody>
             <tr> <th colspan="2"> 交易信息 </th> </tr>
             <tr> <td> 确认数 </td> <td> {{tx.confirm }}</td> </tr>
+            {% if tx.rbf %}
+            <tr> <td> 双花 </td> <td> 交易发送者标记该交易未确认之前可以被替换 </td> </tr>
+            {% endif  %}
             <tr> <td> 版本 </td> <td> {{tx.version}}</td> </tr>
             <tr> <td> locktime </td> <td> {{tx.lock_time}}</td> </tr>
             {% if tx.recv_time!='' %}
