@@ -258,8 +258,9 @@ ALTER TABLE m_vout OWNER TO dbuser;
 refresh materialized view CONCURRENTLY m_vout;
 
 #spent txout table
+drop table stxo;
 CREATE TABLE stxo (                                                                                                           
-    address text NOT NULL,                                                                                                    
+    address text,                                                                                                    
     addr_id integer,
     txout_id      integer, 
     txin_id       integer, 
@@ -300,6 +301,10 @@ CREATE or REPLACE VIEW v_stxo AS
      JOIN blk_tx ON ((blk_tx.tx_id = a.tx_id)))                                                                               
      JOIN blk ON ((blk.id = blk_tx.blk_id)))                                                                                  
   WHERE (c.id IS NOT NULL); 
+
+CREATE INDEX stxo_height_index ON stxo USING BTREE (height);
+CREATE INDEX stxo_txin_tx_id_index ON stxo USING BTREE (txin_tx_id);
+CREATE INDEX stxo_txout_tx_id_index ON stxo USING BTREE (txout_tx_id);
  
 #update spent txout table
 CREATE or REPLACE FUNCTION update_stxo() RETURNS void
@@ -334,6 +339,7 @@ SELECT g.address,
      LEFT JOIN addr g ON g.id = f.addr_id;
   WHERE (c.id IS NULL); 
 
+
 #these vout not in stxo
 create or replace view vtxo as
 SELECT g.address,
@@ -359,6 +365,7 @@ SELECT g.address,
      JOIN blk ON ((blk.id = blk_tx.blk_id))                                                                                  
      LEFT JOIN stxo h ON h.txout_id=a.id
   WHERE (h.txout_id IS NULL); 
+
  
 
 CREATE TABLE addr_tag (                                                                                                           
@@ -381,5 +388,6 @@ $$;
 ALTER TABLE blk ADD COLUMN recv_time BIGINT;
 ALTER TABLE blk ADD COLUMN pool_id int;
 ALTER TABLE blk ADD COLUMN pool_bip int;
+
 
 
