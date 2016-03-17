@@ -56,8 +56,14 @@
             {% else %}  
             <div class="tx_input">
                 {% for txin in tx.in_addresses%}
-                <a href="/addr/{{ txin[0]}} ">  {{txin[0]}}   </a>
-                <span class="pull-right"> <span>  {{txin[1]| btc}}  BTC </span></span> 
+                    {% if loop.index < 5 %}
+                        <a href="/addr/{{ txin[0]}} ">  {{txin[0]}}   </a>
+                        <span class="pull-right"> <span>  {{txin[1]| btc}}  BTC </span></span> 
+                    {%endif%}
+                    {% if loop.length == 5 %}
+                       <br>
+                       <a href="/tx/{{ tx.hash}} "> ... </a>
+                    {%endif%}
                 {% endfor %}
             </div>
             {% endif %}  
@@ -66,8 +72,14 @@
 
             <div class="tx_output">
                 {% for txout in tx.out_addresses%}
-                <a href="/addr/{{txout[0]}} ">  {{txout[0]}}   </a>
-                <span class="pull-right"> <span>  {{txout[1]| btc}}  BTC </span></span> 
+                    {% if loop.index < 5 %}
+                        <a href="/addr/{{txout[0]}} ">  {{txout[0]}}   </a>
+                        <span class="pull-right"> <span>  {{txout[1]| btc}}  BTC </span></span> 
+                    {%endif%}
+                    {% if loop.index == 5 %}
+                       <br>
+                       <a href="/tx/{{ tx.hash}} "> ... </a>
+                    {%endif%}
                 {% endfor %}
             </div>
 
