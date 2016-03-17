@@ -60,7 +60,7 @@
                         <a href="/addr/{{ txin[0]}} ">  {{txin[0]}}   </a>
                         <span class="pull-right"> <span>  {{txin[1]| btc}}  BTC </span></span> 
                     {%endif%}
-                    {% if loop.length == 5 %}
+                    {% if loop.index == 5 %}
                        <br>
                        <a href="/tx/{{ tx.hash}} "> ... </a>
                     {%endif%}

@@ -71,7 +71,7 @@
                         <a href="/addr/{{txin.address}} ">  {{txin.address}}   </a>
                         <span class="pull-right"> <span> <a href=/tx/{{txin.txout_tx_hash }} > {{txin.value| btc}}  BTC </a></span></span> 
                     {%endif%}
-                    {% if loop.length == 5 %}
+                    {% if loop.index == 5 %}
                        <br>
                        <a href="/tx/{{ tx.hash}} "> ... </a>
                     {%endif%}
