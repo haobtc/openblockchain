@@ -84,6 +84,31 @@ def render_404(render_type='html'):
     elif render_type=='json':
         return jsonify({"error":"Not found"}), 404
 
+ 
+def get_tx_addresses(tx=None):
+
+    in_addresses = []
+    out_addresses = []
+
+    s1 = select([STXO.address, STXO.value, STXO.txin_tx_id, STXO.txout_tx_hash, STXO.in_idx]).where(STXO.txin_tx_id == int(tx['id']))
+    
+    s2 = select([VTXO.address, VTXO.value, VTXO.txin_tx_id, VTXO.txout_tx_hash, VTXO.in_idx]).where(VTXO.txin_tx_id == int(tx['id']))
+    
+    q = s1.union(s2).alias('in_addresses')
+    
+    in_addresses=db_session.query(q).order_by('in_idx').all()
+
+    s1 = select([STXO.address, STXO.value, STXO.txin_tx_id, STXO.txout_tx_hash, STXO.out_idx]).where(STXO.txout_tx_id == tx['id'])
+    
+    s2 = select([VTXO.address, VTXO.value, VTXO.txin_tx_id, VTXO.txout_tx_hash, VTXO.out_idx]).where(VTXO.txout_tx_id == tx['id'])
+    
+    q = s1.union(s2).alias('out_addresses')
+    
+    out_addresses=db_session.query(q).order_by('out_idx').all()
+ 
+    return in_addresses , out_addresses
+ 
+
 def lastest_data(render_type='html'):
     blks=[]
     res = Block.query.order_by(Block.height.desc()).limit(10).all()
@@ -96,8 +121,7 @@ def lastest_data(render_type='html'):
     res = Tx.query.order_by(Tx.id.desc()).limit(5).all()
     for tx in res:
         tx= tx.todict()
-        tx['in_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txin_tx_id==tx['id']).order_by(VOUT.in_idx).all()
-        tx['out_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txout_tx_id==tx['id']).order_by(VOUT.out_idx).all()
+        tx['in_addresses'], tx['out_addresses'] = get_tx_addresses(tx)
         if tx['recv_time'] == 0:
             tx['recv_time'] = tx['time']
         txs.append(tx)
@@ -136,46 +160,6 @@ def checkdb():
 
     # level= request.args.get('level') or 3
     # return check_db(level)
-
-def get_tx_addresses (tx=None):
-    in_addresses = []
-    out_addresses = []
-    if tx['out_count']>100 or tx['in_count']>100:
-        try:
-            in_addresses = M_VOUT.query.with_entities(M_VOUT.address, M_VOUT.value, M_VOUT.txin_tx_id, M_VOUT.txout_tx_hash).filter(M_VOUT.txin_tx_id==tx['id']).order_by(M_VOUT.in_idx).all()
-            out_addresses = M_VOUT.query.with_entities(M_VOUT.address, M_VOUT.value, M_VOUT.txin_tx_id, M_VOUT.txin_tx_hash).filter(M_VOUT.txout_tx_id==tx['id']).order_by(M_VOUT.out_idx).all()
-            if in_addresses!=None and out_addresses!=None:
-                return in_addresses , out_addresses
-        except Exception, e:
-            pass
-
-    in_addresses = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txout_tx_hash).filter(VOUT.txin_tx_id==tx['id']).order_by(VOUT.in_idx).all()
-    out_addresses = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txin_tx_hash).filter(VOUT.txout_tx_id==tx['id']).order_by(VOUT.out_idx).all()
-    return in_addresses , out_addresses
-
-
-def get_tx_addresses_new (tx=None):
-
-    in_addresses = []
-    out_addresses = []
-
-    s1 = select([STXO.address, STXO.value, STXO.txin_tx_id, STXO.txout_tx_hash, STXO.in_idx]).where(STXO.txin_tx_id == int(tx['id']))
-    
-    s2 = select([VTXO.address, VTXO.value, VTXO.txin_tx_id, VTXO.txout_tx_hash, VTXO.in_idx]).where(VTXO.txin_tx_id == int(tx['id']))
-    
-    q = s1.union(s2).alias('in_addresses')
-    
-    in_addresses=db_session.query(q).order_by('in_idx').all()
-
-    s1 = select([STXO.address, STXO.value, STXO.txin_tx_id, STXO.txout_tx_hash, STXO.out_idx]).where(STXO.txout_tx_id == tx['id'])
-    
-    s2 = select([VTXO.address, VTXO.value, VTXO.txin_tx_id, VTXO.txout_tx_hash, VTXO.out_idx]).where(VTXO.txout_tx_id == tx['id'])
-    
-    q = s1.union(s2).alias('out_addresses')
-    
-    out_addresses=db_session.query(q).order_by('out_idx').all()
- 
-    return in_addresses , out_addresses
 
 def render_tx(tx=None, render_type='html'):
     tx= tx.todict()
@@ -274,6 +258,49 @@ def blk_handle(blkhash, blk=None):
 def confirm(txs): 
      return txs['confirm'] 
 
+def get_addresses_spent_tx(addr_id=None, page=1, page_size=10, desc=True):
+
+    in_addresses = []
+    out_addresses = []
+
+    s1 = select([STXO.txin_tx_id]).where(STXO.addr_id == addr_id)
+    s2 = select([VTXO.txin_tx_id]).where(VTXO.addr_id == addr_id)
+    
+    q = s1.union(s2).alias('spent_btc')
+    
+    spent_tx=db_session.query(q).order_by('txin_tx_id').desc().offset((page-1)*page_size).limit(page_size) 
+
+def get_addresses_unspent_tx(addr_id=None, page=1, page_size=10, desc=True):
+
+    s1 = select([UTXO.txout_tx_id]).where(UTXO.addr_id == addr_id)
+    
+    q = s1.alias('unspent_btc')
+    
+    return db_session.query(q).order_by('txout_tx_id').desc().offset((page-1)*page_size).limit(page_size) 
+
+def get_addresses_recv_tx(addr_id=None, page=1, page_size=10, desc=True):
+
+    s1 = select([VOUT.txout_tx_id]).where(VOUT.addr_id == addr_id)
+    
+    q = s1.alias('receive_btc')
+
+    if desc:
+        return db_session.query(q).order_by('txout_tx_id').desc().offset((page-1)*page_size).limit(page_size) 
+    else:
+        return db_session.query(q).order_by('txout_tx_id').asc().offset((page-1)*page_size).limit(page_size) 
+
+def get_addresses_unconfirmed_btc(addr_id=None, page=1, page_size=10, desc=True):
+ 
+    s1 = select([UTXO.txout_tx_id]).where(UTXO.addr_id == addr_id)
+    q = s1.alias('unconfirmed_btc')
+    return db_session.query(q).order_by('txout_tx_id').desc().offset((page-1)*page_size).limit(page_size) 
+
+def get_addresses_confirmed_btc(addr_id=None, page=1, page_size=10, desc=True):
+ 
+    s1 = select([UTXO.txout_tx_id]).where(UTXO.addr_id == addr_id)
+    q = s1.alias('confirmed_btc')
+    return db_session.query(q).order_by('txout_tx_id').desc().offset((page-1)*page_size).limit(page_size) 
+ 
 def render_addr(address=None, page=1, render_type='html', filter=0):
     addr = Addr.query.filter(Addr.address == address).first()
     if addr == None:
@@ -328,11 +355,11 @@ def render_addr(address=None, page=1, render_type='html', filter=0):
     if filter==0:   #all
         txidlist = AddrTx.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id==int(addr["id"])).order_by(AddrTx.tx_id.desc()).offset((page-1)*page_size).limit(page_size)
     elif filter==1: #spent
-        txidlist = VOUT.query.with_entities(VOUT.txin_tx_id).distinct(VOUT.txin_tx_id).filter(and_(VOUT.addr_id==int(addr["id"]),VOUT.txin_tx_id!=None)).order_by(VOUT.txin_tx_id.desc()).offset((page-1)*page_size).limit(page_size)
+        txidlist = get_addresses_spent_tx(int(addr['id']), page, page_size, desc=True)
     elif filter==2: #recv
-        txidlist = VOUT.query.with_entities(VOUT.txout_tx_id).distinct(VOUT.txout_tx_id).filter(VOUT.addr_id==int(addr["id"])).order_by(VOUT.txout_tx_id.desc()).offset((page-1)*page_size).limit(page_size)
+        txidlist = get_addresses_recv_tx(int(addr['id']), page, page_size, desc=True)
     elif filter==3: #utxo
-        txidlist = VOUT.query.with_entities(VOUT.txout_tx_id).distinct(VOUT.txout_tx_id).filter(and_(VOUT.addr_id==int(addr["id"]),VOUT.txin_tx_id==None)).order_by(VOUT.txout_tx_id.desc()).offset((page-1)*page_size).limit(page_size)
+        txidlist = get_addresses_unspent_tx(int(addr['id']), page, page_size, desc=True)
     elif filter==4: #unconfirm
         txidlist =  AddrTxUC.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id==int(addr["id"])).order_by(AddrTx.tx_id.desc()).offset((page-1)*page_size).limit(page_size)
     elif filter==5: #confirm
