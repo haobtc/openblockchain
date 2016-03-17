@@ -84,8 +84,23 @@ def render_404(render_type='html'):
     elif render_type=='json':
         return jsonify({"error":"Not found"}), 404
 
+def get_tx_addresses (tx=None):
+    in_addresses = []
+    out_addresses = []
+    if tx['out_count']>100 or tx['in_count']>100:
+        try:
+            in_addresses = M_VOUT.query.with_entities(M_VOUT.address, M_VOUT.value, M_VOUT.txin_tx_id, M_VOUT.txout_tx_hash).filter(M_VOUT.txin_tx_id==tx['id']).order_by(M_VOUT.in_idx).all()
+            out_addresses = M_VOUT.query.with_entities(M_VOUT.address, M_VOUT.value, M_VOUT.txin_tx_id, M_VOUT.txin_tx_hash).filter(M_VOUT.txout_tx_id==tx['id']).order_by(M_VOUT.out_idx).all()
+            if in_addresses!=None and out_addresses!=None:
+                return in_addresses , out_addresses
+        except Exception, e:
+            pass
+
+    in_addresses = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txout_tx_hash).filter(VOUT.txin_tx_id==tx['id']).order_by(VOUT.in_idx).all()
+    out_addresses = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txin_tx_hash).filter(VOUT.txout_tx_id==tx['id']).order_by(VOUT.out_idx).all()
+    return in_addresses , out_addresses
  
-def get_tx_addresses(tx=None):
+def get_tx_addresses_new(tx=None):
 
     in_addresses = []
     out_addresses = []
