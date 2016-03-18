@@ -46,7 +46,7 @@ def to_dict(inst, cls):
     return d
 
 class Block(SQLBase):
-    __tablename__ = 'blk'
+    __tablename__ = 'v_blk'
     id = Column(INTEGER, primary_key=True)
     hash = Column(SBYTEA)
     height = Column(INTEGER)
@@ -67,6 +67,10 @@ class Block(SQLBase):
     pool_id         = Column(INTEGER) 
     recv_time       = Column(BIGINT) 
     pool_bip        = Column(INTEGER) 
+    pool_name       = Column(TEXT) 
+    pool_link       = Column(TEXT) 
+    bip_name        = Column(TEXT) 
+    bip_link        = Column(TEXT) 
 
     def todict(self):
         return to_dict(self, self.__class__)
