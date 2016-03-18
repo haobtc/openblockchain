@@ -56,7 +56,7 @@ COPY	pool	(id,	name,	link)	FROM	stdin;
 97	nodeStratum	\N
 98	p2pool	\N
 99	ckpool	\N
-100	multipool	"https://www.multipool.us"
+100	multipool	https://www.multipool.us
 101	mybitcoin	http://mybtccoin.com
 102	btcdig	https://btcdig.com/stats/blocks
 103	wizkid057	\N
