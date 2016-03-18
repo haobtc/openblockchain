@@ -389,5 +389,6 @@ ALTER TABLE blk ADD COLUMN recv_time BIGINT;
 ALTER TABLE blk ADD COLUMN pool_id int;
 ALTER TABLE blk ADD COLUMN pool_bip int;
 
-
-
+#add block view to support pool info and bip info
+drop view v_blk;
+create view v_blk as select a.*,b.name as pool_name,b.link as pool_link,c.name as bip_name,c.link as bip_link from blk a left join pool b on (a.pool_id=b.id) left join bip c on (a.pool_bip=c.id) order by height desc;
