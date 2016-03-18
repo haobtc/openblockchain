@@ -11,7 +11,8 @@
         <th class="text-center">区块大小(byte)</th>
         <th class="text-center">交易数目</th>
         <th class="text-center">区块奖励<br/>(BTC)</th>
-        <th class="text-center">k矿池<br/></th>
+        <th class="text-center">支持的BIP<br/></th>
+        <th class="text-center">矿池<br/></th>
       </tr>
     </thead>
     <tbody id="liveblock">
@@ -22,7 +23,8 @@
         <td class="text-center">{{blk.blk_size}}</td>
         <td class="text-center">{{blk.tx_count}}</td>
         <td class="text-right">{{blk|reward}}</td>
-        <td class="text-right"><a href="{{blk.pool_link}}">{{blk.pool}}</a></td>
+        <td class="text-right"><a href="/bip/{{blk.bip_name}}">{{blk.bip_name}}</a></td>
+        <td class="text-right"><a href="/pool/{{blk.pool}}">{{blk.pool}}</a></td>
     </tr>
      {% endfor %}
     </tbody>
