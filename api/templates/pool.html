@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="col-lg-12"><h3>最新的BLOCK</h3>
+  <table class="table table-condensed table-striped">
+    <thead>
+      <tr>
+        <th class="text-center">高度</th>
+        <th class="text-center">时间</th>
+        <th class="text-center">区块大小(byte)</th>
+        <th class="text-center">交易数目</th>
+        <th class="text-center">区块奖励<br/>(BTC)</th>
+        <th class="text-center">支持的BIP<br/></th>
+        <th class="text-center">矿池<br/></th>
+      </tr>
+    </thead>
+    <tbody id="liveblock">
+     {% for blk in blks %}
+     <tr>      
+        <td class="text-center"><a href="/blk/{{blk.hash}}">{{blk.height}}</a></td>
+        <td class="text-center"><abbr class="timeago" rel="tooltip" data-animation="false" >{{blk.time|datetime}}</abbr></td>
+        <td class="text-center">{{blk.blk_size}}</td>
+        <td class="text-center">{{blk.tx_count}}</td>
+        <td class="text-right">{{blk|reward}}</td>
+        <td class="text-right"><a href="/bip/{{blk.bip_name}}">{{blk.bip_name}}</a></td>
+        <td class="text-right"><a href="/pool/{{blk.pool_name}}">{{blk.pool_name}}</a></td>
+    </tr>
+     {% endfor %}
+    </tbody>
+  </table> 
+</div>           
+{% endblock %} 
