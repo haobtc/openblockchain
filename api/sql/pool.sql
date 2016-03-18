@@ -69,4 +69,8 @@ COPY	pool	(id,	name,	link)	FROM	stdin;
 110	trickys	http://pool.wemine.uk/
 111	eSited	http://stratum1.esited.net:8080/
 112	btcmp	http://www.btcmp.com/
+113	bcmonster	http://www.bcmonster.com/
+114	manhattanmine	http://ham.manhattanmine.com
+115	eobot	http://eobot.com
+116	1hash	https://www.1hash.com/
 \.
