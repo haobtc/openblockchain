@@ -193,9 +193,30 @@ def checkdb():
     # level= request.args.get('level') or 3
     # return check_db(level)
 
+def render_bip(bip_name=None, render_type='html'):
+    blks=[]
+    res = Block.query.filter(Block.bip_name==bip_name).order_by(Block.height.desc()).limit(100).all()
+    for blk in res:
+        blk=blk.todict() 
+        blks.append(blk)
+   
+    last_data={}
+    last_data['blks'] = blks
+    
+    if render_type == 'json':
+        return jsonify(last_data)
+
+    return render_template('bip.html', blks=blks)
+ 
+@app.route('/bip/<bip_name>', methods=['GET', 'POST'])
+def bip_handle(bip_name):
+    render_type=request.args.get('type') or 'html'
+    return render_bip(bip_name, render_type)
+ 
+
 def render_pool(pool_name=None, render_type='html'):
     blks=[]
-    res = Block.query.filter(Block.pool_name==pool_name).order_by(Block.height.desc()).limit(10).all()
+    res = Block.query.filter(Block.pool_name==pool_name).order_by(Block.height.desc()).limit(100).all()
     for blk in res:
         blk=blk.todict() 
         blks.append(blk)
