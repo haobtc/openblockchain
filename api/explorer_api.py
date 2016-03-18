@@ -61,7 +61,25 @@ def _jinja2_filter_reward(blk):
 def _jinja2_filter_btc(value):
     if value=='':
        return 0
-    return float(value)/100000000
+
+    if isinstance(value, basestring):
+        value = decimal.Decimal(value)
+
+    hold_len = 8
+    fmt = '%i.%08i'
+    k = 100000000
+
+    sign = ''
+    if value < 0:
+        value = -value
+        sign = '-'
+
+    upv = value
+    r = fmt % (upv // k, upv % k)
+    r = sign + r.rstrip('0').rstrip('.')
+    if r == '-0':
+        r = '0'
+    return r
  
 @app.template_filter('target')
 def _jinja2_filter_target(value):
