@@ -8,3 +8,5 @@ COPY	bip (id,	name,	link)	FROM	stdin;
 6	BIP_248	\N
 7	BIP_CLASSIC	\N
 \.
+
+ALTER TABLE bip OWNER TO dbuser;

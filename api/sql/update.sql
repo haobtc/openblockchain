@@ -251,7 +251,7 @@ $$;
 ALTER TABLE blk ADD COLUMN recv_time BIGINT;
 
 
-CREATE MATERIALIZED VIEW m_vout AS SELECT g.address, g.id AS addr_id, a.id AS txout_id, c.id AS txin_id, e.id AS txin_tx_id, b.id AS txout_tx_id, a.value, a.tx_idx AS out_idx, c.tx_idx AS in_idx, e.hash AS txin_tx_hash, b.hash AS txout_tx_hash FROM (((((txout a LEFT JOIN tx b ON ((b.id = a.tx_id and (b.in_count>100 or b.out_count>100)))) LEFT JOIN txin c ON (((c.prev_out = b.hash) AND (c.prev_out_index = a.tx_idx)))) LEFT JOIN tx e ON ((e.id = c.tx_id))) LEFT JOIN addr_txout f ON ((f.txout_id = a.id))) LEFT JOIN addr g ON ((g.id = f.addr_id)));
+CREATE VIEW m_vout AS SELECT g.address, g.id AS addr_id, a.id AS txout_id, c.id AS txin_id, e.id AS txin_tx_id, b.id AS txout_tx_id, a.value, a.tx_idx AS out_idx, c.tx_idx AS in_idx, e.hash AS txin_tx_hash, b.hash AS txout_tx_hash FROM (((((txout a LEFT JOIN tx b ON ((b.id = a.tx_id and (b.in_count>100 or b.out_count>100)))) LEFT JOIN txin c ON (((c.prev_out = b.hash) AND (c.prev_out_index = a.tx_idx)))) LEFT JOIN tx e ON ((e.id = c.tx_id))) LEFT JOIN addr_txout f ON ((f.txout_id = a.id))) LEFT JOIN addr g ON ((g.id = f.addr_id)));
 ALTER TABLE m_vout OWNER TO dbuser;
 
 #cron run #must be 9.4
@@ -389,9 +389,12 @@ ALTER TABLE blk ADD COLUMN recv_time BIGINT;
 ALTER TABLE blk ADD COLUMN pool_id int;
 ALTER TABLE blk ADD COLUMN pool_bip int;
 
+ALTER TABLE addr ADD group_id integer;
+
 #add block view to support pool info and bip info
 drop view v_blk;
 create view v_blk as select a.*,b.name as pool_name,b.link as pool_link,c.name as bip_name,c.link as bip_link from blk a left join pool b on (a.pool_id=b.id) left join bip c on (a.pool_bip=c.id) order by height desc;
+ALTER TABLE v_blk OWNER TO dbuser;
 
 
 CREATE INDEX m_vout_txout_tx_id_index on m_vout USING btree (txout_tx_id);
