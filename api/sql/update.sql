@@ -392,3 +392,7 @@ ALTER TABLE blk ADD COLUMN pool_bip int;
 #add block view to support pool info and bip info
 drop view v_blk;
 create view v_blk as select a.*,b.name as pool_name,b.link as pool_link,c.name as bip_name,c.link as bip_link from blk a left join pool b on (a.pool_id=b.id) left join bip c on (a.pool_bip=c.id) order by height desc;
+
+
+CREATE INDEX m_vout_txout_tx_id_index on m_vout USING btree (txout_tx_id);
+CREATE INDEX m_vout_txin_tx_id_index on m_vout USING btree (txin_tx_id);
