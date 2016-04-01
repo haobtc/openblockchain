@@ -99,6 +99,7 @@ BEGIN
     return true;
 END;
 $$;
+ALTER FUNCTION public.check_all_tx_count() OWNER TO dbuser;
 
 
 DROP FUNCTION check_all_blk_count();
