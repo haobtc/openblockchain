@@ -396,3 +396,58 @@ create view v_blk as select a.*,b.name as pool_name,b.link as pool_link,c.name a
 
 CREATE INDEX m_vout_txout_tx_id_index on m_vout USING btree (txout_tx_id);
 CREATE INDEX m_vout_txin_tx_id_index on m_vout USING btree (txin_tx_id);
+
+CREATE or REPLACE VIEW txo AS                                                                                                           
+ SELECT g.address,                                                                                                            
+    g.id AS addr_id,                                                                                                          
+    a.id AS txout_id,                                                                                                         
+    c.id AS txin_id,                                                                                                          
+    e.id AS txin_tx_id,                                                                                                       
+    b.id AS txout_tx_id,                                                                                                      
+    a.value,                                                                                                                  
+    a.tx_idx AS out_idx,
+    c.tx_idx AS in_idx,
+    b.hash AS txout_tx_hash,
+    e.hash AS txin_tx_hash,
+    blk.height,                                                                                                               
+    blk.time,
+    e.tx_size,
+    c.script_sig
+   FROM (((((((txout a                                                                                                        
+     LEFT JOIN tx b ON ((b.id = a.tx_id)))                                                                                    
+     LEFT JOIN txin c ON (((c.prev_out = b.hash) AND (c.prev_out_index = a.tx_idx))))                                         
+     LEFT JOIN tx e ON ((e.id = c.tx_id)))                                                                                    
+     LEFT JOIN addr_txout f ON ((f.txout_id = a.id)))                                                                         
+     LEFT JOIN addr g ON ((g.id = f.addr_id)))                                                                                
+     JOIN blk_tx ON ((blk_tx.tx_id = a.tx_id)))                                                                               
+     JOIN blk ON ((blk.id = blk_tx.blk_id)))                                                                                  
+  WHERE (c.id IS NOT NULL); 
+ 
+
+CREATE or REPLACE FUNCTION delete_some_utx() RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE groupId integer;
+    DECLARE o RECORD;
+BEGIN
+    groupId = (select group_id from addr_group limit 1);
+    groupCount=(select count(distinct group_id) from addr where id in (select count(distinct addr_id) from addr_group where group_id=groupId) and group_id is not NULL;
+    if groupCount == 0 then 
+       update addr set balance=(balance - o.value), spent_value=(spent_value+o.value) where id=o.addr_id;
+       delete from addr_group where group_id=groupId;
+       return;
+    end if;
+    if groupCount == 1 then 
+       groupId=(select distinct group_id from addr where id in (select count(distinct addr_id) from addr_group where group_id=groupId) and group_id is not NULL);
+       update addr set balance=(balance - o.value), spent_value=(spent_value+o.value) where id=groupId;
+       delete from addr_group where group_id=groupId;
+       return;
+    end if;
+
+    for o in select distinct group_id from addr where id in (select count(distinct addr_id) from addr_group where group_id=groupId) and group_id is not NULL LOOP
+        tagId=(select count(1)id from addr_tag where id=o.group_id);   
+    END LOOP;
+
+END;
+$$;
+ 
