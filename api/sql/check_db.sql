@@ -9,6 +9,8 @@ CREATE TABLE blk_stat (
     sum_tx_size bigint
     ); 
 
+ALTER TABLE blk_stat OWNER TO dbuser;
+
 insert into blk_stat (max_height, total_tx_count, max_blk_id, max_tx_id, sum_blk_size, sum_tx_size) values(0,0,0,0,0,0);
 
 DROP FUNCTION update_stat();
@@ -97,6 +99,7 @@ BEGIN
     return true;
 END;
 $$;
+ALTER FUNCTION public.check_all_tx_count() OWNER TO dbuser;
 
 
 DROP FUNCTION check_all_blk_count();

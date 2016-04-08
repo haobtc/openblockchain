@@ -1,3 +1,4 @@
+drop table pool;
 CREATE TABLE pool (id serial, name text NOT NULL, link text);
 COPY	pool	(id,	name,	link)	FROM	stdin;
 1	MegaBigPower	\N
@@ -75,3 +76,6 @@ COPY	pool	(id,	name,	link)	FROM	stdin;
 116	1hash	https://www.1hash.com/
 117	unomp	http://199.115.116.7:8925/
 \.
+
+
+ALTER TABLE pool OWNER TO dbuser;
