@@ -451,3 +451,7 @@ BEGIN
 END;
 $$;
  
+
+CREATE TABLE addr_group_stat (tx_id integer NOT NULL, group_id integer NOT NULL);
+
+ 
