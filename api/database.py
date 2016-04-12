@@ -141,7 +141,7 @@ class TxOut(SQLBase):
         return to_dict(self, self.__class__)
 
 class Addr(SQLBase):
-    __tablename__ = 'addr'
+    __tablename__ = 'vaddr'
     id = Column(INTEGER, primary_key=True)
     address = Column(TEXT, primary_key=True)
     hash160 = Column(TEXT)
@@ -151,6 +151,8 @@ class Addr(SQLBase):
     spent_value = Column(BIGINT) 
     spent_count = Column(INTEGER)  
     group_id    = Column(INTEGER)  
+    wallet_name    = Column(text)  
+    wallet_link   = Column(text)  
 
     def todict(self):
         return to_dict(self, self.__class__)
