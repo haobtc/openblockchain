@@ -36,6 +36,7 @@ CREATE INDEX group_addr_send_index ON addr_send USING btree (group_id);
 CREATE INDEX addr_addr_group_tmp_index ON addr_group_tmp USING btree (addr_id);
 CREATE INDEX tx_addr_group_tmp_index ON addr_group_tmp USING btree (tx_id);
 
+CREATE UNIQUE INDEX addr_group_index ON addr_group(addr_id, tx_id);
 
 
     insert into addr_group (select addr_id, tx_id from addr_send where group_id is NULL limit 1);
