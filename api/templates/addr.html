@@ -6,7 +6,7 @@
 
     <h1> 地址: {{ addr.address }} </h1>
     {% if addr.tag_name %}
-    <h1> 钱包:  <a href=/wallet/{{ addr.group_id}}>{{ addr.tag_name }} </a> </h1>
+    <h1> 钱包:  <a href=/wallet/{{ addr.group_id}}>{{ addr.wallet_name }} </a> </h1>
     {% else %}
     <h1> 钱包:  <a href=/wallet/{{ addr.group_id}}> 未知钱包 </a> </h1>
     {% endif %}
