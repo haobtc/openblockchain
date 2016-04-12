@@ -394,6 +394,9 @@ def render_addr(address=None, page=1, render_type='html', filter=0):
             addr['recv_value'] = 0
             addr['spent_value'] = 0
             addr['balance'] = 0
+            addr['group_id']    = 0
+            addr['wallet_name'] = ''
+            addr['wallet_link'] = ''
 
         if render_type == 'json':
             return jsonify(addr)
@@ -403,13 +406,6 @@ def render_addr(address=None, page=1, render_type='html', filter=0):
 
     addr=addr.todict()
     addr['tx_count']=AddrTx.query.filter(AddrTx.addr_id==int(addr["id"])).count();
-    if addr['group_id']!='':
-        res = AddrTag.query.with_entities(AddrTag.name,AddrTag.link).filter(AddrTag.id == addr['group_id']).first()
-        if res !=None:
-            addr['tag_name'], addr['tag_url'] = res.name, res.link
-        else:
-            addr['tag_name'], addr['tag_url'] = '',''
-
     total_page = addr['tx_count']/page_size
     if addr['tx_count']%page_size:
         total_page+=1
