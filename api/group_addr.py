@@ -58,9 +58,24 @@ def group_addr():
       
         groupid = groupid + 1
 
-def group_new_addr(max_group_id):
+def new_addr_init(max_tx_id=None):
+    max_tx_id = session.execute('select max(tx_id) from addr_group').first()[0]
+    session.execute('alter table addr_group rename to addr_group_pre')
+    #session.execute('delete from addr_group')
+    session.execute('delete from addr_group_tmp')
+    session.execute('delete from addr_send')
+    session.execute('drop MATERIALIZED view group_vout')
+    session.commit()
+    max_blk_height = session.execute('select max(height)-10 from blk').first()[0]
+    session.execute('CREATE MATERIALIZED VIEW group_vout as SELECT g.id as addr_id, e.id AS txin_tx_id FROM txout a LEFT JOIN tx b ON b.id = a.tx_id left join txin c on (c.prev_out=b.hash and c.prev_out_index=a.tx_idx) left JOIN tx e ON e.id = c.tx_id left JOIN addr_txout f on f.txout_id=a.id left JOIN addr g on g.id=f.addr_id where e.id is not NULL and g.id is not NULL and b.id>%d' % maxTxId)
+    session.commit()
+    session.execute('insert into addr_send select distinct addr_id,txin_tx_id as tx_id from group_vout')
+    session.commit()
+
+def group_new_addr(max_group_id=None):
     if max_group_id == None:
-        max_group_id = session.execute('select max(group_id) from addr').first()[0]
+        #max_group_id = session.execute('select max(group_id) from addr').first()[0]
+        max_group_id = session.execute('select max(group_id) from addr_group').first()[0]
     groupid = max_group_id + 1;
     while True:
         ida=1
@@ -143,7 +158,6 @@ def group_tx(newsession, txId, newGroupId):
        if len(groupIds) == 0: #new group
             newsession.execute('update addr set group_id=%d where id in (%s)' % (newGroupId, addrIdsStr))
        elif len(groupIds) ==1: #only one old group
-            newsession.execute('update addr set group_id=%d where id in (%s)' % (newGroupId, addrIdsStr))
             oldGroupId = groupIds[0][0]
             newsession.execute('update addr set group_id=%d where id in (%s)' % (oldGroupId, addrIdsStr))
        else: #len(groupIds) >1 need merge old group
@@ -161,6 +175,40 @@ def group_tx(newsession, txId, newGroupId):
                else: #more than two group by taged need mannual merge
                    print "tagcount %d,  new groupId %d\n" % (tagIdCount,newGroupId)
 
+#use t_addr_group  table to save midstate to avoid multi update confilt
+#CREATE TABLE t_addr_group (addr_id integer NOT NULL, group_id integer not NULL);
+def group_tx_new(newsession, txId, newGroupId):
+       noGroupAddrIds = newsession.execute('select id from addr where id in (select addr_id from vout where txin_tx_id=%d) and group_id is NULL' % txId).fetchall()
+       if len(noGroupAddrIds) == 0: #all addr have group_id or no addr in this tx
+           return
+
+       addrIds = newsession.execute('select addr_id from vout where txin_tx_id=%d' % txId).fetchall()
+       if len(addrIds) == 0: #should not happen,have checed
+            return
+
+       addrIdsStr = ', '.join(str(addr_id[0]) for addr_id in addrIds)
+       groupIds = newsession.execute('select distinct group_id from addr where id in (%s) and group_id is not NULL' % addrIdsStr).fetchall()
+       if len(groupIds) == 0: #new group
+            newsession.execute('insert into t_addr_group (select id,%d from addr where id in (%s))' % (newGroupId, addrIdsStr))
+       elif len(groupIds) ==1: #only one old group
+            oldGroupId = groupIds[0][0]
+            newsession.execute('insert into t_addr_group (select id,%d from addr where id in (%s))' % (oldGroupId, addrIdsStr))
+       else: #len(groupIds) >1 need merge old group
+               groupIdsStr = ', '.join(str(groupId[0]) for groupId in groupIds)
+               tagIdCount=newsession.execute('select count(distinct id) from addr_tag where id in (%s)' % groupIdsStr).first()[0]
+               if tagIdCount==0: # no tag group
+                   oldGroupId = groupIds[0][0]
+
+                   #merge old group addr
+                   newsession.execute('insert into t_addr_group (select id,%d from addr where group_id  in (%s))' % (oldGroupId, groupIdsStr))
+                   newsession.execute('insert into t_addr_group (select id,%d from addr where id in (%s) and group_id is NULL)' % (oldGroupId, addrIdsStr))
+               elif tagIdCount==1: #only one group id by taged
+                   tagGroupId=newsession.execute('select distinct id from addr_tag where id in (%s)' % groupIdsStr).first()[0]
+                   newsession.execute('insert into t_addr_group (select id,%d from addr where id in (%s) and group_id is NULL)' % (tagGroupId, addrIdsStr))
+               else: #more than two group by taged need mannual merge
+                   print "tagcount %d,  new groupId %d\n" % (tagIdCount,newGroupId)
+
+
 def group_tx_process(newGroupId, minTxId, offset, limit):
     print 'pid is %d, group id is %d, start TxId is %d ' % (os.getpid(), newGroupId, minTxId + offset)
     newengine = create_engine(config.SQLALCHEMY_DATABASE_URI, echo=False)
@@ -171,7 +219,7 @@ def group_tx_process(newGroupId, minTxId, offset, limit):
        print "finish"
        return
     for txId in txIds:
-        group_tx(newsession,txId[0], newGroupId )
+        group_tx_new(newsession,txId[0], newGroupId )
         newGroupId = newGroupId+1 
     newsession.execute('insert into addr_group_stat (tx_id, group_id) values (%d,%s)' % (txId[0], newGroupId))
     newsession.commit()
@@ -193,6 +241,7 @@ def group_txs(processCount, minTxId=0):
     newGroupId = maxGroupId + 1;
     limit=100
     i=0
+
     pool = mul.Pool(processCount, init_worker)
     activieProcessCount=0
     results = []
@@ -237,6 +286,7 @@ def group_txs_single_thread(minTxId):
        session.commit()
        i = i+1
 
+
 #39647280
 if __name__ == "__main__" :                                                                                               
                                                                                                                           
@@ -249,5 +299,8 @@ if __name__ == "__main__" :
     elif sys.argv[1]=='merge':                                                                                               
         merge_addr_group()
     elif sys.argv[1]=='sync':                                                                                               
-        print "cpu count is %d " % mul.cpu_count()
-        group_txs(processCount=mul.cpu_count())
+        if len(sys.argv)<3:                                                                                                   
+           exit(0)                                                                                                            
+        procCount = int(sys.argv[2])
+        print "cpu count is %d, process count is %d" % (mul.cpu_count(), procCount) 
+        group_txs(processCount=procCount)
