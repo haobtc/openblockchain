@@ -1,6 +1,5 @@
 ALTER TABLE blk ADD COLUMN orphan bool default false;
 ALTER TABLE tx ADD COLUMN removed bool; 
-ALTER TABLE tx ADD COLUMN confirmed bool; 
 CREATE TABLE rtx ( id integer NOT NULL UNIQUE);
 drop TABLE rtx;
 
@@ -16,11 +15,6 @@ drop view vout;
 create view vout as SELECT g.address, g.id AS addr_id, a.id AS txout_id, c.id AS txin_id, e.id AS txin_tx_id, b.id AS txout_tx_id, a.value, a.tx_idx AS out_idx, c.tx_idx AS in_idx, e.hash AS txin_tx_hash, b.hash AS txout_tx_hash FROM txout a LEFT JOIN tx b ON (b.id = a.tx_id and b.removed!=true) LEFT JOIN txin c ON c.prev_out = b.hash AND c.prev_out_index = a.tx_idx LEFT JOIN tx e ON (e.id = c.tx_id and e.removed!=true) LEFT JOIN addr_txout f ON f.txout_id = a.id LEFT JOIN addr g ON g.id = f.addr_id;
 create view balance as SELECT vout.addr_id, sum(vout.value) AS value FROM vout WHERE vout.txin_id IS NULL GROUP BY vout.addr_id;
 
-drop VIEW addr_tx_unconfirmed;
-CREATE VIEW addr_tx_unconfirmed AS SELECT a.tx_id,a.addr_id FROM (addr_tx a JOIN tx b ON ((b.id = a.tx_id and b.confirmed=false and removed!=true)));
-
-drop VIEW vin;
-CREATE VIEW vin AS SELECT g.address, g.group_id AS addr_group_id, a.id AS txout_id, c.id AS txin_id, e.id AS txin_tx_id, b.id AS txout_tx_id, a.value, a.tx_idx AS out_idx, c.tx_idx AS in_idx, e.hash AS txin_tx_hash, b.hash AS txout_tx_hash, b.tx_size, b.fee FROM ((((((txout a LEFT JOIN tx b ON ((b.id = a.tx_id and b.confirmed=false and b.removed!=true))) LEFT JOIN txin c ON (((c.prev_out = b.hash) AND (c.prev_out_index = a.tx_idx)))) LEFT JOIN tx e ON ((e.id = c.tx_id and e.confirmed=false and e.removed!=true))) LEFT JOIN addr_txout f ON ((f.txout_id = a.id))) LEFT JOIN addr g ON ((g.id = f.addr_id)))
 
 drop  FUNCTION add_blk_statics(blkid integer);
 CREATE FUNCTION add_blk_statics(blkid integer) RETURNS void
@@ -29,7 +23,8 @@ CREATE FUNCTION add_blk_statics(blkid integer) RETURNS void
 BEGIN
     update blk set total_in_count=t.a, total_out_count=t.b, total_in_value=t.c, total_out_value=t.d, fees=t.e from (select sum(in_count) as a,sum(out_count) as b, sum(in_value) as c, sum(out_value) as d, sum(fee) as e from tx where id in (select tx_id from blk_tx where blk_id=$1)) as t where blk.id=$1;
 
-    update tx set confirmed=true, removed=false where id in (select tx_id from blk_tx where blk_id=$1);
+    delete from utx where id in (select tx_id from blk_tx where blk_id=$1);
+    update tx set removed=false where id in (select tx_id from blk_tx where blk_id=$1);
 END;
 $_$;
 
@@ -59,6 +54,7 @@ BEGIN
          perform delete_tx(ntx.txin_tx_id);
      END LOOP;
      perform  rollback_addr_balance($1);
+     delete from utx where id=$1;
      update tx set removed=true where id=$1;
 END;
 $_$;
@@ -72,7 +68,7 @@ CREATE FUNCTION delete_blk(blkhash bytea) RETURNS void
     BEGIN
     blkid=(select id from blk where hash=blkhash);
     txid=(select tx_id from blk_tx where blk_id=blkid and idx=0);
-    update tx set confirmed=false where id in (select tx_id from blk_tx where blk_id=blkid);
+    insert into utx select tx_id from blk_tx where blk_id=blkid and tx_id!=txid;
     update blk set orphan=true where blk_id=blkid; 
     perform delete_tx(txid);
     END
@@ -154,18 +150,3 @@ BEGIN
     insert into stxo SELECT * from v_stxo where height<=(max_blk_height - 10) and height>max_saved_height;
 END;
 $$;
-
-drop FUNCTION delete_some_utx();
-CREATE FUNCTION delete_some_utx() RETURNS void                                                                                
-    LANGUAGE plpgsql                                                                                                          
-    AS $$                                                                                                                     
-    DECLARE txid integer;                                                                                                     
-BEGIN                                                                                                                         
-     FOR txid IN select id from tx where confirmed=false and removed!=true order by id desc limit 100 LOOP                                                           
-         perform delete_tx(txid);                                                                                             
-     END LOOP;                                                                                                                
-END;                                                                                                                          
-$$;
-
-drop FUNCTION tru_utx();
-drop table utx;
