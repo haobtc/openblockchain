@@ -305,6 +305,7 @@ CREATE or REPLACE VIEW v_stxo AS
 CREATE INDEX stxo_height_index ON stxo USING BTREE (height);
 CREATE INDEX stxo_txin_tx_id_index ON stxo USING BTREE (txin_tx_id);
 CREATE INDEX stxo_txout_tx_id_index ON stxo USING BTREE (txout_tx_id);
+CREATE INDEX stxo_txout_id_index ON stxo USING BTREE (txout_id);
  
 #update spent txout table
 CREATE or REPLACE FUNCTION update_stxo() RETURNS void
@@ -459,5 +460,6 @@ $$;
  
 
 CREATE TABLE addr_group_stat (tx_id integer NOT NULL, group_id integer NOT NULL);
+create view vaddr as select a.*, b.name as tag_name, b.link as tag_link from addr a left join addr_tag b on (a.group_id=b.id);
 
  
