@@ -1,12 +1,19 @@
 ALTER TABLE blk ADD COLUMN orphan bool default false;
-
+ALTER TABLE tx ADD COLUMN removed bool; 
 CREATE TABLE rtx ( id integer NOT NULL UNIQUE);
+drop TABLE rtx;
 
 drop view addr_tx_confirmed;
 create view addr_tx_confirmed as SELECT a.tx_id, a.addr_id FROM addr_tx a JOIN blk_tx b ON b.tx_id = a.tx_id left join blk c on (c.id=b.blk_id and c.orphan!=true);
 
 drop view utxo;
-create view utxo SELECT g.address, g.id AS addr_id, a.id AS txout_id, c.id AS txin_id, e.id AS txin_tx_id, b.id AS txout_tx_id, b.hash AS txout_txhash, a.value, a.tx_idx, blk.height, blk.time, a.pk_script FROM txout a LEFT JOIN tx b ON b.id = a.tx_id LEFT JOIN txin c ON c.prev_out = b.hash AND c.prev_out_index = a.tx_idx LEFT JOIN tx e ON e.id = c.tx_id LEFT JOIN addr_txout f ON f.txout_id = a.id LEFT JOIN addr g ON g.id = f.addr_id JOIN blk_tx ON blk_tx.tx_id = a.tx_id JOIN blk ON blk.id = blk_tx.blk_id and blk.orphan!=true WHERE c.id IS NULL;
+create view utxo as SELECT g.address, g.id AS addr_id, a.id AS txout_id, c.id AS txin_id, e.id AS txin_tx_id, b.id AS txout_tx_id, b.hash AS txout_txhash, a.value, a.tx_idx, blk.height, blk.time, a.pk_script FROM txout a LEFT JOIN tx b ON b.id = a.tx_id LEFT JOIN txin c ON c.prev_out = b.hash AND c.prev_out_index = a.tx_idx LEFT JOIN tx e ON e.id = c.tx_id LEFT JOIN addr_txout f ON f.txout_id = a.id LEFT JOIN addr g ON g.id = f.addr_id JOIN blk_tx ON blk_tx.tx_id = a.tx_id JOIN blk ON blk.id = blk_tx.blk_id and blk.orphan!=true WHERE c.id IS NULL;
+
+
+drop view balance;
+drop view vout;
+create view vout as SELECT g.address, g.id AS addr_id, a.id AS txout_id, c.id AS txin_id, e.id AS txin_tx_id, b.id AS txout_tx_id, a.value, a.tx_idx AS out_idx, c.tx_idx AS in_idx, e.hash AS txin_tx_hash, b.hash AS txout_tx_hash FROM txout a LEFT JOIN tx b ON (b.id = a.tx_id and b.removed!=true) LEFT JOIN txin c ON c.prev_out = b.hash AND c.prev_out_index = a.tx_idx LEFT JOIN tx e ON (e.id = c.tx_id and e.removed!=true) LEFT JOIN addr_txout f ON f.txout_id = a.id LEFT JOIN addr g ON g.id = f.addr_id;
+create view balance as SELECT vout.addr_id, sum(vout.value) AS value FROM vout WHERE vout.txin_id IS NULL GROUP BY vout.addr_id;
 
 
 drop  FUNCTION add_blk_statics(blkid integer);
@@ -17,7 +24,7 @@ BEGIN
     update blk set total_in_count=t.a, total_out_count=t.b, total_in_value=t.c, total_out_value=t.d, fees=t.e from (select sum(in_count) as a,sum(out_count) as b, sum(in_value) as c, sum(out_value) as d, sum(fee) as e from tx where id in (select tx_id from blk_tx where blk_id=$1)) as t where blk.id=$1;
 
     delete from utx where id in (select tx_id from blk_tx where blk_id=$1);
-    delete from rtx where id in (select tx_id from blk_tx where blk_id=$1);
+    update tx set removed=false where id in (select tx_id from blk_tx where blk_id=$1);
 END;
 $_$;
 
@@ -47,7 +54,8 @@ BEGIN
          perform delete_tx(ntx.txin_tx_id);
      END LOOP;
      perform  rollback_addr_balance($1);
-     insert into rtx (id) values ($1);
+     delete from utx where id=$1;
+     update tx set removed=true where id=$1;
 END;
 $_$;
 
@@ -60,7 +68,7 @@ CREATE FUNCTION delete_blk(blkhash bytea) RETURNS void
     BEGIN
     blkid=(select id from blk where hash=blkhash);
     txid=(select tx_id from blk_tx where blk_id=blkid and idx=0);
-    insert into utx select tx_id from blk_tx where blk_id=blkid;
+    insert into utx select tx_id from blk_tx where blk_id=blkid and tx_id!=txid;
     update blk set orphan=true where blk_id=blkid; 
     perform delete_tx(txid);
     END
