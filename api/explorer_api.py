@@ -242,7 +242,7 @@ def render_tx(tx=None, render_type='html'):
     tx['vin'] = [txin.todict() for txin in txins ]
     txouts = TxOut.query.filter(TxOut.tx_id==tx['id']).order_by(TxOut.tx_idx.asc()).all()
     tx['vout'] = [txout.todict() for txout in txouts]
-    tx['in_addresses'], tx['out_addresses'] = get_tx_addresses(tx)
+    tx['in_addresses'], tx['out_addresses'] = get_tx_addresses_new(tx)
    
     confirm = db_session.execute('select get_confirm(%d)' % tx['id']).first()[0];
     if confirm ==None:
@@ -294,7 +294,7 @@ def render_blk(blk=None, page=1, render_type='html'):
         for txid in res:
            res = Tx.query.filter(Tx.id==txid).first()
            tx= res.todict()
-           tx['in_addresses'], tx['out_addresses'] = get_tx_addresses(tx)
+           tx['in_addresses'], tx['out_addresses'] = get_tx_addresses_new(tx)
            txs.append(tx)
     blk['tx']=txs
 
@@ -450,7 +450,7 @@ def render_addr(address=None, page=1, render_type='html', filter=0):
         res = Tx.query.filter(Tx.id==txid).first()
         tx= res.todict()
 
-        txins, txouts = get_tx_addresses(tx)
+        txins, txouts = get_tx_addresses_new(tx)
         for vin in txins:
             if vin.address==address:
                 tx_in_value = tx_in_value - vin.value
