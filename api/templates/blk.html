@@ -6,6 +6,9 @@
         <h1>
             Block Height: {{ blk.height }}</h1>
         <table class="table table-striped">
+                {% if blk.orphan %}
+                <tr> <td> 孤块 </td> <td>  </td> </tr>
+                {% endif %}
                 <tr> <td> 大小 </td> <td> {{ blk.blk_size}} </td> </tr>
                 <tr> <td> 版本 </td> <td> {{ blk.version }} </td> </tr>
                 <tr> <td> 梅克尔树 </td> <td> {{ blk.mrkl_root}} </td> </tr>
@@ -18,7 +21,6 @@
                 <tr> <td> 转入量 </td> <td> {{ blk.total_in_value|btc}} </td> </tr>
                 <tr> <td> 转出量 </td> <td> {{ blk.total_out_value|btc}} </td> </tr>
                 <tr> <td> 交易费 </td> <td> {{ blk.fees | btc }} </td> </tr>
-                 
                 {% if blk.height>0 %}
                 <tr> <td> 前一个块 </td> <td> <a href="/blk/{{ blk.prev_hash }}"> {{ blk.prev_hash }} </a></td> </tr>
                 {% endif %}
