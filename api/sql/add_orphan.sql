@@ -15,6 +15,12 @@ drop view vout;
 create view vout as SELECT g.address, g.id AS addr_id, a.id AS txout_id, c.id AS txin_id, e.id AS txin_tx_id, b.id AS txout_tx_id, a.value, a.tx_idx AS out_idx, c.tx_idx AS in_idx, e.hash AS txin_tx_hash, b.hash AS txout_tx_hash FROM txout a JOIN tx b ON (b.id = a.tx_id and b.removed!=true) LEFT JOIN txin c ON c.prev_out = b.hash AND c.prev_out_index = a.tx_idx LEFT JOIN tx e ON (e.id = c.tx_id and e.removed!=true) LEFT JOIN addr_txout f ON f.txout_id = a.id LEFT JOIN addr g ON g.id = f.addr_id;
 create view balance as SELECT vout.addr_id, sum(vout.value) AS value FROM vout WHERE vout.txin_id IS NULL GROUP BY vout.addr_id;
 
+DROP VIEW v_blk;
+CREATE VIEW v_blk AS SELECT a.id, a.hash, a.height, a.version, a.prev_hash, a.mrkl_root, a."time", a.bits, a.nonce, a.blk_size, a.work, a.total_in_count, a.total_in_value, a.fees, a.total_out_count, a.total_out_value, a.tx_count, a.pool_id, a.recv_time, a.pool_bip, a.orphan, b.name AS pool_name, b.link AS pool_link, c.name AS bip_name, c.link AS bip_link FROM ((blk a LEFT JOIN pool b ON ((a.pool_id = b.id))) LEFT JOIN bip c ON ((a.pool_bip = c.id))) ORDER BY a.height DESC; 
+
+DROP VIEW vtx; 
+CREATE VIEW v_tx AS SELECT a.id, a.hash, a.version, a.lock_time, a.coinbase, a.tx_size, a.in_count, a.in_value, a.out_count, a.out_value, a.fee, a.recv_time, a.ip,a.removed, b.idx, c.height, c."time" FROM ((tx a LEFT JOIN blk_tx b ON ((b.tx_id = a.id))) LEFT JOIN blk c ON ((c.id = b.blk_id))); 
+
 drop FUNCTION add_tx_statics(txid integer, inc integer, outc integer, inv bigint, outv bigint);
 CREATE FUNCTION add_tx_statics(txid integer, inc integer, outc integer, inv bigint, outv bigint) RETURNS void
     LANGUAGE plpgsql
@@ -35,36 +41,24 @@ CREATE FUNCTION update_addr_balance(txid integer) RETURNS void
     AS $$                                                                                                                     
     DECLARE o RECORD;                                                                                                         
 BEGIN                                                                                                                         
-    raise log 'debug2: start update balance % ', $1;
     FOR o IN select addr_id, value from vout where txin_tx_id=$1 and addr_id is not NULL LOOP                               
-       raise log 'debug2: start 0 update balance % ', $1;
        update addr set balance=(balance - o.value), spent_value=(spent_value+o.value) where id=o.addr_id;                     
     END LOOP;                                                                                                                 
                                                                                                                               
     FOR o IN select addr_id, value from vout where txout_tx_id=$1 and addr_id is not NULL LOOP                              
-       raise log 'debug2: start 1 update balance % ', $1;
        update addr set balance=(balance + o.value), recv_value=(recv_value+o.value)  where id=o.addr_id;                      
     END LOOP;                                                                                                                 
                                                                                                                               
                                                                                                                               
     FOR o IN select distinct addr_id from vout where txin_tx_id=$1 and addr_id is not NULL LOOP                             
-       raise log 'debug2:insert addr_tx % ',$1;
        update addr set spent_count=(spent_count+1) where id=o.addr_id;                                                        
        insert into addr_tx (addr_id,tx_id) values(o.addr_id, $1);                                                           
-       raise log 'debug2: start 2 update balance % ', $1;
     END LOOP;                                                                                                                 
                                                                                                                               
     FOR o IN select distinct addr_id from vout where txout_tx_id=$1 and addr_id is not NULL LOOP                            
-       raise log 'debug2: start 3 update balance % ', $1;
        update addr set recv_count=(recv_count+1) where id=o.addr_id;                                                          
-       raise log 'debug2:insert addr_tx % ',$1;
     END LOOP;                                                                                                                 
 
-    if (txid=210) then
-    raise log 'debug2:% ', (select balance from addr where id=206); 
-    raise log 'debug2:% ', (select addr_id from addr_tx limit 1); 
-    end if;
-    raise log 'debug2: end update balance % ', $1;
 END;                                                                                                                          
 $$;
 
@@ -108,7 +102,6 @@ BEGIN
      END LOOP;
      perform  rollback_addr_balance($1);
      delete from utx where id=$1;
-     raise log 'debug:set removed %', $1; 
      update tx set removed=true where id=$1;
 END;
 $_$;
@@ -154,9 +147,6 @@ BEGIN
 
     FOR o IN select addr_id, value from vout where txout_tx_id=txid and addr_id is not NULL LOOP
        spentv= (select (recv_value-o.value) from addr where id=o.addr_id);
-       if (spentv<0) then
-          raise log 'debug:error %',$1; 
-       end if;
        update addr set balance=(balance - o.value), recv_value=(recv_value-o.value)  where id=o.addr_id;    
     END LOOP;
 
@@ -211,6 +201,7 @@ BEGIN
 END;
 $$;
 
+#dropdb -U postgres -p5433 orp&& createdb -U postgres -p5433 orp&& psql -U postgres -p 5433 orp <s.sql  && psql -U postgres -p 5433 orp <sql/add_orphan.sql
 
 drop FUNCTION test(txid integer);
 CREATE FUNCTION test(txid integer) RETURNS void
@@ -219,10 +210,8 @@ CREATE FUNCTION test(txid integer) RETURNS void
     DECLARE ntx RECORD;
 BEGIN
      FOR ntx IN select txin_tx_id from vout where txout_tx_id=$1 and txin_tx_id is not NULL LOOP
-         raise log 'debug:txin_tx id is %', $1; 
          perform  test(ntx.txin_tx_id );
      END LOOP;
-     raise log 'debug:set removed %', $1; 
 END;
 $_$;
 
