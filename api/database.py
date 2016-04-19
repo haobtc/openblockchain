@@ -71,6 +71,7 @@ class Block(SQLBase):
     pool_link       = Column(TEXT) 
     bip_name        = Column(TEXT) 
     bip_link        = Column(TEXT) 
+    orphan          = Column(BOOLEAN) 
 
     def todict(self):
         return to_dict(self, self.__class__)
@@ -81,7 +82,7 @@ class Block(SQLBase):
 
 
 class Tx(SQLBase):
-    __tablename__ = 'vtx'
+    __tablename__ = 'v_tx'
     id = Column(INTEGER, primary_key=True)
     hash = Column(SBYTEA)
     version = Column(BIGINT)
@@ -98,6 +99,7 @@ class Tx(SQLBase):
     idx  = Column(INTEGER)
     height  = Column(INTEGER)
     time  = Column(BIGINT)
+    removed = Column(BOOLEAN)
 
     def todict(self):
         return to_dict(self, self.__class__)
@@ -151,8 +153,8 @@ class Addr(SQLBase):
     spent_value = Column(BIGINT) 
     spent_count = Column(INTEGER)  
     group_id    = Column(INTEGER)  
-    wallet_name    = Column(text)  
-    wallet_link   = Column(text)  
+    tag_name    = Column(TEXT)  
+    tag_link   = Column(TEXT)  
 
     def todict(self):
         return to_dict(self, self.__class__)
