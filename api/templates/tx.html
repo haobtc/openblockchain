@@ -62,6 +62,10 @@
         <table class="table table-striped">
             <tbody>
             <tr> <th colspan="2"> 交易信息 </th> </tr>
+            {% if tx.removed %}
+            <tr> <td> 已经删除 </td> <td>  </td> </tr>
+            {% endif %}
+
             <tr> <td> 确认数 </td> <td> {{tx.confirm }}</td> </tr>
             {% if tx.rbf %}
             <tr> <td> 双花 </td> <td> 交易发送者标记该交易未确认之前可以被替换 </td> </tr>
