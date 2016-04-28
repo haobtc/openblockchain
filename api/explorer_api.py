@@ -14,6 +14,8 @@ import re
 import config
 import logging
 
+from flask.ext.cache import Cache
+
 # logging.basicConfig(format='%(asctime)s %(message)s', filename=config.EXPLORER_API_LOG_FILE,level=logging.INFO)
 # console = logging.StreamHandler()  
 # console.setLevel(logging.DEBUG)  
@@ -25,6 +27,7 @@ logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
 
 
 app = Flask(__name__, static_url_path='/static')
+cache = Cache(app, config={'CACHE_TYPE': 'redis', 'CACHE_DEFAULT_TIMEOUT':31536000})
 
 page_size=10
 
@@ -240,7 +243,6 @@ def render_tx(tx=None, render_type='html'):
     else:
         tx['confirm'] = confirm
 
- 
     if render_type == 'json':
         return jsonify(tx)
 
@@ -249,6 +251,15 @@ def render_tx(tx=None, render_type='html'):
 @app.route('/tx/<txhash>', methods=['GET', 'POST'])
 def tx_handle(txhash,tx=None):
     render_type=request.args.get('type') or 'html'
+
+    tx=cache.get(key="\\x" + txhash)
+    tx=json.loads(tx)
+    if tx !=None:
+        if render_type == 'json':
+            return jsonify(tx)
+        else:
+            return render_template("tx.html",tx=tx)
+ 
     if tx ==None:
         tx = Tx.query.filter(Tx.hash == txhash.decode('hex')).first()
     if tx == None:
