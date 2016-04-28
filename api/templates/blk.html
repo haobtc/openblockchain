@@ -27,7 +27,7 @@
                 <tr> <td> 后一个块 </td> <td> <a href="/blk/{{ blk.nextblockhash }}"> {{ blk.nextblockhash }} </a></td> </tr>
          </table>
 
-    {% for tx in blk.tx %}
+    {% for tx in blk.txs %}
     <div class="transaction_section"> 
         <div class="transaction" > 
             <div class="transaction_hash">
