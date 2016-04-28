@@ -462,4 +462,46 @@ $$;
 CREATE TABLE addr_group_stat (tx_id integer NOT NULL, group_id integer NOT NULL);
 create view vaddr as select a.*, b.name as tag_name, b.link as tag_link from addr a left join addr_tag b on (a.group_id=b.id);
 
+CREATE OR REPLACE FUNCTION public.json_merge(data json, merge_data json)
+RETURNS json
+IMMUTABLE
+LANGUAGE sql
+AS $$
+    SELECT ('{'||string_agg(to_json(key)||':'||value, ',')||'}')::json
+    FROM (
+        WITH to_merge AS (
+            SELECT * FROM json_each(merge_data)
+        )
+        SELECT *
+        FROM json_each(data)
+        WHERE key NOT IN (SELECT key FROM to_merge)
+        UNION ALL
+        SELECT * FROM to_merge
+    ) t;
+$$;
+
+CREATE or REPLACE FUNCTION tx_to_json(id integer) RETURNS json
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE txJson json;
+    DECLARE jStr json;
+    DECLARE r record;
+BEGIN
+    txJson = (select row_to_json (t) from (select * from vtx where vtx.id=$1) as t);
+
+    jStr := (SELECT json_agg(sub) FROM  (select * from txin where tx_id=$1 order by tx_idx) as sub);
+    txJson = json_merge(txJson, (select json_build_object('vin', jStr)));
+
+    jStr := (SELECT json_agg(sub) FROM  (select * from txout where tx_id=$1 order by tx_idx) as sub);
+    txJson = json_merge(txJson, (select json_build_object('vout', jStr)));
+
+    jStr := (SELECT json_agg(sub) FROM  (select * from (select address, value, txin_tx_id, txout_tx_hash, in_idx from stxo where txin_tx_id=$1 union select address, value, txin_tx_id, txout_tx_hash, in_idx from vtxo where txin_tx_id=$1 ) as t order by in_idx) as sub);
+    txJson = json_merge(txJson, (select json_build_object('in_addresses', jStr)));
+ 
+    jStr := (SELECT json_agg(sub) FROM  (select * from (select address, value, txin_tx_id, txout_tx_hash, out_idx from stxo where txout_tx_id=$1 union select  address, value, txin_tx_id, txout_tx_hash, out_idx from vtxo where txout_tx_id=$1) as t order by out_idx) as sub);
+    txJson = json_merge(txJson, (select json_build_object('out_addresses', jStr)));
+ 
+    return txJson;
+END;
+$$;
  
