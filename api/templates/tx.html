@@ -22,7 +22,12 @@
             </span>
             {% else %}
             {% for txin in tx.in_addresses%}
+            {% if txin.address!=None %}
             <a href="/addr/{{ txin.address }}"> {{ txin.address }}</a>
+            {% else %}
+            unknown
+            {% endif %}
+
             <span class="pull-right">
                 <span class="pull-right"> <span> <a href=/tx/{{txin.txout_tx_hash }} > {{txin.value| btc}}  BTC </a></span></span> 
             </span>
@@ -39,7 +44,11 @@
  
         <div class="tx_output">
             {% for txout in tx.out_addresses%}
-            <a href="/addr/{{ txout.address }}"> {{ txout.address }}</a>
+                {% if txout.address %}
+                <a href="/addr/{{ txout.address }}"> {{ txout.address }}</a>
+                {% else %}
+                unknown
+                {% endif %}
                 {% if txout.txin_tx_id!=None %}
                 <span class="pull-right"> <span> <a href=/tx/{{txout.txin_tx_hash }} >{{txout.value| btc}} BTC</a> </span></span> 
                     <span class="pull-right"> <span>   已花费 </span></span> 
