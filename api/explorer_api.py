@@ -27,7 +27,7 @@ logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
 
 
 app = Flask(__name__, static_url_path='/static')
-cache = Cache(app, config={'CACHE_TYPE': 'redis', 'CACHE_DEFAULT_TIMEOUT':31536000})
+cache = Cache(app, config={'CACHE_TYPE': 'redis', 'CACHE_KEY_PREFIX':None, 'CACHE_DEFAULT_TIMEOUT':31536000})
 
 page_size=10
 
@@ -253,8 +253,8 @@ def tx_handle(txhash,tx=None):
     render_type=request.args.get('type') or 'html'
 
     tx=cache.get(key="\\x" + txhash)
-    tx=json.loads(tx)
     if tx !=None:
+        tx=json.loads(tx)
         if render_type == 'json':
             return jsonify(tx)
         else:
