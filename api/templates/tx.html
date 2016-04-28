@@ -81,10 +81,10 @@
             {% endif  %}
             <tr> <td> 版本 </td> <td> {{tx.version}}</td> </tr>
             <tr> <td> locktime </td> <td> {{tx.lock_time}}</td> </tr>
-            {% if tx.recv_time!='' %}
+            {% if tx.recv_time!=None and tx.recv_time!='' %}
             <tr> <td> 接收时间</td> <td> {{(tx.recv_time/1000000)|datetime}}</td> </tr>
             {% endif %}
-            {% if tx.time != '' %}
+            {% if tx.time != None and tx.time != '' %}
             <tr> <td> 确认时间</td> <td> {{tx.time|datetime}}</td> </tr>
             {% endif %}
             <tr> <td> 大小 </td> <td> {{tx.tx_size}}</td> </tr>
