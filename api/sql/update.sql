@@ -485,7 +485,6 @@ CREATE or REPLACE FUNCTION tx_to_json(id integer) RETURNS json
     AS $$
     DECLARE txJson json;
     DECLARE jStr json;
-    DECLARE r record;
 BEGIN
     txJson = (select row_to_json (t) from (select * from vtx where vtx.id=$1) as t);
 
@@ -498,10 +497,75 @@ BEGIN
     jStr := (SELECT json_agg(sub) FROM  (select * from (select address, value, txin_tx_id, txout_tx_hash, in_idx from stxo where txin_tx_id=$1 union select address, value, txin_tx_id, txout_tx_hash, in_idx from vtxo where txin_tx_id=$1 ) as t order by in_idx) as sub);
     txJson = json_merge(txJson, (select json_build_object('in_addresses', jStr)));
  
-    jStr := (SELECT json_agg(sub) FROM  (select * from (select address, value, txin_tx_id, txout_tx_hash, out_idx from stxo where txout_tx_id=$1 union select  address, value, txin_tx_id, txout_tx_hash, out_idx from vtxo where txout_tx_id=$1) as t order by out_idx) as sub);
+    jStr := (SELECT json_agg(sub) FROM  (select * from (select address, value, txin_tx_id, txin_tx_hash, out_idx from stxo where txout_tx_id=$1 union select  address, value, txin_tx_id, txout_tx_hash, out_idx from vtxo where txout_tx_id=$1) as t order by out_idx) as sub);
     txJson = json_merge(txJson, (select json_build_object('out_addresses', jStr)));
  
     return txJson;
+END;
+$$;
+ 
+CREATE or REPLACE FUNCTION save_bigtx_to_redis(itemCount integer) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE r record;
+BEGIN
+   for r in select id from tx where in_count>$1 or out_count>$1 LOOP
+      BEGIN
+      insert into redis_db0 (key,val) values((select hash from tx where tx.id=r.id), (select tx_to_json(r.id)));
+      EXCEPTION WHEN OTHERS THEN
+         -- keep looping
+      END;
+   END LOOP;
+END;
+$$;
+ 
+CREATE or REPLACE FUNCTION blk_to_json(blkId integer, txCount integer) RETURNS json
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE blkJson json;
+    DECLARE txJson json;
+    DECLARE jStr json;
+    DECLARE r record;
+    DECLARE block record;
+    DECLARE ar json[];
+BEGIN
+    select * from v_blk where v_blk.id=$1 into block;
+    blkJson = (select row_to_json (block));
+    jStr = (select row_to_json(t) from (select hash from blk where height=(block.height-1)) as t);
+    if jStr is not NULL then
+        blkJson = json_merge(blkJson, (select json_build_object('nextblockhash', txJson)));
+    end if;
+
+    FOR r in select tx_id from blk_tx where blk_id>$1 order by idx limit $2 LOOP
+        txJson = (select row_to_json (t) from (select * from tx where tx.id=r.tx_id) as t);
+
+        jStr := (SELECT json_agg(sub) FROM  (select * from (select address, value, txin_tx_id, txout_tx_hash, in_idx from stxo where txin_tx_id=$1 union select address, value, txin_tx_id, txout_tx_hash, in_idx from vtxo where txin_tx_id=$1 ) as t order by in_idx) as sub);
+        txJson = json_merge(txJson, (select json_build_object('in_addresses', jStr)));
+ 
+        jStr := (SELECT json_agg(sub) FROM  (select * from (select address, value, txin_tx_id, txin_tx_hash, out_idx from stxo where txout_tx_id=$1 union select  address, value, txin_tx_id, txout_tx_hash, out_idx from vtxo where txout_tx_id=$1) as t order by out_idx) as sub);
+        txJson = json_merge(txJson, (select json_build_object('out_addresses', jStr)));
+        ar=(select array_append(ar,txJson));
+    END LOOP;
+
+    txJson=(select array_to_json(ar));
+    blkJson = json_merge(blkJson, (select json_build_object('txs', txJson)));
+     
+    return blkJson;
+END;
+$$;
+
+CREATE or REPLACE FUNCTION save_blk_to_redis(startHeight integer, endHeight integer) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE r record;
+BEGIN
+   for r in select id from blk where height>=$1 and height<=$2 LOOP
+      BEGIN
+      insert into redis_db0 (key,val) values((select hash from blk where blk.id=r.id), (select blk_to_json(r.id, 10)));
+      EXCEPTION WHEN OTHERS THEN
+         -- keep looping
+      END;
+   END LOOP;
 END;
 $$;
  
