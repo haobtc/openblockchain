@@ -221,8 +221,20 @@ def pool_handle(pool_name):
     render_type=request.args.get('type') or 'html'
     return render_pool(pool_name, render_type)
  
+def render_tx(txHash=None):
 
-def render_tx(tx=None, render_type='html'):
+    tx=cache.get(key="\\x" + txHash)
+    if tx !=None:
+        return json.loads(tx)
+
+    try:
+        txHash = txHash.decode('hex')
+    except:
+        return None
+
+    tx = Tx.query.filter(Tx.hash == txHash).first()
+    if tx==None:
+       return None
     tx= tx.todict()
 
     txins = TxIn.query.filter(TxIn.tx_id==tx['id']).order_by(TxIn.tx_idx.asc()).all()
@@ -243,31 +255,38 @@ def render_tx(tx=None, render_type='html'):
     else:
         tx['confirm'] = confirm
 
-    if render_type == 'json':
-        return jsonify(tx)
+    return tx
 
-    return render_template("tx.html",tx=tx)
+@app.route('/tx/<txHash>', methods=['GET', 'POST'])
+def tx_handle(txHash,tx=None):
 
-@app.route('/tx/<txhash>', methods=['GET', 'POST'])
-def tx_handle(txhash,tx=None):
     render_type=request.args.get('type') or 'html'
-
-    tx=cache.get(key="\\x" + txhash)
-    if tx !=None:
-        tx=json.loads(tx)
-        if render_type == 'json':
-            return jsonify(tx)
-        else:
-            return render_template("tx.html",tx=tx)
  
-    if tx ==None:
-        tx = Tx.query.filter(Tx.hash == txhash.decode('hex')).first()
-    if tx == None:
+    tx=render_tx(txHash)
+    if tx==None:
         return render_404(render_type)
 
-    return render_tx(tx, render_type)
+    if render_type == 'json':
+        return jsonify(tx)
+    else:
+        return render_template("tx.html",tx=tx)
 
-def render_blk(blk=None, page=1, render_type='html'):
+def render_blk(blkHash=None,  page=1):
+
+    blk=cache.get(key="\\x" + blkHash)
+    if blk !=None:
+        return json.loads(blk)
+
+    try:
+        blkHash = blkHash.decode('hex')
+    except:
+        return None
+ 
+    blk = Block.query.filter(Block.hash == blkHash).first()
+
+    if blk==None:
+       return None
+
     blk = blk.todict()
 
     total_page = blk['tx_count']/page_size
@@ -291,38 +310,54 @@ def render_blk(blk=None, page=1, render_type='html'):
            tx= res.todict()
            tx['in_addresses'], tx['out_addresses'] = get_tx_addresses(tx)
            txs.append(tx)
-    blk['tx']=txs
+    blk['txs']=txs
 
     res = Block.query.with_entities(Block.hash).filter(Block.height == (int(blk['height'])+1)).first()
     if res!= None:
         blk['nextblockhash']=res[0]
 
-    if render_type == 'json':
-        return jsonify(blk)
+    return blk
 
-    return render_template("blk.html",blk=blk, page=page)
 
 @app.route('/height/<height>', methods=['GET', 'POST'])
 def blkheight_handle(height=0):
     render_type=request.args.get('type') or 'html'
     page= request.args.get('page') or 1
+
+    try:
+       height=int(height)
+    except:
+       return render_404(render_type)
+ 
     blk = Block.query.filter(Block.height == height).first()
     if blk== None:
         return render_404(render_type)
 
-    return render_blk(blk, page, render_type)
+    blk = render_blk(blk.hash, page)
 
-@app.route('/blk/<blkhash>', methods=['GET', 'POST'])
-def blk_handle(blkhash, blk=None):
-    render_type=request.args.get('type') or 'html'
-    page= request.args.get('page') or 1
-
-    if blk==None:
-       blk = Block.query.filter(Block.hash == blkhash.decode('hex')).first()
     if blk== None:
         return render_404(render_type)
 
-    return render_blk(blk, page, render_type)
+    if render_type == 'json':
+        return jsonify(blk)
+
+    return render_template("blk.html",blk=blk, page=page)
+ 
+
+@app.route('/blk/<blkHash>', methods=['GET', 'POST'])
+def blk_handle(blkHash, blk=None):
+    render_type=request.args.get('type') or 'html'
+    page= request.args.get('page') or 1
+
+    blk = render_blk(blkHash,page)
+
+    if blk== None:
+        return render_404(render_type)
+
+    if render_type == 'json':
+        return jsonify(blk)
+
+    return render_template("blk.html",blk=blk, page=page)
 
 def confirm(txs): 
      return txs['confirm'] 
@@ -516,30 +551,39 @@ def search(sid=0):
     if slen == 64:
         #should be tx hash or blk hash
         try:
-            hash = sid.decode('hex')
+            hashHex = sid.decode('hex')
         except:
             return render_404(render_type)
-          
-        tx = Tx.query.filter(Tx.hash ==hash ).first()
-        if tx!=None:
-            return render_tx(tx, render_type)
-        else:
-            blk = Block.query.filter(Block.hash == hash).first()
+     
+        blk = Block.query.filter(Block.hash == hashHex).first()
+        if blk!=None:
+            blk = render_blk(sid, 1)
             if blk!=None:
-               return render_blk(blk, 1, render_type)
-            else:
-               return render_404(render_type)
+                 if render_type == 'json':
+                     return jsonify(blk)
+                 return render_template("blk.html",blk=blk, page=1)
+        else:
+            tx=render_tx(sid)
+            if tx!=None:
+               if render_type == 'json':
+                   return jsonify(tx)
+               else:
+                   return render_template("tx.html",tx=tx)
+            return render_404(render_type)
     elif slen <= 34 and slen >=26:
         addr = sid
         return render_addr(addr,1, render_type)
     elif slen <9:
         #as blk height
-        height = sid
-        blk = Block.query.filter(Block.height == height).first()
+        blk = Block.query.filter(Block.height == int(sid)).first()
         if blk== None:
             return render_404(render_type)
 
-        return render_blk(blk, 1, render_type)
+        blk = render_blk(blk.hash, 1)
+        if blk!=None:
+             if render_type == 'json':
+                 return jsonify(blk)
+             return render_template("blk.html",blk=blk, page=1)
     else:
         return render_404(render_type)
 
