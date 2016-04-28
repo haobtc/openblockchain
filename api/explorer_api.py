@@ -273,9 +273,10 @@ def tx_handle(txHash,tx=None):
 
 def render_blk(blkHash=None,  page=1):
 
-    blk=cache.get(key="\\x" + blkHash)
-    if blk !=None:
-        return json.loads(blk)
+    if page==1:
+        blk=cache.get(key="\\x" + blkHash)
+        if blk !=None:
+            return json.loads(blk)
 
     try:
         blkHash = blkHash.decode('hex')
