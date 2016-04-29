@@ -499,22 +499,20 @@ BEGIN
  
     jStr := (SELECT json_agg(sub) FROM  (select * from (select address, value, txin_tx_id, txin_tx_hash, out_idx from stxo where txout_tx_id=$1 union select  address, value, txin_tx_id, txout_tx_hash, out_idx from vtxo where txout_tx_id=$1) as t order by out_idx) as sub);
     txJson = json_merge(txJson, (select json_build_object('out_addresses', jStr)));
+    txJson = json_merge(txJson, (select json_build_object('type', 'tx')));
  
     return txJson;
 END;
 $$;
  
 CREATE or REPLACE FUNCTION save_bigtx_to_redis(itemCount integer) RETURNS void
+
     LANGUAGE plpgsql
     AS $$
     DECLARE r record;
 BEGIN
-   for r in select id from tx where in_count>$1 or out_count>$1 LOOP
-      BEGIN
-      insert into redis_db0 (key,val) values((select hash from tx where tx.id=r.id), (select tx_to_json(r.id)));
-      EXCEPTION WHEN OTHERS THEN
-         -- keep looping
-      END;
+   for r in select id,encode(hash,'hex') as hash from tx where (in_count + out_count)>$1 LOOP
+        insert into redis_db0 (key,val) values(r.hash, (select tx_to_json(r.id)));
    END LOOP;
 END;
 $$;
@@ -549,6 +547,7 @@ BEGIN
 
     txJson=(select array_to_json(ar));
     blkJson = json_merge(blkJson, (select json_build_object('txs', txJson)));
+    blkJson = json_merge(blkJson, (select json_build_object('type', 'blk')));
      
     return blkJson;
 END;
@@ -559,9 +558,9 @@ CREATE or REPLACE FUNCTION save_blk_to_redis(startHeight integer, endHeight inte
     AS $$
     DECLARE r record;
 BEGIN
-   for r in select id from blk where height>=$1 and height<=$2 LOOP
+   for r in select id, encode(hash,'hex') as hash from blk where height>=$1 and height<=$2 LOOP
       BEGIN
-      insert into redis_db0 (key,val) values((select hash from blk where blk.id=r.id), (select blk_to_json(r.id, 10)));
+      insert into redis_db0 (key,val) values(r.hash, (select blk_to_json(r.id, 10)));
       EXCEPTION WHEN OTHERS THEN
          -- keep looping
       END;
@@ -569,3 +568,18 @@ BEGIN
 END;
 $$;
  
+CREATE or REPLACE FUNCTION save_bigtx_to_json_cache(itemCount integer) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE r record;
+BEGIN
+   for r in select id,hash from tx where (in_count+out_count)>$1 LOOP
+       insert into json_cache (type,hash,js) values(1, r.hash, (select tx_to_json(r.id)));
+   END LOOP;
+END;
+$$;
+ 
+
+
+CREATE TABLE json_cache (key TEXT not NULL, val TEXT not NULL, CONSTRAINT uniq_json_cache_key UNIQUE (key));
+CREATE UNIQUE INDEX uniq_json_cache_key on json_cache USING btree (key); 
