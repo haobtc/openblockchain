@@ -222,26 +222,28 @@ def pool_handle(pool_name):
     return render_pool(pool_name, render_type)
  
 def render_tx(txHash=None):
-
-    tx=cache.get(key="\\x" + txHash)
+ 
+    tx = JsonCache.query.filter(JsonCache.key == txHash).first()
+    tx = tx.val
+    #tx=cache.get(key=txHash)
     if tx !=None:
-        return json.loads(tx)
+        tx = json.loads(tx)
+    else:
+        try:
+            txHash = txHash.decode('hex')
+        except:
+            return None
 
-    try:
-        txHash = txHash.decode('hex')
-    except:
-        return None
+        tx = Tx.query.filter(Tx.hash == txHash).first()
+        if tx==None:
+           return None
+        tx= tx.todict()
 
-    tx = Tx.query.filter(Tx.hash == txHash).first()
-    if tx==None:
-       return None
-    tx= tx.todict()
-
-    txins = TxIn.query.filter(TxIn.tx_id==tx['id']).order_by(TxIn.tx_idx.asc()).all()
-    tx['vin'] = [txin.todict() for txin in txins ]
-    txouts = TxOut.query.filter(TxOut.tx_id==tx['id']).order_by(TxOut.tx_idx.asc()).all()
-    tx['vout'] = [txout.todict() for txout in txouts]
-    tx['in_addresses'], tx['out_addresses'] = get_tx_addresses(tx)
+        txins = TxIn.query.filter(TxIn.tx_id==tx['id']).order_by(TxIn.tx_idx.asc()).all()
+        tx['vin'] = [txin.todict() for txin in txins ]
+        txouts = TxOut.query.filter(TxOut.tx_id==tx['id']).order_by(TxOut.tx_idx.asc()).all()
+        tx['vout'] = [txout.todict() for txout in txouts]
+        tx['in_addresses'], tx['out_addresses'] = get_tx_addresses(tx)
    
     confirm = db_session.execute('select get_confirm(%d)' % tx['id']).first()[0];
     if confirm ==None:
@@ -274,7 +276,7 @@ def tx_handle(txHash,tx=None):
 def render_blk(blkHash=None,  page=1):
 
     if page==1:
-        blk=cache.get(key="\\x" + blkHash)
+        blk=cache.get(key=blkHash)
         if blk !=None:
             return json.loads(blk)
 
