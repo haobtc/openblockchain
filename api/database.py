@@ -373,3 +373,7 @@ class AddrTag(SQLBase):
     def todict(self):
         return to_dict(self, self.__class__)
  
+class JsonCache(SQLBase):
+    __tablename__ = 'json_cache'
+    key = Column(TEXT, primary_key=True)
+    val = Column(TEXT)
