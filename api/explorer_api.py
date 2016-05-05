@@ -438,6 +438,9 @@ def render_addr(address=None, page=1, render_type='html', filter=0):
  
 
     addr=addr.todict()
+    if addr['balance']<0:
+        addr['balance'] = 0
+       
     addr['tx_count']=AddrTx.query.filter(AddrTx.addr_id==int(addr["id"])).count();
     total_page = addr['tx_count']/page_size
     if addr['tx_count']%page_size:
