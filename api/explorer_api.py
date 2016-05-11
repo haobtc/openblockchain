@@ -224,9 +224,9 @@ def pool_handle(pool_name):
 def render_tx(txHash=None):
  
     tx = JsonCache.query.filter(JsonCache.key == txHash).first()
-    tx = tx.val
     #tx=cache.get(key=txHash)
     if tx !=None:
+        tx = tx.val
         tx = json.loads(tx)
     else:
         try:
