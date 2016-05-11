@@ -583,3 +583,17 @@ $$;
 
 CREATE TABLE json_cache (key TEXT not NULL, val TEXT not NULL, CONSTRAINT uniq_json_cache_key UNIQUE (key));
 CREATE UNIQUE INDEX uniq_json_cache_key on json_cache USING btree (key); 
+
+CREATE or REPLACE FUNCTION update_tx_json_cache(blkId integer) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE r record;
+BEGIN
+   for r in select id,hash from tx a join blk_tx b on (b.tx_id=a.id) join blk c on (c.id=b.blk_id and c.id=$1) where (a.in_count+a.out_count)>100 LOOP
+         insert into json_cache (type,hash,js) values(1, r.hash, (select tx_to_json(r.id)));
+   END LOOP;
+END;
+$$;
+ 
+
+CREATE INDEX addr_balance_index ON addr USING btree (balance);

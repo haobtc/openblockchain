@@ -166,3 +166,6 @@ BEGIN
     insert into addr_send select distinct addr_id,txin_tx_id as tx_id from group_vout;
 end;
  
+
+
+CREATE INDEX addr_balance_index ON addr USING btree (balance);

@@ -12,7 +12,7 @@ create view utxo as SELECT g.address, g.id AS addr_id, a.id AS txout_id, c.id AS
 
 drop view balance;
 drop view vout;
-create view vout as SELECT g.address, g.id AS addr_id, a.id AS txout_id, c.id AS txin_id, e.id AS txin_tx_id, b.id AS txout_tx_id, a.value, a.tx_idx AS out_idx, c.tx_idx AS in_idx, e.hash AS txin_tx_hash, b.hash AS txout_tx_hash FROM txout a JOIN tx b ON (b.id = a.tx_id and b.removed!=true) LEFT JOIN txin c ON c.prev_out = b.hash AND c.prev_out_index = a.tx_idx LEFT JOIN tx e ON (e.id = c.tx_id and e.removed!=true) LEFT JOIN addr_txout f ON f.txout_id = a.id LEFT JOIN addr g ON g.id = f.addr_id;
+create view vout as SELECT g.address, g.id AS addr_id, a.id AS txout_id, c.id AS txin_id, e.id AS txin_tx_id, b.id AS txout_tx_id, a.value, a.tx_idx AS out_idx, c.tx_idx AS in_idx, e.hash AS txin_tx_hash, b.hash AS txout_tx_hash FROM txout a JOIN tx b ON (b.id = a.tx_id and b.removed=false) LEFT JOIN txin c ON c.prev_out = b.hash AND c.prev_out_index = a.tx_idx LEFT JOIN tx e ON (e.id = c.tx_id and e.removed=false) LEFT JOIN addr_txout f ON f.txout_id = a.id LEFT JOIN addr g ON g.id = f.addr_id;
 create view balance as SELECT vout.addr_id, sum(vout.value) AS value FROM vout WHERE vout.txin_id IS NULL GROUP BY vout.addr_id;
 
 DROP VIEW v_blk;
@@ -57,8 +57,8 @@ BEGIN
                                                                                                                               
     FOR o IN select distinct addr_id from vout where txout_tx_id=$1 and addr_id is not NULL LOOP                            
        update addr set recv_count=(recv_count+1) where id=o.addr_id;                                                          
+       insert into addr_tx (addr_id,tx_id) values(o.addr_id, $1);                                                           
     END LOOP;                                                                                                                 
-
 END;                                                                                                                          
 $$;
 
@@ -113,6 +113,9 @@ CREATE FUNCTION delete_blk(blkhash bytea) RETURNS void
     declare blkid integer;
     declare txid integer;
     BEGIN
+    if (select orphan from blk where hash=$1)=true then
+       return;
+    end if;
     blkid=(select id from blk where hash=blkhash);
     txid=(select tx_id from blk_tx where blk_id=blkid and idx=0);
     insert into utx select tx_id from blk_tx where blk_id=blkid and tx_id!=txid;
@@ -135,27 +138,27 @@ END;
 $_$;
 
 drop FUNCTION rollback_addr_balance(txid integer);
-CREATE FUNCTION rollback_addr_balance(txid integer) RETURNS void
+CREATE or replace FUNCTION rollback_addr_balance(txid integer) RETURNS void
     LANGUAGE plpgsql
     AS $$
     DECLARE o RECORD;
-    DECLARE spentv integer;
 BEGIN
     FOR o IN select addr_id, value from vout where txin_tx_id=txid and addr_id is not NULL LOOP
        update addr set balance=(balance + o.value), spent_value=(spent_value-o.value) where id=o.addr_id;
     END LOOP;
 
     FOR o IN select addr_id, value from vout where txout_tx_id=txid and addr_id is not NULL LOOP
-       spentv= (select (recv_value-o.value) from addr where id=o.addr_id);
        update addr set balance=(balance - o.value), recv_value=(recv_value-o.value)  where id=o.addr_id;    
     END LOOP;
 
     FOR o IN select distinct addr_id from vout where txin_tx_id=txid and addr_id is not NULL LOOP
        update addr set spent_count=(spent_count-1) where id=o.addr_id;
+       delete from addr_tx where addr_id=o.addr_id and tx_id=$1;
     END LOOP;
 
     FOR o IN select distinct addr_id from vout where txout_tx_id=txid and addr_id is not NULL LOOP
        update addr set recv_count=(recv_count-1) where id=o.addr_id;
+       delete from addr_tx where addr_id=o.addr_id and tx_id=$1;
     END LOOP;
 END;
 $$;
@@ -195,7 +198,7 @@ CREATE FUNCTION update_stxo() RETURNS void
     DECLARE max_blk_height integer;
     DECLARE max_saved_height integer;
 BEGIN
-    max_blk_height = (select max(height) from blk where orphan!=true);
+    max_blk_height = (select max(height) from blk where orphan=false);
     max_saved_height = (select max(height) from stxo);
     insert into stxo SELECT * from v_stxo where height<=(max_blk_height - 10) and height>max_saved_height;
 END;
@@ -216,3 +219,84 @@ END;
 $_$;
 
 
+drop FUNCTION readd_tx(txid integer);
+CREATE FUNCTION readd_tx(txid integer) RETURNS void
+    LANGUAGE plpgsql
+    AS $_$
+BEGIN
+    if (select removed from tx where id=$1)!=true then
+       return;
+    end if;
+    update tx set removed=false where id=$1;
+    perform update_addr_balance($1);
+END
+$_$;
+ 
+drop FUNCTION readd_blk(blkHash bytea);
+CREATE FUNCTION readd_blk(blkHash bytea) RETURNS integer
+    LANGUAGE plpgsql
+    AS $_$
+    DECLARE blkId integer;
+    DECLARE o RECORD;
+BEGIN
+    if (select orphan from blk where hash=$1)!=true then
+       return (select id from blk where hash=$1);
+    end if;
+    blkId := (select id from blk where hash=blkHash);
+    FOR o IN select tx_id from blk_tx where blk_id=blkId LOOP                               
+       perform readd_tx(o.tx_id);
+    END LOOP;
+
+    update blk set orphan=false where id=blkId;
+    return blkId;
+END
+$_$;
+ 
+
+drop FUNCTION delete_tx(txid integer);
+CREATE FUNCTION delete_tx(txid integer) RETURNS void
+    LANGUAGE plpgsql
+    AS $_$
+    DECLARE ntx RECORD;
+BEGIN
+    if (select removed from tx where id=$1)=true then
+       return;
+    end if;
+     FOR ntx IN select txin_tx_id from vout where txout_tx_id=$1 and txin_tx_id is not NULL LOOP
+         perform delete_tx(ntx.txin_tx_id);
+     END LOOP;
+     perform  rollback_addr_balance($1);
+     delete from utx where id=$1;
+     update tx set removed=true where id=$1;
+END;
+$_$;
+ 
+
+create view nvout as SELECT g.address, g.id AS addr_id, a.id AS txout_id, c.id AS txin_id, e.id AS txin_tx_id, b.id AS txout_tx_id, a.value, a.tx_idx AS out_idx, c.tx_idx AS in_idx, e.hash AS txin_tx_hash, b.hash AS txout_tx_hash FROM txout a JOIN tx b ON (b.id = a.tx_id ) LEFT JOIN txin c ON c.prev_out = b.hash AND c.prev_out_index = a.tx_idx LEFT JOIN tx e ON (e.id = c.tx_id) LEFT JOIN addr_txout f ON f.txout_id = a.id LEFT JOIN addr g ON g.id = f.addr_id;
+create view nbalance as SELECT vout.addr_id, sum(vout.value) AS value FROM vout WHERE vout.txin_id IS NULL GROUP BY vout.addr_id;
+ 
+
+create materialized view uout as SELECT g.address, g.id AS addr_id, a.id AS txout_id, c.id AS txin_id, e.id AS txin_tx_id, b.id AS txout_tx_id, a.value, a.tx_idx AS out_idx, c.tx_idx AS in_idx, e.hash AS txin_tx_hash, b.hash AS txout_tx_hash FROM txout a JOIN tx b ON (b.id = a.tx_id and b.removed!=true) LEFT JOIN txin c ON c.prev_out = b.hash AND c.prev_out_index = a.tx_idx LEFT JOIN tx e ON (e.id = c.tx_id and e.removed!=true) LEFT JOIN addr_txout f ON f.txout_id = a.id LEFT JOIN addr g ON g.id = f.addr_id;
+CREATE INDEX uout_address_id on uout USING btree (addr_id);
+
+create materialized view ubalance as SELECT uout.addr_id, sum(uout.value) AS value FROM uout WHERE uout.txin_id IS NULL GROUP BY uout.addr_id;
+update addr set balance=value from ubalance  where ubalance.addr_id=addr.id and ubalance.value!=addr.balance;
+update addr set balance=0 where balance<0;
+
+create materialized view urecv as SELECT uout.addr_id, count(distinct txout_tx_id) as receive_count, sum(value) as recv_value  FROM uout   GROUP BY uout.addr_id;
+update addr set recv_value=urecv.recv_value, recv_count=urecv.receive_count from urecv where addr.id=urecv.addr_id  and (addr.recv_value!=urecv.recv_value or addr.recv_count!=urecv.receive_count);
+
+create materialized view uspent as SELECT uout.addr_id, count(distinct txin_tx_id) as spent_count, sum(value) as spent_value  FROM uout where txin_id is not NULL GROUP BY uout.addr_id;
+update addr set spent_value=uspent.spent_value, spent_count=uspent.spent_count from uspent where addr.id=uspent.addr_id and (addr.spent_value!=uspent.spent_value or addr.spent_count!=uspent.spent_count);
+
+insert into addr_tx  (select distinct addr_id,txout_tx_id from uout where addr_id is not NULL);
+insert into addr_tx  (select distinct addr_id,txin_tx_id from uout where addr_id is not NULL and txin_tx_id is not NULL);
+
+
+SELECT vout.addr_id, count(distinct txout_tx_id) as receive_count, sum(value) as recv_value  FROM vout where vout.addr_id=140665179 GROUP BY vout.addr_id;
+SELECT vout.addr_id, count(distinct txin_tx_id) as spent_count, sum(value) as spent_value  FROM vout where txin_id is not NULL and vout.addr_id=140665179 GROUP BY vout.addr_id;
+update addr set balance=0, recv_value=1111825588534,recv_count=1932,spent_count=337,spent_value=1111825588534 where id=21468316;
+
+update addr set balance=0, recv_value=125115 where id=109838193;
+update addr set balance=0, recv_value=134190 where id=109727348;
+update addr set balance=7973, recv_value=734225 where id=140665179;
