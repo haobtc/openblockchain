@@ -197,7 +197,7 @@ class SystemCursor(SQLBase):
 
 class AddrTx(SQLBase):
     __tablename__ = 'addr_tx'
-    addr_id = Column(INTEGER, ForeignKey("vaddr.id"))
+    addr_id = Column(INTEGER)
     tx_id = Column(INTEGER)
     __table_args__ = (PrimaryKeyConstraint(addr_id, tx_id), )
 
