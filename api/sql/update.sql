@@ -24,7 +24,7 @@ Drop view vtx;
 ALTER TABLE tx DROP COLUMN ip;
 ALTER TABLE tx ADD COLUMN ip text;
 
-create view vtx as select a.*,b.idx,c.height,c.time from tx a left join blk_tx b on(b.tx_id=a.id) left join blk c on (c.id=b.blk_id);
+create view v_tx as select a.*,b.idx,c.height,c.time from tx a left join blk_tx b on(b.tx_id=a.id) left join blk c on (c.id=b.blk_id);
 
 
 drop view addr_tx_confirmed;
@@ -486,7 +486,7 @@ CREATE or REPLACE FUNCTION tx_to_json(id integer) RETURNS json
     DECLARE txJson json;
     DECLARE jStr json;
 BEGIN
-    txJson = (select row_to_json (t) from (select * from vtx where vtx.id=$1) as t);
+    txJson = (select row_to_json (t) from (select * from v_tx where v_tx.id=$1) as t);
 
     jStr := (SELECT json_agg(sub) FROM  (select * from txin where tx_id=$1 order by tx_idx) as sub);
     txJson = json_merge(txJson, (select json_build_object('vin', jStr)));
@@ -505,13 +505,13 @@ BEGIN
 END;
 $$;
  
-CREATE or REPLACE FUNCTION save_bigtx_to_redis(itemCount integer) RETURNS void
+CREATE or REPLACE FUNCTION save_bigtx_to_redis(minCount integer, maxCount integer) RETURNS void
 
     LANGUAGE plpgsql
     AS $$
     DECLARE r record;
 BEGIN
-   for r in select id,encode(hash,'hex') as hash from tx where (in_count + out_count)>$1 LOOP
+   for r in select id,encode(hash,'hex') as hash from tx where (in_count + out_count)>$1 and (in_count + out_count)<$2 LOOP
         insert into redis_db0 (key,val) values(r.hash, (select tx_to_json(r.id)));
    END LOOP;
 END;
@@ -568,13 +568,13 @@ BEGIN
 END;
 $$;
  
-CREATE or REPLACE FUNCTION save_bigtx_to_json_cache(itemCount integer) RETURNS void
+CREATE or REPLACE FUNCTION save_bigtx_to_json_cache(minCount integer, maxCount integer) RETURNS void
     LANGUAGE plpgsql
     AS $$
     DECLARE r record;
 BEGIN
-   for r in select id,hash from tx where (in_count+out_count)>$1 LOOP
-       insert into json_cache (type,hash,js) values(1, r.hash, (select tx_to_json(r.id)));
+   for r in select id,hash from tx where (in_count+out_count)>$1 and (in_count+out_count)<$2 LOOP
+       insert into json_cache (key,val) values(r.hash, (select tx_to_json(r.id)));
    END LOOP;
 END;
 $$;
@@ -597,3 +597,36 @@ $$;
  
 
 CREATE INDEX addr_balance_index ON addr USING btree (balance);
+
+CREATE or REPLACE FUNCTION refresh_json_cache (blkId integer) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE r record;
+    DECLARE t record;
+BEGIN
+   for r in select  tx_id from blk_tx where blk_id=$1 LOOP
+      for t in select distinct txout_tx_id as id, txout_tx_hash as hash from vout where txin_tx_id=r.tx_id LOOP
+          if (select 1 from json_cache where key=encode(t.hash,'hex')) then
+               update json_cache set val=(select tx_to_json(t.id) where key=encode(t.hash,'hex'));
+          end if;
+      END LOOP;
+   END LOOP;
+END;
+$$;
+ 
+CREATE or REPLACE FUNCTION refresh_json_cache (blkHash text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE r record;
+    DECLARE t record;
+BEGIN
+   for r in select  tx_id from blk_tx where blk_id=(select id from blk where hash=decode($1,'hex')) LOOP
+      for t in select distinct txout_tx_id as id, txout_tx_hash as hash from vout where txin_tx_id=r.tx_id LOOP
+          if (select 1 from json_cache where key=encode(t.hash,'hex')) then
+               update json_cache set val=(select tx_to_json(t.id) where key=encode(t.hash,'hex'));
+          end if;
+      END LOOP;
+   END LOOP;
+END;
+$$;
+ 
