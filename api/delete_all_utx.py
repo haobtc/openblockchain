@@ -16,13 +16,16 @@ Session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=en
 
 session=Session()
 
-res = UTX.query.all()
-for tx in res:
-    session.execute('select delete_tx(%d)' % tx.id)
-    try:
-        session.commit()
-    except:
-        session.rollback()
-        logging.exception('delete fail')
+while True:
+    res = UTX.query.first()
+    if res!=None:
+        session.execute('select delete_some_utx()')
+        try:
+            session.commit()
+        except:
+            session.rollback()
+            logging.exception('delete fail')
+    else:
+        break
 session.close()
 
