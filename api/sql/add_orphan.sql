@@ -12,7 +12,7 @@ create view utxo as SELECT g.address, g.id AS addr_id, a.id AS txout_id, c.id AS
 
 drop view balance;
 drop view vout;
-create view vout as SELECT g.address, g.id AS addr_id, a.id AS txout_id, c.id AS txin_id, e.id AS txin_tx_id, b.id AS txout_tx_id, a.value, a.tx_idx AS out_idx, c.tx_idx AS in_idx, e.hash AS txin_tx_hash, b.hash AS txout_tx_hash FROM txout a JOIN tx b ON (b.id = a.tx_id and b.removed=false) LEFT JOIN txin c ON c.prev_out = b.hash AND c.prev_out_index = a.tx_idx LEFT JOIN tx e ON (e.id = c.tx_id and e.removed=false) LEFT JOIN addr_txout f ON f.txout_id = a.id LEFT JOIN addr g ON g.id = f.addr_id;
+create or replace view vout as SELECT g.address, g.id AS addr_id, a.id AS txout_id, c.id AS txin_id, e.id AS txin_tx_id, b.id AS txout_tx_id, a.value, a.tx_idx AS out_idx, c.tx_idx AS in_idx, e.hash AS txin_tx_hash, b.hash AS txout_tx_hash FROM txout a JOIN tx b ON (b.id = a.tx_id and b.removed=false) LEFT JOIN txin c ON c.prev_out = b.hash AND c.prev_out_index = a.tx_idx LEFT JOIN tx e ON (e.id = c.tx_id and e.removed=false) LEFT JOIN addr_txout f ON f.txout_id = a.id LEFT JOIN addr g ON g.id = f.addr_id;
 create view balance as SELECT vout.addr_id, sum(vout.value) AS value FROM vout WHERE vout.txin_id IS NULL GROUP BY vout.addr_id;
 
 DROP VIEW v_blk;
@@ -276,7 +276,7 @@ create view nvout as SELECT g.address, g.id AS addr_id, a.id AS txout_id, c.id A
 create view nbalance as SELECT vout.addr_id, sum(vout.value) AS value FROM vout WHERE vout.txin_id IS NULL GROUP BY vout.addr_id;
  
 
-create materialized view uout as SELECT g.address, g.id AS addr_id, a.id AS txout_id, c.id AS txin_id, e.id AS txin_tx_id, b.id AS txout_tx_id, a.value, a.tx_idx AS out_idx, c.tx_idx AS in_idx, e.hash AS txin_tx_hash, b.hash AS txout_tx_hash FROM txout a JOIN tx b ON (b.id = a.tx_id and b.removed!=true) LEFT JOIN txin c ON c.prev_out = b.hash AND c.prev_out_index = a.tx_idx LEFT JOIN tx e ON (e.id = c.tx_id and e.removed!=true) LEFT JOIN addr_txout f ON f.txout_id = a.id LEFT JOIN addr g ON g.id = f.addr_id;
+create materialized view uout as SELECT g.address, g.id AS addr_id, a.id AS txout_id, c.id AS txin_id, e.id AS txin_tx_id, b.id AS txout_tx_id, a.value, a.tx_idx AS out_idx, c.tx_idx AS in_idx, e.hash AS txin_tx_hash, b.hash AS txout_tx_hash FROM txout a JOIN tx b ON (b.id = a.tx_id and b.removed=false) LEFT JOIN txin c ON c.prev_out = b.hash AND c.prev_out_index = a.tx_idx JOIN tx e ON (e.id = c.tx_id and e.removed=false) LEFT JOIN addr_txout f ON f.txout_id = a.id LEFT JOIN addr g ON g.id = f.addr_id;
 CREATE INDEX uout_address_id on uout USING btree (addr_id);
 
 create materialized view ubalance as SELECT uout.addr_id, sum(uout.value) AS value FROM uout WHERE uout.txin_id IS NULL GROUP BY uout.addr_id;
@@ -293,10 +293,81 @@ insert into addr_tx  (select distinct addr_id,txout_tx_id from uout where addr_i
 insert into addr_tx  (select distinct addr_id,txin_tx_id from uout where addr_id is not NULL and txin_tx_id is not NULL);
 
 
-SELECT vout.addr_id, count(distinct txout_tx_id) as receive_count, sum(value) as recv_value  FROM vout where vout.addr_id=140665179 GROUP BY vout.addr_id;
-SELECT vout.addr_id, count(distinct txin_tx_id) as spent_count, sum(value) as spent_value  FROM vout where txin_id is not NULL and vout.addr_id=140665179 GROUP BY vout.addr_id;
-update addr set balance=0, recv_value=1111825588534,recv_count=1932,spent_count=337,spent_value=1111825588534 where id=21468316;
+-- SELECT vout.addr_id, count(distinct txout_tx_id) as receive_count, sum(value) as recv_value  FROM vout where vout.addr_id=139983987 GROUP BY vout.addr_id;
+-- SELECT vout.addr_id, count(distinct txin_tx_id) as spent_count, sum(value) as spent_value  FROM vout where txin_id is not NULL and vout.addr_id=139983987 GROUP BY vout.addr_id;
+-- update addr set balance=0, recv_value=1111825588534,recv_count=1932,spent_count=337,spent_value=1111825588534 where id=21468316;
+-- 
+-- update addr set balance=0, recv_value=125115 where id=109838193;
+-- update addr set balance=0, recv_value=134190 where id=109727348;
+-- update addr set balance=7973, recv_value=734225 where id=140665179;
 
-update addr set balance=0, recv_value=125115 where id=109838193;
-update addr set balance=0, recv_value=134190 where id=109727348;
-update addr set balance=7973, recv_value=734225 where id=140665179;
+
+create or replace view vout as SELECT g.address,
+    g.id AS addr_id,
+    a.id AS txout_id,
+    h.txin_id,
+    h.txin_tx_id,
+    b.id AS txout_tx_id,
+    a.value,
+    a.tx_idx AS out_idx,
+    h.in_idx,
+    h.txin_tx_hash,
+    b.hash AS txout_tx_hash
+   FROM txout a
+     JOIN tx b ON b.id = a.tx_id AND b.removed = false
+     LEFT JOIN addr_txout f ON f.txout_id = a.id
+     LEFT JOIN addr g ON g.id = f.addr_id
+     LEFT JOIN (select c.prev_out, c.prev_out_index, c.id as txin_id, c.tx_idx as in_idx, e.id as txin_tx_id, e.hash as txin_tx_hash from txin c JOIN tx e ON e.id = c.tx_id AND e.removed = false) as h ON (h.prev_out = b.hash AND h.prev_out_index = a.tx_idx);
+
+
+create materialized view uout as SELECT g.address, g.id AS addr_id, a.id AS txout_id, h.txin_id, h.txin_tx_id, b.id AS txout_tx_id, a.value, a.tx_idx AS out_idx, h.in_idx, h.txin_tx_hash, b.hash AS txout_tx_hash FROM txout a JOIN tx b ON b.id = a.tx_id AND b.removed = false LEFT JOIN addr_txout f ON f.txout_id = a.id LEFT JOIN addr g ON g.id = f.addr_id LEFT JOIN (select c.prev_out, c.prev_out_index, c.id as txin_id, c.tx_idx as in_idx, e.id as txin_tx_id, e.hash as txin_tx_hash from txin c JOIN tx e ON e.id = c.tx_id AND e.removed = false) as h ON (h.prev_out = b.hash AND h.prev_out_index = a.tx_idx); 
+
+#spent vout view
+CREATE or REPLACE VIEW v_stxo AS                                                                                                           
+ SELECT g.address,                                                                                                            
+    g.id AS addr_id,                                                                                                          
+    a.id AS txout_id,                                                                                                         
+    h.txin_id,                                                                                                          
+    h.txin_tx_id,                                                                                                       
+    b.id AS txout_tx_id,                                                                                                      
+    a.value,                                                                                                                  
+    a.tx_idx AS out_idx,
+    h.in_idx,
+    b.hash AS txout_tx_hash,
+    h.txin_tx_hash,
+    blk.height,                                                                                                               
+    blk.time
+   FROM txout a                                                                                                        
+     LEFT JOIN tx b ON (b.id = a.tx_id and b.removed=false)
+     left join (select c.prev_out, c.prev_out_index, c.id as txin_id, c.tx_idx as in_idx, e.id as txin_tx_id, e.hash as txin_tx_hash from txin c JOIN tx e ON (e.id = c.tx_id and e.removed=false)) as h ON (h.prev_out = b.hash AND h.prev_out_index = a.tx_idx)
+     LEFT JOIN addr_txout f ON (f.txout_id = a.id)
+     LEFT JOIN addr g ON (g.id = f.addr_id)
+     JOIN blk_tx ON (blk_tx.tx_id = a.tx_id)
+     JOIN blk ON (blk.id = blk_tx.blk_id)
+  WHERE (h.txin_id IS NOT NULL); 
+ 
+#spent vout that not include stxo view 
+create or replace view vtxo as
+SELECT g.address,
+    g.id AS addr_id,
+    a.id AS txout_id,
+    h.txin_id,                                                                                                          
+    h.txin_tx_id,                                                                                                       
+    b.id AS txout_tx_id,
+    a.value,
+    a.tx_idx as out_idx,
+    h.in_idx,
+    h.txin_tx_hash,
+    b.hash AS txout_tx_hash,
+    blk.height,                                                                                                               
+    blk.time
+    FROM txout a
+     LEFT JOIN tx b ON (b.id = a.tx_id and b.removed=false)
+     left join (select c.prev_out, c.prev_out_index, c.id as txin_id, c.tx_idx as in_idx, e.id as txin_tx_id, e.hash as txin_tx_hash from txin c JOIN tx e ON (e.id = c.tx_id and e.removed=false)) as h ON (h.prev_out = b.hash AND h.prev_out_index = a.tx_idx)
+     LEFT JOIN addr_txout f ON f.txout_id = a.id
+     LEFT JOIN addr g ON g.id = f.addr_id
+     LEFT JOIN blk_tx ON ((blk_tx.tx_id = a.tx_id))                                                                               
+     LEFT JOIN blk ON ((blk.id = blk_tx.blk_id))                                                                                  
+     LEFT JOIN stxo i ON i.txout_id=a.id
+  WHERE (i.txout_id IS NULL); 
+ 
