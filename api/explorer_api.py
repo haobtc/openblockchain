@@ -137,7 +137,7 @@ def lastest_data(render_type='html'):
         blks.append(blk)
 
     txs=[]
-    res = Tx.query.order_by(Tx.id.desc()).limit(5).all()
+    res = Tx.query.filter(and_(Tx.removed==False,Tx.coinbase==False)).order_by(Tx.id.desc()).limit(5).all()
     for tx in res:
         tx= tx.todict()
         tx['in_addresses'], tx['out_addresses'] = get_tx_addresses(tx)
