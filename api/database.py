@@ -204,6 +204,24 @@ class AddrTx(SQLBase):
     def todict(self):
         return to_dict(self, self.__class__)
 
+class AddrTxN(SQLBase):
+    __tablename__ = 'addr_tx_normal'
+    addr_id = Column(INTEGER)
+    tx_id = Column(INTEGER)
+    __table_args__ = (PrimaryKeyConstraint(addr_id, tx_id), )
+
+    def todict(self):
+        return to_dict(self, self.__class__)
+
+class AddrTxR(SQLBase):
+    __tablename__ = 'addr_tx_removed'
+    addr_id = Column(INTEGER)
+    tx_id = Column(INTEGER)
+    __table_args__ = (PrimaryKeyConstraint(addr_id, tx_id), )
+
+    def todict(self):
+        return to_dict(self, self.__class__)
+
 class AddrTxUC(SQLBase):
     __tablename__ = 'addr_tx_unconfirmed'
     addr_id = Column(INTEGER, ForeignKey("addr.id"))
