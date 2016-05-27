@@ -261,6 +261,28 @@ class VOUT(SQLBase):
     def todict(self):
         return to_dict(self, self.__class__)
 
+#include removed/orphan/expired 
+class ALL_VOUT(SQLBase):
+    __tablename__ = 'all_vout'
+    address = Column(TEXT, primary_key=True)
+    addr_id = Column(INTEGER)
+    txout_id = Column(INTEGER)
+    txin_id = Column(INTEGER)
+    txin_tx_id = Column(INTEGER)
+    txout_tx_id = Column(INTEGER)
+    value = Column(BIGINT)
+    in_idx = Column(INTEGER)
+    out_idx = Column(INTEGER)
+    txin_tx_hash = Column(SBYTEA)
+    txout_tx_hash = Column(SBYTEA)
+    def __init__(self):
+        self.txin_tx_hash = binascii.hexlify(self.txin_tx_hash)
+        self.txout_tx_hash = binascii.hexlify(self.txout_tx_hash)
+
+    @property
+    def todict(self):
+        return to_dict(self, self.__class__)
+
 #Materialized view vout for fast search only for txin_count>100 or txout_count>100
 class M_VOUT(SQLBase):
     __tablename__ = 'm_vout'
