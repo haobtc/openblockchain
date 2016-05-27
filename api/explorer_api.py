@@ -111,10 +111,8 @@ def get_tx_addresses(tx=None):
     out_addresses = []
 
     if tx['removed']==True:
-       in_addresses = ALL_VOUT.query.with_entities(ALL_VOUT.address, ALL_VOUT.value, ALL_VOUT.txin_tx_id, ALL_VOUT.txout_tx_h
-sh).filter(ALL_VOUT.txin_tx_id==int(tx['id'])).order_by(ALL_VOUT.in_idx).all()
-       out_addresses = ALL_VOUT.query.with_entities(ALL_VOUT.address, ALL_VOUT.value, ALL_VOUT.txin_tx_id, ALL_VOUT.txin_tx_h
-sh).filter(ALL_VOUT.txout_tx_id==int(tx['id'])).order_by(ALL_VOUT.out_idx).all()
+       in_addresses = ALL_VOUT.query.with_entities(ALL_VOUT.address, ALL_VOUT.value, ALL_VOUT.txin_tx_id, ALL_VOUT.txout_tx_hash).filter(ALL_VOUT.txin_tx_id==int(tx['id'])).order_by(ALL_VOUT.in_idx).all()
+       out_addresses = ALL_VOUT.query.with_entities(ALL_VOUT.address, ALL_VOUT.value, ALL_VOUT.txin_tx_id, ALL_VOUT.txin_tx_hash).filter(ALL_VOUT.txout_tx_id==int(tx['id'])).order_by(ALL_VOUT.out_idx).all()
 
        return in_addresses , out_addresses
 
