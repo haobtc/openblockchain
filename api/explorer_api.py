@@ -49,6 +49,22 @@ def get_pool(pool_id):
 def _jinja2_filter_datetime(date):
     return datetime.utcfromtimestamp(date).ctime()
 
+@app.template_filter('offtime')
+def _jinja2_filter_offtime(itime):
+    now = datetime.now()
+    itime = datetime.fromtimestamp(itime)
+    elapsed = (now - itime)
+    if elapsed.days > 365:
+        return u'%d年前'  % (elapsed.days / 365)
+    elif elapsed.days > 0:                
+        return u'%d天前'  % (elapsed.days)
+    elif elapsed.seconds > 3600:
+        return u'%d小时前'  % (elapsed.seconds / 3600)
+    elif elapsed.seconds > 60 :
+        return u'%d分钟前'  % (elapsed.seconds / 60)
+    elif elapsed.seconds > 0 :
+        return u'%d秒前'  % (elapsed.seconds)
+
 @app.template_filter('reward')
 def _jinja2_filter_reward(blk):
     halvings = int(blk['height']) / 210000
