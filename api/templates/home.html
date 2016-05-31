@@ -23,7 +23,7 @@
         <td class="text-center">{{blk.blk_size}}</td>
         <td class="text-center">{{blk.tx_count}}</td>
         <td class="text-right">{{blk|reward}}</td>
-        {% if blk.bipname %}
+        {% if blk.bip_name %}
         <td class="text-right"><a href="/bip/{{blk.bip_name}}">{{blk.bip_name}}</a></td>
         {% else %}
         <td class="text-right"> {{blk.version}}</td>
