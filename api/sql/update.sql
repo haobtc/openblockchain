@@ -630,3 +630,5 @@ BEGIN
 END;
 $$;
  
+
+CREATE INDEX tx_removed_index ON tx USING BTREE (removed);
