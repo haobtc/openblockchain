@@ -168,4 +168,17 @@ end;
  
 
 
-CREATE INDEX addr_balance_index ON addr USING btree (balance);
+
+CREATE UNLOGGED TABLE addr_send1 (addr_id integer NOT NULL, tx_id integer NOT NULL, group_id integer, constraint addr_send1_constrainte unique (addr_id, tx_id));
+insert into addr_send1 select distinct addr_id, txin_tx_id as tx_id from vout where addr_id is not NULL and txin_tx_id is not NULL;
+CREATE MATERIALIZED VIEW vvout as SELECT g.id as addr_id, e.id AS txin_tx_id FROM txout a LEFT JOIN tx b ON b.id = a.tx_id and b.removed=false left join txin c on (c.prev_out=b.hash and c.prev_out_index=a.tx_idx) left JOIN tx e ON e.id = c.tx_id and e.removed=false left JOIN addr_txout f on f.txout_id=a.id left JOIN addr g on g.id=f.addr_id where e.id is not NULL and g.id is not NULL;
+CREATE INDEX vvout_address on vvout USING btree (addr_id);
+insert into addr_send select distinct addr_id,txin_tx_id as tx_id from vvout;
+
+
+
+CREATE UNLOGGED TABLE addr_send1 (addr_id integer NOT NULL, tx_id integer NOT NULL, group_id integer, constraint addr_send1_constrainte unique (addr_id, tx_id));
+insert into addr_send1 select distinct addr_id, txin_tx_id as tx_id from vout where addr_id is not NULL and txin_tx_id is not NULL;
+CREATE UNLOGGED TABLE addr_r (id1 integer NOT NULL, id2 integer not NULL, tx_id integer NOT NULL,  constraint addr_r_constrainte unique (id1, id2));
+CREATE RULE "addr_r_on_duplicate_ignore" AS ON INSERT TO "addr_r"  WHERE EXISTS(SELECT 1 FROM addr_r  WHERE (id1, id2)=(NEW.id1, NEW.id2))  DO INSTEAD NOTHING;
+ 
