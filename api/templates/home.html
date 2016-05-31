@@ -7,7 +7,7 @@
     <thead>
       <tr>
         <th class="text-center">高度</th>
-        <th class="text-center">时间</th>
+        <th class="text-center">生成时间</th>
         <th class="text-center">区块大小(byte)</th>
         <th class="text-center">交易数目</th>
         <th class="text-center">区块奖励<br/>(BTC)</th>
@@ -19,7 +19,7 @@
      {% for blk in blks %}
      <tr>      
         <td class="text-center"><a href="/blk/{{blk.hash}}">{{blk.height}}</a></td>
-        <td class="text-center"><abbr class="timeago" rel="tooltip" data-animation="false" >{{blk.time|datetime}}</abbr></td>
+        <td class="text-center"><abbr class="timeago" rel="tooltip" data-animation="false" >{{blk.time|offtime}}</abbr></td>
         <td class="text-center">{{blk.blk_size}}</td>
         <td class="text-center">{{blk.tx_count}}</td>
         <td class="text-right">{{blk|reward}}</td>
