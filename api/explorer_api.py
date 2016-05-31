@@ -59,7 +59,7 @@ def _jinja2_filter_offtime(itime):
     elif elapsed.days > 0:                
         return u'%d天前'  % (elapsed.days)
     elif elapsed.seconds > 3600:
-        return u'%d小时前'  % (elapsed.seconds / 3600)
+        return u'%d小时%d前'  % ((elapsed.seconds / 3600), (elapsed.seconds % 3600)/60 )
     elif elapsed.seconds > 60 :
         return u'%d分钟前'  % (elapsed.seconds / 60)
     elif elapsed.seconds > 0 :
