@@ -13,6 +13,7 @@ from util     import calculate_target, calculate_difficulty, decode_check_addres
 import re
 import config
 import logging
+import time
 
 from flask.ext.cache import Cache
 
@@ -150,7 +151,6 @@ def get_tx_addresses(tx=None):
  
     return in_addresses , out_addresses
  
-
 def lastest_data(render_type='html'):
     blks=[]
     res = Block.query.order_by(Block.height.desc()).limit(10).all()
@@ -562,7 +562,19 @@ def render_wallet(wallet_id=0, page=1, render_type='html'):
         return jsonify(wallet)
 
     return render_template("wallet.html", wallet=wallet,page=page)
- 
+
+@app.route('/stats', methods=['GET'])
+def render_addr(date=None):
+    if date == None:
+        t = datetime.now().date()
+        #beijing time
+        date = time.mktime(t.timetuple()) - 24 * 3600
+    else:
+       date = int(date)
+    btcstat = DAILY_STAT.query.filter(DAILY_STAT.time == date).first()
+    btcstat.js['time'] = datetime.utcnow().date() 
+    return render_template("btc_stat.html", stat=btcstat.js)
+
 @app.route('/wallet/<wallet_id>', methods=['GET', 'POST'])
 def wallet_handle(wallet_id=0):
     render_type=request.args.get('type') or 'html'
