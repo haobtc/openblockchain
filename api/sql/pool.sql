@@ -75,6 +75,9 @@ COPY	pool	(id,	name,	link)	FROM	stdin;
 115	eobot	http://eobot.com
 116	1hash	https://www.1hash.com/
 117	unomp	http://199.115.116.7:8925/
+118	patelsminingpool	http://patelsminingpool.com/
+119	haobtc	http://haobtc.com/
+120	viabtc	http://viabtc.com:8000/
 \.
 
 
