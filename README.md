@@ -55,7 +55,7 @@ txindex=1
 
 # build bitcoind
 
-apt-get install build-essential libtool autotools-dev autoconf libssl-dev libboost-all-dev libdb-dev libdb++-dev pkg-config libpq-dev 
+apt-get install build-essential libtool autotools-dev autoconf libssl-dev libboost-all-dev libdb-dev libdb++-dev pkg-config libpq-dev libevent-dev
 
 ./autogen.sh
 

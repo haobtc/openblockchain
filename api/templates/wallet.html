@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="col-lg-12">
+    <h1> 钱包:   <a href={{ wallet.link}}>{{ wallet.name }} </a> </h1>
+
+    {% for addr in wallet.addresses %}
+
+    <div class="transaction_section"> 
+        <div class="transaction" > 
+            <div class="transaction_hash">
+                <a href=/addr/{{ addr.address }}  >  {{ addr.address }} </a>
+                <span class="pull-right"> <span> 
+                        hash160: {{ addr.hash160 }} 
+                        recv :          {{ addr.recv_value|btc}} 
+                        spent :           {{ addr.spent_value|btc}}
+                        recv tx count : {{ addr.recv_count }}
+                        spent tx count : {{ addr.spent_count }}
+                </span> </span>
+            </div>
+        </div>
+
+        {% endfor %}
+
+        <div class="row">
+            <div class="span10">
+                <ul class="pager">
+                    {% if page > 1 %}
+                    <li><a href=/wallet/{{wallet.wallet_id}}?page={{ page - 1 }}>Prev page</a></li>
+                    {% endif %}
+                    <li><a href=/wallet/{{wallet.wallet_id}}?page={{ page + 1 }}>Next page</a></li>
+                </ul>  
+            </div>
+        </div>
+    </div>
+</div>
+ 
+
+{% endblock %}

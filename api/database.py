@@ -46,7 +46,7 @@ def to_dict(inst, cls):
     return d
 
 class Block(SQLBase):
-    __tablename__ = 'blk'
+    __tablename__ = 'v_blk'
     id = Column(INTEGER, primary_key=True)
     hash = Column(SBYTEA)
     height = Column(INTEGER)
@@ -64,6 +64,13 @@ class Block(SQLBase):
     total_out_count = Column(INTEGER)
     total_out_value = Column(BIGINT)
     tx_count        = Column(INTEGER) 
+    pool_id         = Column(INTEGER) 
+    recv_time       = Column(BIGINT) 
+    pool_bip        = Column(INTEGER) 
+    pool_name       = Column(TEXT) 
+    pool_link       = Column(TEXT) 
+    bip_name        = Column(TEXT) 
+    bip_link        = Column(TEXT) 
 
     def todict(self):
         return to_dict(self, self.__class__)
@@ -143,6 +150,7 @@ class Addr(SQLBase):
     recv_count  = Column(INTEGER)  
     spent_value = Column(BIGINT) 
     spent_count = Column(INTEGER)  
+    group_id    = Column(INTEGER)  
 
     def todict(self):
         return to_dict(self, self.__class__)
@@ -231,6 +239,77 @@ class VOUT(SQLBase):
     def todict(self):
         return to_dict(self, self.__class__)
 
+#Materialized view vout for fast search only for txin_count>100 or txout_count>100
+class M_VOUT(SQLBase):
+    __tablename__ = 'm_vout'
+    address = Column(TEXT, primary_key=True)
+    addr_id = Column(INTEGER)
+    txout_id = Column(INTEGER)
+    txin_id = Column(INTEGER)
+    txin_tx_id = Column(INTEGER)
+    txout_tx_id = Column(INTEGER)
+    value = Column(BIGINT)
+    in_idx = Column(INTEGER)
+    out_idx = Column(INTEGER)
+    txin_tx_hash = Column(SBYTEA)
+    txout_tx_hash = Column(SBYTEA)
+    def __init__(self):
+        self.txin_tx_hash = binascii.hexlify(self.txin_tx_hash)
+        self.txout_tx_hash = binascii.hexlify(self.txout_tx_hash)
+
+    @property
+    def todict(self):
+        return to_dict(self, self.__class__)
+
+#spent vout table
+class STXO(SQLBase):
+    __tablename__ = 'stxo'
+    address = Column(TEXT, primary_key=True)
+    addr_id = Column(INTEGER)
+    txout_id = Column(INTEGER)
+    txin_id = Column(INTEGER)
+    txin_tx_id = Column(INTEGER)
+    txout_tx_id = Column(INTEGER)
+    value = Column(BIGINT)
+    in_idx = Column(INTEGER)
+    out_idx = Column(INTEGER)
+    txin_tx_hash = Column(SBYTEA)
+    txout_tx_hash = Column(SBYTEA)
+    height   = Column(INTEGER) 
+    time = Column(BIGINT)
+    def __init__(self):
+        self.txin_tx_hash = binascii.hexlify(self.txin_tx_hash)
+        self.txout_tx_hash = binascii.hexlify(self.txout_tx_hash)
+
+    @property
+    def todict(self):
+        return to_dict(self, self.__class__)
+
+#vout not in stxo table
+class VTXO(SQLBase):
+    __tablename__ = 'vtxo'
+    address = Column(TEXT, primary_key=True)
+    addr_id = Column(INTEGER)
+    txout_id = Column(INTEGER)
+    txin_id = Column(INTEGER)
+    txin_tx_id = Column(INTEGER)
+    txout_tx_id = Column(INTEGER)
+    value = Column(BIGINT)
+    in_idx = Column(INTEGER)
+    out_idx = Column(INTEGER)
+    txin_tx_hash = Column(SBYTEA)
+    txout_tx_hash = Column(SBYTEA)
+    height   = Column(INTEGER) 
+    time = Column(BIGINT)
+    def __init__(self):
+        self.txin_tx_hash = binascii.hexlify(self.txin_tx_hash)
+        self.txout_tx_hash = binascii.hexlify(self.txout_tx_hash)
+
+    @property
+    def todict(self):
+        return to_dict(self, self.__class__)
+ 
+
 class UTXO(SQLBase):
     __tablename__ = 'utxo'
     address = Column(TEXT, primary_key=True)
@@ -257,6 +336,35 @@ class POOL(SQLBase):
     __tablename__ = 'pool'
     id = Column(INTEGER, primary_key=True)
     name = Column(TEXT)
+    link = Column(TEXT)
+
+    def todict(self):
+        return to_dict(self, self.__class__)
+ 
+class ADDR_SEND(SQLBase):
+    __tablename__ = 'addr_send'
+    addr_id = Column(INTEGER)
+    tx_id = Column(INTEGER)
+    group_id = Column(INTEGER)
+    __table_args__ = (PrimaryKeyConstraint(addr_id, tx_id), )
+
+    def todict(self):
+        return to_dict(self, self.__class__)
+ 
+
+class ADDR_GROUP(SQLBase):
+    __tablename__ = 'addr_group'
+    addr_id = Column(INTEGER)
+    tx_id = Column(INTEGER)
+    group_id = Column(INTEGER)
+    __table_args__ = (PrimaryKeyConstraint(addr_id, tx_id), )
+
+class AddrTag(SQLBase):
+    __tablename__ = 'addr_tag'
+    id = Column(INTEGER, primary_key=True)
+    addr = Column(TEXT)
+    name = Column(TEXT)
+    link = Column(TEXT)
 
     def todict(self):
         return to_dict(self, self.__class__)

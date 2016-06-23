@@ -3,7 +3,13 @@
 {% block content %}
 
 <div class="col-lg-12">
-    <h1> 地址: {{ addr.address }}</h1>
+
+    <h1> 地址: {{ addr.address }} </h1>
+    {% if addr.tag_name %}
+    <h1> 钱包:  <a href=/wallet/{{ addr.group_id}}>{{ addr.tag_name }} </a> </h1>
+    {% else %}
+    <h1> 钱包:  <a href=/wallet/{{ addr.group_id}}> 未知钱包 </a> </h1>
+    {% endif %}
     <button class="btn btn-success">
         <span> 余额: {{ addr.balance|btc }} </span>
     </button>
@@ -61,8 +67,14 @@
             {% else %}  
             <div class="tx_input">
                 {% for txin in tx.vin %}
-                <a href="/addr/{{txin.address}} ">  {{txin.address}}   </a>
-                <span class="pull-right"> <span> <a href=/tx/{{txin.txout_tx_hash }} > {{txin.value| btc}}  BTC </a></span></span> 
+                    {% if loop.index < 5 %}
+                        <a href="/addr/{{txin.address}} ">  {{txin.address}}   </a>
+                        <span class="pull-right"> <span> <a href=/tx/{{txin.txout_tx_hash }} > {{txin.value| btc}}  BTC </a></span></span> 
+                    {%endif%}
+                    {% if loop.index == 5 %}
+                       <br>
+                       <a href="/tx/{{ tx.hash}} "> 更多... </a>
+                    {%endif%}
                 {% endfor %}
             </div>
             {% endif %}  
@@ -71,14 +83,20 @@
 
             <div class="tx_output">
                 {% for txout in tx.vout %}
-                    <a href="/addr/{{txout.address}} ">  {{txout.address}}   </a>
-                    {% if txout.txin_tx_id!=None %}
-                    <span class="pull-right"> <span> <a href=/tx/{{txout.txin_tx_hash }} >{{txout.value| btc}} BTC </a></span></span> 
-                        <span class="pull-right"> <span>   已花费 </span></span> 
-                    {% else %}
-                        <span class="pull-right"> <span>  {{txout.value| btc}}  BTC </span></span> 
-                        <span class="pull-right"> <span>   未花费 </span></span> 
-                    {% endif %}
+                    {% if loop.index < 5 %}
+                        <a href="/addr/{{txout.address}} ">  {{txout.address}}   </a>
+                        {% if txout.txin_tx_id!=None %}
+                        <span class="pull-right"> <span> <a href=/tx/{{txout.txin_tx_hash }} >{{txout.value| btc}} BTC </a></span></span> 
+                            <span class="pull-right"> <span>   已花费 </span></span> 
+                        {% else %}
+                            <span class="pull-right"> <span>  {{txout.value| btc}}  BTC </span></span> 
+                            <span class="pull-right"> <span>   未花费 </span></span> 
+                        {% endif %}
+                    {%endif%}
+                    {% if loop.index == 5 %}
+                       <br>
+                       <a href="/tx/{{ tx.hash}} "> 更多... </a>
+                    {%endif%}
                 {% endfor %}
             </div>
 

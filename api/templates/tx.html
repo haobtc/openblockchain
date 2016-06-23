@@ -63,6 +63,9 @@
             <tbody>
             <tr> <th colspan="2"> 交易信息 </th> </tr>
             <tr> <td> 确认数 </td> <td> {{tx.confirm }}</td> </tr>
+            {% if tx.rbf %}
+            <tr> <td> 双花 </td> <td> 交易发送者标记该交易未确认之前可以被替换 </td> </tr>
+            {% endif  %}
             <tr> <td> 版本 </td> <td> {{tx.version}}</td> </tr>
             <tr> <td> locktime </td> <td> {{tx.lock_time}}</td> </tr>
             {% if tx.recv_time!='' %}
@@ -85,24 +88,59 @@
         {% if tx.coinbase %}
             <h4> Coinbase:</h4>
             <table class="table table-striped">
+                <tr> <td> {{tx.vin[0].script_sig|coinbase}} </td> </tr>
                 <tr> <td> {{tx.vin[0].script_sig}} </td> </tr>
             </table>
         {% else %}
             <h4> 输入列表: </h4>
             <table class="table table-striped">
                 {% for txin in tx.vin %}
-                <tr> <td> {{txin.script_sig}} </td> </tr>
+                <tr> <td> <div id ="btc_script">{{txin.script_sig}} </div> </td> </tr>
                 {% endfor %}
             </table>
         {% endif %}
         <h4> 输出列表: </h4>
         <table class="table table-striped">
             {% for txout in tx.vout %}
-            <tr> <td> {{txout.pk_script}} </td> </tr>
+            <tr> <td> <div id ="btc_script">{{txout.pk_script}} </div> </td> </tr>
             {% endfor %}
         </table>
     </div>
 </div>
- 
+
+{% block script %}
+  <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/bitcore.js') }}"></script>
+
+  <script type="text/javascript">
+    function parse_script(script) {
+        var bitcore = require('bitcore');
+        var Buffer = bitcore.Buffer;
+        var Script = bitcore.Script;
+        var PrivateKey = bitcore.PrivateKey;
+        var PublicKey = bitcore.PublicKey;
+        var Address = bitcore.Address;
+        var raw_script = new Buffer(script, 'hex');
+        var s = new Script(raw_script);
+        console.log(s.toString());
+        return s.toString()
+    }
+
+    var btc_scripts = $('div[id=btc_script]');
+    for (var i=0; i<btc_scripts.length; i++) {
+        var btc_script=btc_scripts[i];
+        if( btc_script == undefined ) {
+          break;
+        }
+
+        script_value =$.trim($(btc_script).text())
+
+        easy_read = parse_script(script_value);
+
+        $(btc_script).text(easy_read);
+        $(btc_script).attr("raw", script_value);
+    } //end all submit
+  </script>
+{%endblock%} 
 
 {% endblock %}

@@ -1,0 +1,1 @@
+ALTER TABLE blk ADD COLUMN pool_bip INTEGER;  

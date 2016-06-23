@@ -11,7 +11,8 @@
         <th class="text-center">区块大小(byte)</th>
         <th class="text-center">交易数目</th>
         <th class="text-center">区块奖励<br/>(BTC)</th>
-        <th class="text-center">k矿池<br/></th>
+        <th class="text-center">支持的BIP<br/></th>
+        <th class="text-center">矿池<br/></th>
       </tr>
     </thead>
     <tbody id="liveblock">
@@ -22,7 +23,8 @@
         <td class="text-center">{{blk.blk_size}}</td>
         <td class="text-center">{{blk.tx_count}}</td>
         <td class="text-right">{{blk|reward}}</td>
-        <td class="text-right">{{blk.pool}}</td>
+        <td class="text-right"><a href="/bip/{{blk.bip_name}}">{{blk.bip_name}}</a></td>
+        <td class="text-right"><a href="/pool/{{blk.pool_name}}">{{blk.pool_name}}</a></td>
     </tr>
      {% endfor %}
     </tbody>
@@ -56,8 +58,14 @@
             {% else %}  
             <div class="tx_input">
                 {% for txin in tx.in_addresses%}
-                <a href="/addr/{{ txin[0]}} ">  {{txin[0]}}   </a>
-                <span class="pull-right"> <span>  {{txin[1]| btc}}  BTC </span></span> 
+                    {% if loop.index < 5 %}
+                        <a href="/addr/{{ txin[0]}} ">  {{txin[0]}}   </a>
+                        <span class="pull-right"> <span>  {{txin[1]| btc}}  BTC </span></span> 
+                    {%endif%}
+                    {% if loop.index == 5 %}
+                       <br>
+                       <a href="/tx/{{ tx.hash}} "> 更多... </a>
+                    {%endif%}
                 {% endfor %}
             </div>
             {% endif %}  
@@ -66,8 +74,14 @@
 
             <div class="tx_output">
                 {% for txout in tx.out_addresses%}
-                <a href="/addr/{{txout[0]}} ">  {{txout[0]}}   </a>
-                <span class="pull-right"> <span>  {{txout[1]| btc}}  BTC </span></span> 
+                    {% if loop.index < 5 %}
+                        <a href="/addr/{{txout[0]}} ">  {{txout[0]}}   </a>
+                        <span class="pull-right"> <span>  {{txout[1]| btc}}  BTC </span></span> 
+                    {%endif%}
+                    {% if loop.index == 5 %}
+                       <br>
+                       <a href="/tx/{{ tx.hash}} "> 更多... </a>
+                    {%endif%}
                 {% endfor %}
             </div>
 

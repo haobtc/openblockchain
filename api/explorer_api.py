@@ -7,18 +7,22 @@ import simplejson as json
 import binascii
 from database import *
 from sqlalchemy import and_
+from sqlalchemy.sql import  select
 from datetime import datetime
 from util     import calculate_target, calculate_difficulty, decode_check_address
 import re
 import config
 import logging
 
-logging.basicConfig(format='%(asctime)s %(message)s', filename=config.EXPLORER_API_LOG_FILE,level=logging.INFO)
-console = logging.StreamHandler()  
-console.setLevel(logging.DEBUG)  
-formatter = logging.Formatter('%(asctime)-12s: %(message)s')  
-console.setFormatter(formatter)  
-logging.getLogger('').addHandler(console) 
+# logging.basicConfig(format='%(asctime)s %(message)s', filename=config.EXPLORER_API_LOG_FILE,level=logging.INFO)
+# console = logging.StreamHandler()  
+# console.setLevel(logging.DEBUG)  
+# formatter = logging.Formatter('%(asctime)-12s: %(message)s')  
+# console.setFormatter(formatter)  
+# logging.getLogger('').addHandler(console) 
+
+logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
+
 
 app = Flask(__name__, static_url_path='/static')
 
@@ -31,45 +35,12 @@ access = AuthServiceProxy(config.RPC_URL)
 def getmininginfo():
   return json.loads(access.getmininginfo())
 
-pool_info=json.loads(open('pools.json','r').read())
-def save_pool():
-    for addr in pool_info['payout_addresses'].keys():
-      try:
-        p=POOL()
-        p.name=pool_info['payout_addresses'][addr]['name']
-        db_session.add(p)
-        db_session.flush()
-        db_session.refresh(p)
-      except:
-        pass
-
-    for tag in pool_info['coinbase_tags'].keys():
-      try:
-        p=POOL()
-        p.name=pool_info['coinbase_tags'][tag]['name']
-        db_session.add(p)
-        db_session.flush()
-        db_session.refresh(p)
-      except:
-        pass
- 
-def get_pool(blk_id):
-    coinbase_txout_id = db_session.execute('select a.id from txout a join tx b on(b.id=a.tx_id) join blk_tx c on (c.tx_id=b.id and c.idx=0) where c.blk_id=%d' % blk_id).first()[0];
-    if coinbase_txout_id==None:
-        return ''
-    coinbase_addr = VOUT.query.with_entities(VOUT.address).filter(VOUT.txout_id==coinbase_txout_id).first()
-    if coinbase_addr==None:
-        return ''
-    pool= pool_info['payout_addresses'].get(coinbase_addr[0])
-    if pool!=None:
-        return  pool['name']
+def get_pool(pool_id):
+    res = POOL.query.with_entities(POOL.name, POOL.link).filter(POOL.id==pool_id).first()
+    if res != None:
+        return res.name, res.link
     else:
-        coinbase_str = db_session.execute('select a.script_sig from txin a join tx b on(b.id=a.tx_id) join blk_tx c on (c.tx_id=b.id and c.idx=0) where c.blk_id=%d' % blk_id).first()[0];
-        for tag in pool_info['coinbase_tags'].keys():
-            if re.search(tag, coinbase_str)!=None:
-               return  pool_info['coinbase_tags'][tag]['name']
-        return 'Unknown'
-
+        return 'unknown',''
 
 @app.template_filter('datetime')
 def _jinja2_filter_datetime(date):
@@ -90,7 +61,25 @@ def _jinja2_filter_reward(blk):
 def _jinja2_filter_btc(value):
     if value=='':
        return 0
-    return float(value)/100000000
+
+    if isinstance(value, basestring):
+        value = decimal.Decimal(value)
+
+    hold_len = 8
+    fmt = '%i.%08i'
+    k = 100000000
+
+    sign = ''
+    if value < 0:
+        value = -value
+        sign = '-'
+
+    upv = value
+    r = fmt % (upv // k, upv % k)
+    r = sign + r.rstrip('0').rstrip('.')
+    if r == '-0':
+        r = '0'
+    return r
  
 @app.template_filter('target')
 def _jinja2_filter_target(value):
@@ -100,26 +89,71 @@ def _jinja2_filter_target(value):
 def _jinja2_filter_difficulty(value):
     return calculate_difficulty(value)
 
+@app.template_filter('coinbase')
+def _jinja2_filter_coinbase(value):
+    try:
+        return value.decode('hex').decode('ascii','replace')
+    except:
+        value
+ 
 def render_404(render_type='html'):
     if render_type=='html':
         return render_template('404.html'), 404
     elif render_type=='json':
         return jsonify({"error":"Not found"}), 404
 
+def get_tx_addresses (tx=None):
+    in_addresses = []
+    out_addresses = []
+    if tx['out_count']>100 or tx['in_count']>100:
+        try:
+            in_addresses = M_VOUT.query.with_entities(M_VOUT.address, M_VOUT.value, M_VOUT.txin_tx_id, M_VOUT.txout_tx_hash).filter(M_VOUT.txin_tx_id==tx['id']).order_by(M_VOUT.in_idx).all()
+            out_addresses = M_VOUT.query.with_entities(M_VOUT.address, M_VOUT.value, M_VOUT.txin_tx_id, M_VOUT.txin_tx_hash).filter(M_VOUT.txout_tx_id==tx['id']).order_by(M_VOUT.out_idx).all()
+            if in_addresses!=None and out_addresses!=None:
+                return in_addresses , out_addresses
+        except Exception, e:
+            pass
+
+    in_addresses = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txout_tx_hash).filter(VOUT.txin_tx_id==tx['id']).order_by(VOUT.in_idx).all()
+    out_addresses = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txin_tx_hash).filter(VOUT.txout_tx_id==tx['id']).order_by(VOUT.out_idx).all()
+    return in_addresses , out_addresses
+ 
+def get_tx_addresses_new(tx=None):
+
+    in_addresses = []
+    out_addresses = []
+
+    s1 = select([STXO.address, STXO.value, STXO.txin_tx_id, STXO.txout_tx_hash, STXO.in_idx]).where(STXO.txin_tx_id == int(tx['id']))
+    
+    s2 = select([VTXO.address, VTXO.value, VTXO.txin_tx_id, VTXO.txout_tx_hash, VTXO.in_idx]).where(VTXO.txin_tx_id == int(tx['id']))
+    
+    q = s1.union(s2).alias('in_addresses')
+    
+    in_addresses=db_session.query(q).order_by('in_idx').all()
+
+    s1 = select([STXO.address, STXO.value, STXO.txin_tx_id, STXO.txout_tx_hash, STXO.out_idx]).where(STXO.txout_tx_id == tx['id'])
+    
+    s2 = select([VTXO.address, VTXO.value, VTXO.txin_tx_id, VTXO.txout_tx_hash, VTXO.out_idx]).where(VTXO.txout_tx_id == tx['id'])
+    
+    q = s1.union(s2).alias('out_addresses')
+    
+    out_addresses=db_session.query(q).order_by('out_idx').all()
+ 
+    return in_addresses , out_addresses
+ 
+
 def lastest_data(render_type='html'):
     blks=[]
     res = Block.query.order_by(Block.height.desc()).limit(10).all()
     for blk in res:
         blk=blk.todict() 
-        blk['pool'] = get_pool(blk['id'])
         blks.append(blk)
 
     txs=[]
     res = Tx.query.order_by(Tx.id.desc()).limit(5).all()
     for tx in res:
         tx= tx.todict()
-        tx['in_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txin_tx_id==tx['id']).order_by(VOUT.in_idx).all()
-        tx['out_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id).filter(VOUT.txout_tx_id==tx['id']).order_by(VOUT.out_idx).all()
+        tx['in_addresses'], tx['out_addresses'] = get_tx_addresses(tx)
         if tx['recv_time'] == 0:
             tx['recv_time'] = tx['time']
         txs.append(tx)
@@ -159,6 +193,48 @@ def checkdb():
     # level= request.args.get('level') or 3
     # return check_db(level)
 
+def render_bip(bip_name=None, render_type='html'):
+    blks=[]
+    res = Block.query.filter(Block.bip_name==bip_name).order_by(Block.height.desc()).limit(100).all()
+    for blk in res:
+        blk=blk.todict() 
+        blks.append(blk)
+   
+    last_data={}
+    last_data['blks'] = blks
+    
+    if render_type == 'json':
+        return jsonify(last_data)
+
+    return render_template('bip.html', blks=blks)
+ 
+@app.route('/bip/<bip_name>', methods=['GET', 'POST'])
+def bip_handle(bip_name):
+    render_type=request.args.get('type') or 'html'
+    return render_bip(bip_name, render_type)
+ 
+
+def render_pool(pool_name=None, render_type='html'):
+    blks=[]
+    res = Block.query.filter(Block.pool_name==pool_name).order_by(Block.height.desc()).limit(100).all()
+    for blk in res:
+        blk=blk.todict() 
+        blks.append(blk)
+   
+    last_data={}
+    last_data['blks'] = blks
+    
+    if render_type == 'json':
+        return jsonify(last_data)
+
+    return render_template('pool.html', blks=blks)
+ 
+@app.route('/pool/<pool_name>', methods=['GET', 'POST'])
+def pool_handle(pool_name):
+    render_type=request.args.get('type') or 'html'
+    return render_pool(pool_name, render_type)
+ 
+
 def render_tx(tx=None, render_type='html'):
     tx= tx.todict()
 
@@ -166,15 +242,20 @@ def render_tx(tx=None, render_type='html'):
     tx['vin'] = [txin.todict() for txin in txins ]
     txouts = TxOut.query.filter(TxOut.tx_id==tx['id']).order_by(TxOut.tx_idx.asc()).all()
     tx['vout'] = [txout.todict() for txout in txouts]
-    tx['in_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txout_tx_hash).filter(VOUT.txin_tx_id==tx['id']).order_by(VOUT.in_idx).all()
-
-    tx['out_addresses'] = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txin_tx_hash).filter(VOUT.txout_tx_id==tx['id']).order_by(VOUT.out_idx).all()
-    
+    tx['in_addresses'], tx['out_addresses'] = get_tx_addresses(tx)
+   
     confirm = db_session.execute('select get_confirm(%d)' % tx['id']).first()[0];
     if confirm ==None:
         tx['confirm'] = 0
+        for vin in tx['vin']:
+            if int(vin['sequence']) < 4294967294:
+               continue
+            else:
+               break
+            tx['rbf'] = True
     else:
         tx['confirm'] = confirm
+
  
     if render_type == 'json':
         return jsonify(tx)
@@ -213,10 +294,7 @@ def render_blk(blk=None, page=1, render_type='html'):
         for txid in res:
            res = Tx.query.filter(Tx.id==txid).first()
            tx= res.todict()
-           txins = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txout_tx_hash).filter(VOUT.txin_tx_id==txid).order_by(VOUT.in_idx).all()
-           tx['in_addresses'] = txins
-           txouts = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txin_tx_hash).filter(VOUT.txout_tx_id==txid).order_by(VOUT.out_idx).all()
-           tx['out_addresses'] = txouts
+           tx['in_addresses'], tx['out_addresses'] = get_tx_addresses(tx)
            txs.append(tx)
     blk['tx']=txs
 
@@ -254,6 +332,49 @@ def blk_handle(blkhash, blk=None):
 def confirm(txs): 
      return txs['confirm'] 
 
+def get_addresses_spent_tx(addr_id=None, page=1, page_size=10, desc=True):
+
+    in_addresses = []
+    out_addresses = []
+
+    s1 = select([STXO.txin_tx_id]).where(STXO.addr_id == addr_id)
+    s2 = select([VTXO.txin_tx_id]).where(VTXO.addr_id == addr_id)
+    
+    q = s1.union(s2).alias('spent_btc')
+    
+    spent_tx=db_session.query(q).order_by('txin_tx_id').desc().offset((page-1)*page_size).limit(page_size) 
+
+def get_addresses_unspent_tx(addr_id=None, page=1, page_size=10, desc=True):
+
+    s1 = select([UTXO.txout_tx_id]).where(UTXO.addr_id == addr_id)
+    
+    q = s1.alias('unspent_btc')
+    
+    return db_session.query(q).order_by('txout_tx_id').desc().offset((page-1)*page_size).limit(page_size) 
+
+def get_addresses_recv_tx(addr_id=None, page=1, page_size=10, desc=True):
+
+    s1 = select([VOUT.txout_tx_id]).where(VOUT.addr_id == addr_id)
+    
+    q = s1.alias('receive_btc')
+
+    if desc:
+        return db_session.query(q).order_by('txout_tx_id').desc().offset((page-1)*page_size).limit(page_size) 
+    else:
+        return db_session.query(q).order_by('txout_tx_id').asc().offset((page-1)*page_size).limit(page_size) 
+
+def get_addresses_unconfirmed_btc(addr_id=None, page=1, page_size=10, desc=True):
+ 
+    s1 = select([UTXO.txout_tx_id]).where(UTXO.addr_id == addr_id)
+    q = s1.alias('unconfirmed_btc')
+    return db_session.query(q).order_by('txout_tx_id').desc().offset((page-1)*page_size).limit(page_size) 
+
+def get_addresses_confirmed_btc(addr_id=None, page=1, page_size=10, desc=True):
+ 
+    s1 = select([UTXO.txout_tx_id]).where(UTXO.addr_id == addr_id)
+    q = s1.alias('confirmed_btc')
+    return db_session.query(q).order_by('txout_tx_id').desc().offset((page-1)*page_size).limit(page_size) 
+ 
 def render_addr(address=None, page=1, render_type='html', filter=0):
     addr = Addr.query.filter(Addr.address == address).first()
     if addr == None:
@@ -282,6 +403,12 @@ def render_addr(address=None, page=1, render_type='html', filter=0):
 
     addr=addr.todict()
     addr['tx_count']=AddrTx.query.filter(AddrTx.addr_id==int(addr["id"])).count();
+    if addr['group_id']!='':
+        res = AddrTag.query.with_entities(AddrTag.name,AddrTag.link).filter(AddrTag.id == addr['group_id']).first()
+        if res !=None:
+            addr['tag_name'], addr['tag_url'] = res.name, res.link
+        else:
+            addr['tag_name'], addr['tag_url'] = '',''
 
     total_page = addr['tx_count']/page_size
     if addr['tx_count']%page_size:
@@ -302,11 +429,11 @@ def render_addr(address=None, page=1, render_type='html', filter=0):
     if filter==0:   #all
         txidlist = AddrTx.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id==int(addr["id"])).order_by(AddrTx.tx_id.desc()).offset((page-1)*page_size).limit(page_size)
     elif filter==1: #spent
-        txidlist = VOUT.query.with_entities(VOUT.txin_tx_id).distinct(VOUT.txin_tx_id).filter(and_(VOUT.addr_id==int(addr["id"]),VOUT.txin_tx_id!=None)).order_by(VOUT.txin_tx_id.desc()).offset((page-1)*page_size).limit(page_size)
+        txidlist = get_addresses_spent_tx(int(addr['id']), page, page_size, desc=True)
     elif filter==2: #recv
-        txidlist = VOUT.query.with_entities(VOUT.txout_tx_id).distinct(VOUT.txout_tx_id).filter(VOUT.addr_id==int(addr["id"])).order_by(VOUT.txout_tx_id.desc()).offset((page-1)*page_size).limit(page_size)
+        txidlist = get_addresses_recv_tx(int(addr['id']), page, page_size, desc=True)
     elif filter==3: #utxo
-        txidlist = VOUT.query.with_entities(VOUT.txout_tx_id).distinct(VOUT.txout_tx_id).filter(and_(VOUT.addr_id==int(addr["id"]),VOUT.txin_tx_id==None)).order_by(VOUT.txout_tx_id.desc()).offset((page-1)*page_size).limit(page_size)
+        txidlist = get_addresses_unspent_tx(int(addr['id']), page, page_size, desc=True)
     elif filter==4: #unconfirm
         txidlist =  AddrTxUC.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id==int(addr["id"])).order_by(AddrTx.tx_id.desc()).offset((page-1)*page_size).limit(page_size)
     elif filter==5: #confirm
@@ -327,14 +454,13 @@ def render_addr(address=None, page=1, render_type='html', filter=0):
         res = Tx.query.filter(Tx.id==txid).first()
         tx= res.todict()
 
-        txins = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txout_tx_hash).filter(VOUT.txin_tx_id==txid).order_by(VOUT.in_idx).all()
+        txins, txouts = get_tx_addresses(tx)
         for vin in txins:
             if vin.address==address:
                 tx_in_value = tx_in_value - vin.value
                 in_value = in_value - vin.value
         tx['vin'] = txins
 
-        txouts = VOUT.query.with_entities(VOUT.address, VOUT.value, VOUT.txin_tx_id, VOUT.txin_tx_hash).filter(VOUT.txout_tx_id==txid).order_by(VOUT.out_idx).all()
         for vout in txouts:
             if vout.address==address:
                 tx_out_value = tx_out_value + vout.value
@@ -363,11 +489,38 @@ def address_handle(address):
 
     return render_addr(address, page, render_type, int(filter))
 
+def render_wallet(wallet_id=0, page=1, render_type='html'):
+    wallet = {}
+    page =int(page)
+    wallet['wallet_id'] = int(wallet_id)
+    addr_list = Addr.query.filter(Addr.group_id== wallet_id).offset((page-1)*page_size).limit(page_size)
+    if addr_list == None:
+       return render_404(render_type)
+
+    wallet['addresses'] = addr_list 
+    res = AddrTag.query.with_entities(AddrTag.name,AddrTag.link).filter(AddrTag.id == wallet_id).first()
+    if res !=None:
+        wallet['name'], wallet['link'] = res.name, res.link
+    else:
+        wallet['name'], wallet['link'] = wallet_id, wallet_id
+ 
+    if render_type == 'json':
+        return jsonify(wallet)
+
+    return render_template("wallet.html", wallet=wallet,page=page)
+ 
+@app.route('/wallet/<wallet_id>', methods=['GET', 'POST'])
+def wallet_handle(wallet_id=0):
+    render_type=request.args.get('type') or 'html'
+    page= request.args.get('page') or 1
+    return render_wallet(wallet_id, page, render_type)
+
 @app.route('/search', methods=['GET', 'POST'])
 def search(sid=0):
     sid = request.args.get('sid') or sid
     render_type=request.args.get('type') or 'html'
 
+    sid.strip()
     slen = len(sid)
     if slen == 64:
         #should be tx hash or blk hash

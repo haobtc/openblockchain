@@ -17,12 +17,14 @@ from deserialize import extract_public_key
 from db2t import db2t_tx, db2t_block
 import logging
 
-logging.basicConfig(format='%(asctime)s %(message)s', filename=config.BLOCKSTORE_API_LOG_FILE,level=logging.INFO)
-console = logging.StreamHandler()  
-console.setLevel(logging.DEBUG)  
-formatter = logging.Formatter('%(asctime)-12s: %(message)s')  
-console.setFormatter(formatter)  
-logging.getLogger('').addHandler(console) 
+# logging.basicConfig(format='%(asctime)s %(message)s', filename=config.BLOCKSTORE_API_LOG_FILE,level=logging.INFO)
+# console = logging.StreamHandler()  
+# console.setLevel(logging.DEBUG)  
+# formatter = logging.Formatter('%(asctime)-12s: %(message)s')  
+# console.setFormatter(formatter)  
+# logging.getLogger('').addHandler(console)
+logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
+
 app = Flask(__name__)
 
 page_size=10
