@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+     <div class="col-lg-12">
+        <h1> {{stat.start_time}}</h1>
+        <table class="table table-striped">
+                <tr> <td> 平均每个区块收到的交易费</td> <td> {{ stat.blkstat.fees_per_blk |btc }} </td> </tr>
+                <tr> <td> 平均每次交易的交易费</td> <td> {{ stat.blkstat.fee_per_tx |btc }} </td> </tr>
+                <tr> <td> 总计交易费 </td> <td> {{ stat.blkstat.fees | btc}} </td> </tr>
+                <tr> <td> 总计区块大小 </td> <td> {{ stat.blkstat.sum_blk_size/1024/1024 }} M </td> </tr>
+                <tr> <td> 总计交易次数 </td> <td> {{ stat.blkstat.tx_count }} </td> </tr>
+                <tr> <td> 总计input次数 </td> <td> {{ stat.blkstat.total_in_count }} </td> </tr>
+                <tr> <td> 总计input bitcoin </td> <td> {{ stat.blkstat.total_in_value |btc }} </td> </tr>
+                <tr> <td> 总计output次数 </td> <td> {{ stat.blkstat.total_out_count }} </td> </tr>
+                <tr> <td> 总计output bitcoin </td> <td> {{ stat.blkstat.total_out_value |btc }} </td> </tr>
+                <tr> <td> 新币开采量 </td> <td> {{ stat.blkstat.new_btc_value |btc }} </td> </tr>
+                <tr> <td> 新区块数目 </td> <td> {{ stat.blkstat.blk_count }} </td> </tr>
+                <tr> <td> 平均区块创建时间 </td> <td> {{ stat.blkstat.blk_create_rate}} (分钟) </td> </tr>
+                <tr> <td> 每秒交易数目 </td> <td> {{ stat.blkstat.tx_per_second }} </td> </tr>
+                <tr> <td> 最小高度 </td> <td> {{ stat.blkstat.min_blk_height}} </td> </tr>
+                <tr> <td> 最大高度 </td> <td> {{ stat.blkstat.max_blk_height}} </td> </tr>
+                <tr> <td> 最小区块 </td> <td> {{ stat.blkstat.min_blk_size}} </td> </tr>
+                <tr> <td> 最大区块 </td> <td> {{ stat.blkstat.max_blk_size}} </td> </tr>
+                <tr> <td> 包含最少交易的区块(归属矿池) </td> <td> {{ stat.blkstat.min_tx_count}} </td> </tr> 
+                <tr> <td> 包含最多交易的区块(归属矿池) </td> <td> {{ stat.blkstat.max_tx_count}} </td> </tr>
+                <tr> <td> 孤块数目 </td> <td> {{ stat.blkstat.orphan_blk_count }} </td> </tr>
+                <tr> <th> 挖矿成本 </th> </tr>
+                <tr> <td> 总收入 </td> <td> {{ (stat.blkstat.new_btc_value  + stat.blkstat.fees)|btc}} </td> </tr>
+                <tr> <td> 交易费收入占比 </td> <td> {{ stat.blkstat.fees*100/(stat.blkstat.new_btc_value  + stat.blkstat.fees) }}% </td> </tr>
+                <tr> <td> 在总交易量中的占比 </td> <td> {{ stat.blkstat.fee_total_value * 100 }}% </td> </tr>
+                <tr> <td> 每次交易成本 </td> <td> {{ (stat.blkstat.fees/stat.blkstat.tx_count) |btc }} </td> </tr>
+                <tr> <td> 难度变化 </td> <td>  </td> </tr>
+                <tr> <th> 市场统计 </th> </tr>
+                <tr> <td> 汇率 </td> <td>  </td> </tr>
+                <tr> <td> 交易量(人民币) </td> <td>  </td> </tr>
+                <tr> <td> 交易量(btc) </td> <td>  </td> </tr>
+                <tr> <td> 交易占比 </td> <td>  </td> </tr>
+         </table>
+
+        <h1> 交易情况 </h1>
+         <table class="table table-striped">
+                <tr> <td> 全网发出的交易数 </td> <td>  {{stat.txstat.total_tx_count}}  </td> </tr>
+                <tr> <td> 确认的交易数 </td> <td>  {{stat.blkstat.tx_count }}  </td> </tr>
+                <tr> <td> 发出但被未确认的交易数 </td> <td> {{stat.txstat.unconfirmed_tx_count}}   </td> </tr>
+                <tr> <td> 删除的交易数 </td> <td>  {{stat.txstat.removed_tx_count}} </td> </tr>
+                <tr> <td> 最大交易</td> <td> {{ stat.txstat.max_tx_size }} byte</td> </tr>
+                <tr> <td> 最小交易</td> <td> {{ stat.txstat.min_tx_size }} byte</td> </tr>
+                <tr> <td> 单笔最少交易费</td> <td> {{ stat.txstat.min_fee |btc}} </td> </tr>
+                <tr> <td> 单笔最多交易费</td> <td> {{ stat.txstat.max_fee |btc}} </td> </tr>
+                <tr> <td> 最小input </td> <td> {{ stat.txstat.min_in_value |btc }} </td> </tr>
+                <tr> <td> 最小input数</td> <td> {{ stat.txstat.min_in_count }} </td> </tr>
+                <tr> <td> 最大input值 </td> <td> {{ stat.txstat.max_in_value |btc }} </td> </tr>
+                <tr> <td> 最大input数</td> <td> {{ stat.txstat.max_in_count}} </td> </tr>
+                <tr> <td> 最小output值</td> <td> {{ stat.txstat.min_out_value |btc }} </td> </tr>
+                <tr> <td> 最大output值</td> <td> {{ stat.txstat.max_out_value |btc }} </td> </tr>
+                <tr> <td> 最小output数</td> <td> {{ stat.txstat.min_out_count }} </td> </tr>
+                <tr> <td> 最大output数</td> <td> {{ stat.txstat.max_out_count}} </td> </tr>
+                <tr> <th> 确认的交易 </th> </tr>
+                <tr> <th> 未确认的交易 </th> </tr>
+                <tr> <th> 删除的交易 </th> </tr>
+                <tr> <th> 超时过期的交易 </th> </tr>
+                <tr> <th> 交易类型 </th> </tr>
+         </table>
+ 
+
+        <h1> 收到最多次btc的地址TOP10  </h1>
+         <table class="table table-striped">
+                <tr> <td> 地址 </td> <td> 收到次数</td> <td> 收到btc </td> </tr>
+    {% for addr in stat.recv_tx_count %}
+               <tr> <td> {{ addr.address }} </td> <td> {{ addr.recv_count }} </td> <td> {{ addr.recv_value |btc }} </td> </tr>
+    {% endfor %}
+         </table>
+
+         <h1> 收到最多比特币的地址TOP10  </h1>
+         <table class="table table-striped">
+                <tr> <td> 地址 </td> <td> 收到次数</td> <td> 收到btc </td> </tr>
+    {% for addr in stat.recv_tx_value %}
+               <tr> <td> {{ addr.address }} </td> <td> {{ addr.recv_count }} </td> <td> {{ addr.recv_value |btc }} </td> </tr>
+    {% endfor %}
+         </table>
+ 
+          <h1> 花费最多次比特币的地址TOP10  </h1>
+         <table class="table table-striped">
+                <tr> <td> 地址 </td> <td> 花费次数</td> <td> 花费btc </td> </tr>
+    {% for addr in stat.spent_tx_count %}
+               <tr> <td> {{ addr.address }} </td> <td> {{ addr.spent_count }} </td> <td> {{ addr.spent_value |btc }} </td> </tr>
+    {% endfor %}
+         </table>
+
+          <h1> 花费最多比特币的地址TOP10  </h1>
+         <table class="table table-striped">
+                <tr> <td> 地址 </td> <td> 花费次数</td> <td> 花费btc </td> </tr>
+    {% for addr in stat.spent_tx_value  %}
+               <tr> <td> {{ addr.address }} </td> <td> {{ addr.spent_count }} </td> <td> {{ addr.spent_value |btc }} </td> </tr>
+    {% endfor %}
+         </table>
+ 
+ 
+ 
+
+</div>
+ 
+    </div>
+ 
+{% endblock %} 
