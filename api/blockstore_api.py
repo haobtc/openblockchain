@@ -215,15 +215,15 @@ def getRelatedTxIdList():
     logging.info("getRelatedTxIdList tx count, cursor %s %s", count,cursor)
 
     addridlist = Addr.query.with_entities(Addr.id).filter(Addr.address.in_(addressList)).all()
-    if addridlist == None:
-        resp_data={}
-        return jsonify(resp_data)
+    if  addridlist:
+        txidlist=list(AddrTx.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id.in_(addridlist)).order_by(AddrTx.tx_id).offset(cursor).limit(count))
+    else:
+        txidlist=[]
+
     logging.info("getRelatedTxIdList addridlist:%s %s",len(addridlist), addridlist)
 
-    txidlist=AddrTx.query.with_entities(AddrTx.tx_id).filter(AddrTx.addr_id.in_(addridlist)).order_by(AddrTx.tx_id).offset(cursor).limit(count)
-
     resp_data={}
-    resp_data['bitcoin.cursor'] = str(cursor+txidlist.count())
+    resp_data['bitcoin.cursor'] = str(cursor+len(txidlist))
 
     txHashList = [(Tx.query.with_entities(Tx.hash).filter(Tx.id==txid[0]).first()) for txid in txidlist]
     txHashList = [txHash[0] for txHash in txHashList]

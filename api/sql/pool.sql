@@ -74,6 +74,8 @@ COPY	pool	(id,	name,	link)	FROM	stdin;
 114	manhattanmine	http://ham.manhattanmine.com
 115	eobot	http://eobot.com
 116	1hash	https://www.1hash.com/
+117 patels   \N
+118 Haobtc \N
 \.
 
 
