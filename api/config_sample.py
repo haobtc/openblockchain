@@ -30,3 +30,5 @@ EMAIL_RECEIVER = ['xxx@xxx.com']
 NET_PORT='eth1'
 
 UTX_EXPIRE_TIME = 24 * 60 * 60 #24 hour
+
+ONCE_WATCH_TXID_COUNT = 1000
