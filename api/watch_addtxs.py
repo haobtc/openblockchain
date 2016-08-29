@@ -17,14 +17,18 @@ from sqlalchemy import and_
 import logging
 
 from config import *
-from blockstore_api import watch_addrtxs
+from blockstore_api import new_watch_addrtxs, watch_addrtxs
 
 if __name__ == '__main__':
-    start_time = time.time()
-    watch_addrtxs(False)
-    end_time = time.time()
-    if end_time - start_time < 300:
-        time.sleep(300 - end_time + start_time)
+#    start_time = time.time()
+#    watch_addrtxs(False)
+#    end_time = time.time()
+#    if end_time - start_time < 300:
+#        time.sleep(300 - end_time + start_time)
 
-   
+    while True:
+        #启动verify=True时需要删除SystemCursor表中watch_addrtx_cursor_verify行
+        is_continue = new_watch_addrtxs(False)
+        if not is_continue:
+            time.sleep(10)
 
