@@ -393,15 +393,19 @@ def new_watch_addrtxs_normal():
 
     #取所有地址
     addressList = WatchedAddrGroup.query.with_entities(WatchedAddrGroup.address).all()
+    logging.info("new_watch_addrtxs_normal got addressList")
 
     #取所有地址的id
     addridList = Addr.query.with_entities(Addr.id).filter(Addr.address.in_(addressList)).all()
+    logging.info("new_watch_addrtxs_normal got addridList")
 
     #取当前最大的tx_id
-    max_txid = db_session.query(func.max(AddrTx.tx_id)).all()[0][0] or 0
+    max_txid = db_session.query(func.max(Tx.id)).all()[0][0] or 0
+    logging.info("new_watch_addrtxs_normal got max_txid")
 
     #分批处理AddrTx表中的记录，类似单次1000条
     addrtxList = AddrTx.query.filter(AddrTx.tx_id > cursor_id, AddrTx.tx_id <= cursor_id + config.ONCE_WATCH_TXID_COUNT).filter(AddrTx.addr_id.in_(addridList)).all()
+    logging.info("new_watch_addrtxs_normal got addrtxList")
 
     for addrtx in addrtxList:
         address = Addr.query.with_entities(Addr.address).filter_by(id=addrtx.addr_id).first()
@@ -427,11 +431,12 @@ def new_watch_addrtxs_normal():
             db_session.refresh(newRecord)
 
 
+    logging.info("new_watch_addrtxs_normal compare %d %d", max_txid, cursor_id + config.ONCE_WATCH_TXID_COUNT)
     if max_txid > cursor_id + config.ONCE_WATCH_TXID_COUNT:
         next_cursor = cursor_id + config.ONCE_WATCH_TXID_COUNT
         is_continue = True
     else:
-        next_cursor = max_txid 
+        next_cursor = max_txid
         is_continue = False
 
     logging.info("new_watch_addrtxs_normal next watch_addrtx_cursor:%s is_continue:%s", next_cursor, is_continue)
