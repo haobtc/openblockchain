@@ -400,7 +400,7 @@ def new_watch_addrtxs_normal():
     logging.info("new_watch_addrtxs_normal got addridList")
 
     #取当前最大的tx_id
-    max_txid = db_session.query(func.max(Tx.id)).all()[0][0] or 0
+    max_txid = db_session.query(func.max(RealTx.id)).all()[0][0] or 0
     logging.info("new_watch_addrtxs_normal got max_txid")
 
     #分批处理AddrTx表中的记录，类似单次1000条

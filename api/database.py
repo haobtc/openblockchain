@@ -105,6 +105,9 @@ class Tx(SQLBase):
     def __repr__(self):
         return "<('%s')>" % (self.hash.encode('hex'))
 
+class RealTx(SQLBase):
+    __tablename__ = 'tx'
+    id = Column(INTEGER, primary_key=True)
 
 class BlockTx(SQLBase):
     __tablename__ = 'blk_tx'
