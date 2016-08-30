@@ -343,6 +343,7 @@ def check_db(level=0):
         fail = True
 
     if not fail:
+        alter_admin(msg)
         return {'success': msg}
     else:
         alter_admin(msg)
