@@ -16,6 +16,7 @@ import config
 from deserialize import extract_public_key
 from db2t import db2t_tx, db2t_block
 import logging
+import time
 
 # logging.basicConfig(format='%(asctime)s %(message)s', filename=config.BLOCKSTORE_API_LOG_FILE,level=logging.INFO)
 # console = logging.StreamHandler()  
@@ -401,10 +402,15 @@ def new_watch_addrtxs_normal():
 
     #取当前最大的tx_id
     max_txid = db_session.query(func.max(RealTx.id)).all()[0][0] or 0
+    max_txid -= 50
+    max_txid = max(max_txid, cursor_id)
+
     logging.info("new_watch_addrtxs_normal got max_txid")
 
+    max_cursor_id = min(max_txid, cursor_id + config.ONCE_WATCH_TXID_COUNT)
+
     #分批处理AddrTx表中的记录，类似单次1000条
-    addrtxList = AddrTx.query.filter(AddrTx.tx_id > cursor_id, AddrTx.tx_id <= cursor_id + config.ONCE_WATCH_TXID_COUNT).filter(AddrTx.addr_id.in_(addridList)).all()
+    addrtxList = AddrTx.query.filter(AddrTx.tx_id > cursor_id, AddrTx.tx_id <= max_cursor_id).filter(AddrTx.addr_id.in_(addridList)).all()
     logging.info("new_watch_addrtxs_normal got addrtxList")
 
     for addrtx in addrtxList:
@@ -431,9 +437,9 @@ def new_watch_addrtxs_normal():
             db_session.refresh(newRecord)
 
 
-    logging.info("new_watch_addrtxs_normal compare %d %d", max_txid, cursor_id + config.ONCE_WATCH_TXID_COUNT)
-    if max_txid > cursor_id + config.ONCE_WATCH_TXID_COUNT:
-        next_cursor = cursor_id + config.ONCE_WATCH_TXID_COUNT
+    logging.info("new_watch_addrtxs_normal compare max_txid:%d max_cursor_id:%d", max_txid, max_cursor_id)
+    if max_txid > max_cursor_id:
+        next_cursor = max_cursor_id
         is_continue = True
     else:
         next_cursor = max_txid
