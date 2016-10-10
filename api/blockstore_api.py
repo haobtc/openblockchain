@@ -402,10 +402,11 @@ def new_watch_addrtxs_normal():
 
     #取当前最大的tx_id
     max_txid = db_session.query(func.max(RealTx.id)).all()[0][0] or 0
+    logging.info("new_watch_addrtxs_normal got true max_txid %d", max_txid)
     max_txid -= 50
     max_txid = max(max_txid, cursor_id)
 
-    logging.info("new_watch_addrtxs_normal got max_txid")
+    logging.info("new_watch_addrtxs_normal got false max_txid %d", max_txid)
 
     max_cursor_id = min(max_txid, cursor_id + config.ONCE_WATCH_TXID_COUNT)
 
