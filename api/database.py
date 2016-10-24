@@ -95,6 +95,9 @@ class Tx(SQLBase):
     fee       = Column(BIGINT )
     recv_time = Column(BIGINT )
     ip  = Column(TEXT)
+    wtxid = Column(SBYTEA)
+    wsize  = Column(INTEGER)
+    vsize  = Column(INTEGER)
     idx  = Column(INTEGER)
     height  = Column(INTEGER)
     time  = Column(BIGINT)
@@ -126,6 +129,7 @@ class TxIn(SQLBase):
     sequence = Column(BIGINT)
     script_sig = Column(SBYTEA)
     prev_out = Column(SBYTEA)
+    witness = Column(SBYTEA)
 
     def todict(self):
         return to_dict(self, self.__class__)
@@ -234,6 +238,7 @@ class VOUT(SQLBase):
     out_idx = Column(INTEGER)
     txin_tx_hash = Column(SBYTEA)
     txout_tx_hash = Column(SBYTEA)
+    txout_type = Column(INTEGER)
     def __init__(self):
         self.txin_tx_hash = binascii.hexlify(self.txin_tx_hash)
         self.txout_tx_hash = binascii.hexlify(self.txout_tx_hash)

@@ -22,9 +22,21 @@
             </span>
             {% else %}
             {% for txin in tx.in_addresses%}
-            <a href="/addr/{{ txin.address }}"> {{ txin.address }}</a>
+
+                {% if txin.address  %}
+                    <a href="/addr/{{ txin.address }}"> {{ txin.address }}</a>
+                {% endif %}
             <span class="pull-right">
-                <span class="pull-right"> <span> <a href=/tx/{{txin.txout_tx_hash }} > {{txin.value| btc}}  BTC </a></span></span> 
+                {% if txin.txout_type== 0 %}
+                    NONSTANDARD
+                {% endif %}
+                {% if txin.txout_type== 6 %}
+                   WITNESS_V0_SCRIPTHASH
+                {% endif %}
+                {% if txin.txout_type==7 %}
+                 WITNESS_V0_KEYHASH
+                {% endif %}
+                 <a href=/tx/{{txin.txout_tx_hash }} > {{txin.value| btc}}  BTC </a>
             </span>
             {% endfor %}
             </br>
@@ -39,7 +51,20 @@
  
         <div class="tx_output">
             {% for txout in tx.out_addresses%}
-            <a href="/addr/{{ txout.address }}"> {{ txout.address }}</a>
+                {% if txout.txout_type== 0 %}
+                    <span> NONSTANDARD </span>
+                {% endif %}
+                {% if txout.txout_type== 6 %}
+                   <span> WITNESS_V0_SCRIPTHASH </span>
+                {% endif %}
+                {% if txout.txout_type==7 %}
+                   <span> WITNESS_V0_KEYHASH</span>
+                {% endif %}
+                
+                {% if txout.address  %}
+                    <a href="/addr/{{ txout.address }}"> {{ txout.address }}</a>
+                {% endif %}
+
                 {% if txout.txin_tx_id!=None %}
                 <span class="pull-right"> <span> <a href=/tx/{{txout.txin_tx_hash }} >{{txout.value| btc}} BTC</a> </span></span> 
                     <span class="pull-right"> <span>   已花费 </span></span> 
@@ -82,6 +107,9 @@
             {% endif %}
             <tr> <td> 输出 </td> <td> {{tx.out_value|btc}} BTC</td> </tr>
             <tr> <td> 输出数目 </td> <td> {{tx.out_count}}</td> </tr>
+            <tr> <td> wtxid </td> <td> {{tx.wtxid}}</td> </tr>
+            <tr> <td> wsize </td> <td> {{tx.wsize}}</td> </tr>
+            <tr> <td> vsize </td> <td> {{tx.vsize}}</td> </tr>
         </tr>
         </tbody>
     </table>
@@ -95,7 +123,11 @@
             <h4> 输入列表: </h4>
             <table class="table table-striped">
                 {% for txin in tx.vin %}
-                <tr> <td> <div id ="btc_script">{{txin.script_sig}} </div> </td> </tr>
+                    {% if txin.script_sig %}
+                        <tr> <td> <div id ="btc_script">{{txin.script_sig}} </div> </td> </tr>
+                    {% else %}
+                        <tr> <td> <div id ="btc_script">{{txin.witness}} </div> </td> </tr>
+                    {% endif %}
                 {% endfor %}
             </table>
         {% endif %}
@@ -108,6 +140,7 @@
     </div>
 </div>
 
+{# comment templary
 {% block script %}
   <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/bitcore.js') }}"></script>
@@ -142,5 +175,6 @@
     } //end all submit
   </script>
 {%endblock%} 
+#}
 
 {% endblock %}

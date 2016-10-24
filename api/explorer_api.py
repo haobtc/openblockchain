@@ -138,6 +138,7 @@ def lastest_data(render_type='html'):
     res = Block.query.order_by(Block.height.desc()).limit(10).all()
     for blk in res:
         blk=blk.todict() 
+        blk['pool'], blk['pool_link'] = get_pool(blk['pool_id'])
         blks.append(blk)
 
     txs=[]
