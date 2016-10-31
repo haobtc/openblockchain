@@ -56,6 +56,7 @@ def db2t_tx(dtx):
             inp['vout'] = vin.prev_out_index
             inp['script'] = vin.script_sig
             inp['q'] = vin.sequence
+            inp['witness'] = vin.witness 
 
             prev_tx = Tx.query.filter(Tx.hash == vin.prev_out.decode('hex')).first()
             if prev_tx:
@@ -85,6 +86,7 @@ def db2t_tx(dtx):
         outp['amountSatoshi'] = str(vout.value)
         outp['amount'] = str_money_value(vout.value)
         outp['script'] = vout.pk_script
+        outp['type'] = vout.txout_type 
         t['outputs'].append(outp)
 
     return t
