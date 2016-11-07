@@ -428,14 +428,18 @@ def new_watch_addrtxs_normal():
         txHash = txHash[0]
 
         w_addrtx = WatchedAddrTx.query.filter_by(address=address, tx=txHash).first()
-        if not w_addrtx:
-            logging.info("new_watch_addrtxs_normal add WatchedAddrTx address:%s  tx:%s", address, txHash)
-            newRecord = WatchedAddrTx()
-            newRecord.address = address
-            newRecord.tx = txHash
-            db_session.add(newRecord)
+        if w_addrtx:
+            db_session.delete(w_addrtx)
             db_session.flush()
-            db_session.refresh(newRecord)
+            logging.info("new_watch_addrtxs_normal delete WatchedAddrTx id:%d address:%s  tx:%s", w_addrtx.id, address, txHash)
+
+        logging.info("new_watch_addrtxs_normal add WatchedAddrTx address:%s  tx:%s", address, txHash)
+        newRecord = WatchedAddrTx()
+        newRecord.address = address
+        newRecord.tx = txHash
+        db_session.add(newRecord)
+        db_session.flush()
+        db_session.refresh(newRecord)
 
 
     logging.info("new_watch_addrtxs_normal compare max_txid:%d max_cursor_id:%d", max_txid, max_cursor_id)
