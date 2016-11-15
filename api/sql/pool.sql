@@ -74,9 +74,15 @@ COPY	pool	(id,	name,	link)	FROM	stdin;
 114	manhattanmine	http://ham.manhattanmine.com
 115	eobot	http://eobot.com
 116	1hash	https://www.1hash.com/
-117 patels   \N
-118 Haobtc \N
+117	unomp	\N
+118	patels	http://199.115.116.7:8925/
+119	Haobtc	http://haobtc.com/
+120	btc.com	http://pool.btc.com/
+121	viabtc	http://6Yviabtc.com/
+122	bitcoinindia	http://bitcoin-india.org/
+123	bitcoin.com	http://www.bitcoin.com/
 \.
+
 
 
 ALTER TABLE pool OWNER TO dbuser;
