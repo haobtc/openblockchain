@@ -25,7 +25,7 @@ import logging
 
 logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
 
-cache = Cache(config={'CACHE_TYPE': config.CACHE_TYPE})
+cache = Cache(config={'CACHE_TYPE': config.CACHE_TYPE, 'CACHE_MEMCACHED_SERVERS': config.CACHE_MEMCACHED_SERVERS})
 app = Flask(__name__, static_url_path='/static')
 cache.init_app(app)
 
