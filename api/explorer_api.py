@@ -2,12 +2,14 @@
 # -*- coding: utf-8 -*-
 
 from flask import Flask, render_template, url_for,redirect,request,jsonify
+from flask_cache import Cache
 from flask_sqlalchemy import SQLAlchemy
 import simplejson as json
 import binascii
 from database import *
 from sqlalchemy import and_
 from sqlalchemy.sql import  select
+from sqlalchemy.sql import  func
 from datetime import datetime
 from util     import calculate_target, calculate_difficulty, decode_check_address
 import re
@@ -23,17 +25,29 @@ import logging
 
 logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
 
-
+cache = Cache(config={'CACHE_TYPE': config.CACHE_TYPE, 'CACHE_MEMCACHED_SERVERS': config.CACHE_MEMCACHED_SERVERS})
 app = Flask(__name__, static_url_path='/static')
+cache.init_app(app)
 
 page_size=10
+current_height = 0
 
 from bitcoinrpc.authproxy import AuthServiceProxy
 
 access = AuthServiceProxy(config.RPC_URL)
 
+def refresh_height(f):
+    def __decorator(*args, **kwargs):
+        global current_height
+        height = db_session.query(func.max(Block.height)).scalar()
+        if (height > current_height):
+            current_height = height 
+            cache.clear()
+        return f(*args, **kwargs)
+    return __decorator
+
 def getmininginfo():
-  return json.loads(access.getmininginfo())
+	return json.loads(access.getmininginfo())
 
 def get_pool(pool_id):
     res = POOL.query.with_entities(POOL.name, POOL.link).filter(POOL.id==pool_id).first()
@@ -96,6 +110,8 @@ def _jinja2_filter_coinbase(value):
     except:
         value
  
+@refresh_height
+@cache.cached(timeout=24 * 3600)
 def render_404(render_type='html'):
     if render_type=='html':
         return render_template('404.html'), 404
@@ -133,6 +149,8 @@ def get_tx_addresses_new(tx=None):
     return in_addresses , out_addresses
  
 
+@refresh_height
+@cache.cached(timeout=600)
 def lastest_data(render_type='html'):
     blks=[]
     res = Block.query.order_by(Block.height.desc()).limit(10).all()
@@ -185,6 +203,8 @@ def checkdb():
     # level= request.args.get('level') or 3
     # return check_db(level)
 
+@refresh_height
+@cache.cached(timeout=600)
 def render_bip(bip_name=None, render_type='html'):
     blks=[]
     res = Block.query.filter(Block.bip_name==bip_name).order_by(Block.height.desc()).limit(100).all()
@@ -206,6 +226,8 @@ def bip_handle(bip_name):
     return render_bip(bip_name, render_type)
  
 
+@refresh_height
+@cache.cached(timeout=600)
 def render_pool(pool_name=None, render_type='html'):
     blks=[]
     res = Block.query.filter(Block.pool_name==pool_name).order_by(Block.height.desc()).limit(100).all()
@@ -227,6 +249,8 @@ def pool_handle(pool_name):
     return render_pool(pool_name, render_type)
  
 
+@refresh_height
+@cache.cached(timeout=600)
 def render_tx(tx=None, render_type='html'):
     tx= tx.todict()
 
@@ -264,6 +288,8 @@ def tx_handle(txhash,tx=None):
 
     return render_tx(tx, render_type)
 
+@refresh_height
+@cache.cached(timeout=600)
 def render_blk(blk=None, page=1, render_type='html'):
     blk = blk.todict()
 
@@ -301,6 +327,8 @@ def render_blk(blk=None, page=1, render_type='html'):
 
 @app.route('/height/<height>', methods=['GET', 'POST'])
 def blkheight_handle(height=0):
+
+
     render_type=request.args.get('type') or 'html'
     page= request.args.get('page') or 1
     blk = Block.query.filter(Block.height == height).first()
@@ -367,6 +395,8 @@ def get_addresses_confirmed_btc(addr_id=None, page=1, page_size=10, desc=True):
     q = s1.alias('confirmed_btc')
     return db_session.query(q).order_by('txout_tx_id').desc().offset((page-1)*page_size).limit(page_size) 
  
+@refresh_height
+@cache.cached(timeout=600)
 def render_addr(address=None, page=1, render_type='html', filter=0):
     addr = Addr.query.filter(Addr.address == address).first()
     if addr == None:
@@ -481,6 +511,8 @@ def address_handle(address):
 
     return render_addr(address, page, render_type, int(filter))
 
+@refresh_height
+@cache.cached(timeout=600)
 def render_wallet(wallet_id=0, page=1, render_type='html'):
     wallet = {}
     page =int(page)
