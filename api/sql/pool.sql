@@ -80,7 +80,18 @@ COPY	pool	(id,	name,	link)	FROM	stdin;
 120	btc.com	http://pool.btc.com/
 121	viabtc	http://6Yviabtc.com/
 122	bitcoinindia	http://bitcoin-india.org/
-123	bitcoin.com	http://www.bitcoin.com/
+123	shawnp0wers	http://www.brainofshawn.com
+124	btctop	http://www.btc.top
+125	connectbtc	http://www.connectbtc.com
+126	batpool	http://www.batpool.com
+127	canoe	http://www.canoepool.com
+128	rigpool	http://www.rigpool.com
+129	bixin	https://bixin.com/common/pool_landing
+130	phash	https://phash.io
+131	bitcoin.com	http://www.bitcoin.com
+132	ekanembtc	http://www.ekanembtc.com
+132	gogreenlight	http://www.gogreenlight.se
+
 \.
 
 
